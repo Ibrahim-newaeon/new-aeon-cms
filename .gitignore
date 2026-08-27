@@ -1,0 +1,31 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+.env
+.env.local
+.env.*.local
+
+# Local uploads — user content, not source
+public/uploads/
+
+coverage/
+playwright-report/
+test-results/
+
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# Working files from this session
+cookies.txt
+c[0-9].txt
+ce.txt
