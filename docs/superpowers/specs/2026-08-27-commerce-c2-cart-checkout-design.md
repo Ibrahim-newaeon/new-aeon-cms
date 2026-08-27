@@ -309,4 +309,4 @@ Recorded because each was found by running the code, not by reading it.
 - [x] Shipping and coupon admin screens
 - [x] All routes 404 when commerce is disabled
 - [x] Typecheck clean, production build passes
-- [ ] Build ledger updated (pending — stale since before C1)
+- [x] Build ledger updated
