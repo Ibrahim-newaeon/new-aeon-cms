@@ -1,0 +1,660 @@
+
+## MINIMAL BUILDABLE PROJECT
+
+Create these files exactly. Run `npm install` then `npm run typecheck` to verify.
+
+---
+
+### /package.json
+
+```json
+{
+  "name": "new-aeon-cms",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "15.1.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "drizzle-orm": "^0.38.0",
+    "pg": "^8.13.0",
+    "@neondatabase/serverless": "^0.10.0",
+    "next-intl": "^3.26.0",
+    "zod": "^3.24.0",
+    "jose": "^5.9.0",
+    "argon2": "^0.41.0",
+    "lucide-react": "^0.468.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.0",
+    "@tiptap/react": "^2.11.0",
+    "@tiptap/starter-kit": "^2.11.0",
+    "@tiptap/extension-image": "^2.11.0",
+    "@tiptap/extension-link": "^2.11.0",
+    "@tiptap/extension-placeholder": "^2.11.0",
+    "@tiptap/html": "^2.11.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/pg": "^8.11.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0"
+  }
+}
+```
+
+---
+
+### /tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./*"] },
+    "target": "ES2022",
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+---
+
+### /next.config.ts
+
+```typescript
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  output: 'standalone',
+  experimental: {
+    ppr: true,
+    dynamicIO: true,
+  },
+  turbopack: {},
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    formats: ['image/webp', 'image/avif'],
+  },
+};
+
+export default nextConfig;
+```
+
+---
+
+### /tailwind.config.ts
+
+```typescript
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  darkMode: ['class'],
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        admin: {
+          bg: '#0c0e13',
+          surface: '#14161f',
+          elevated: '#1c1e2a',
+          line: '#1e2028',
+          text: '#f0f0f5',
+          'text-secondary': '#9aa3b5',
+          'text-muted': '#7d8596',
+          primary: '#6366f1',
+          'primary-hover': '#818cf8',
+          'primary-muted': 'rgba(99, 102, 241, 0.15)',
+          success: '#22c55e',
+          warning: '#f59e0b',
+          danger: '#ef4444',
+          info: '#3b82f6',
+        },
+      },
+      fontFamily: {
+        cairo: ['Cairo', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+};
+
+export default config;
+```
+
+---
+
+### /postcss.config.mjs
+
+```javascript
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+```
+
+---
+
+### /drizzle.config.ts
+
+```typescript
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  schema: './lib/db/schema.ts',
+  out: './lib/db/migrations',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+  verbose: true,
+  strict: true,
+});
+```
+
+---
+
+### /lib/types/content-blocks.ts
+
+```typescript
+export type ContentBlock =
+  | { type: 'heading'; level: 1 | 2 | 3 | 4; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'image'; src: string; alt: string }
+  | { type: 'rich-text'; content: object };
+```
+
+---
+
+### /lib/db/schema.ts
+
+```typescript
+import { pgTable, uuid, varchar, text, integer, boolean, timestamp, jsonb, pgEnum, index } from 'drizzle-orm/pg-core';
+import type { ContentBlock } from '../types/content-blocks';
+
+export const userRoleEnum = pgEnum('user_role', ['admin', 'editor', 'author']);
+export const contentStatusEnum = pgEnum('content_status', ['draft', 'published', 'archived']);
+export const localeEnum = pgEnum('locale', ['ar', 'en']);
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  role: userRoleEnum('role').default('editor'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const content = pgTable('content', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: varchar('slug', { length: 255 }).notNull(),
+  status: contentStatusEnum('status').default('draft'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const contentI18n = pgTable('content_i18n', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contentId: uuid('content_id').notNull().references(() => content.id, { onDelete: 'cascade' }),
+  locale: localeEnum('locale').notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  body: jsonb('body').$type<ContentBlock[]>(),
+});
+```
+
+---
+
+### /lib/db/index.ts
+
+```typescript
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from './schema';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const db = drizzle(pool, { schema });
+```
+
+---
+
+### /lib/auth/password.ts
+
+```typescript
+import { hash, verify, argon2id } from 'argon2';
+
+export async function hashPassword(plain: string): Promise<string> {
+  return hash(plain, {
+    type: argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4,
+  });
+}
+
+export async function verifyPassword(hash: string, plain: string): Promise<boolean> {
+  return verify(hash, plain);
+}
+```
+
+---
+
+### /lib/auth/session.ts
+
+```typescript
+import { SignJWT, jwtVerify } from 'jose';
+
+const ACCESS_SECRET = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET!);
+const REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET!);
+
+export interface TokenPayload {
+  sub: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'editor' | 'author';
+  jti: string;
+}
+
+export async function createAccessToken(payload: Omit<TokenPayload, 'jti'> & { jti: string }): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('15m')
+    .sign(ACCESS_SECRET);
+}
+
+export async function verifyAccessToken(token: string): Promise<TokenPayload> {
+  const { payload } = await jwtVerify(token, ACCESS_SECRET, { clockTolerance: 60 });
+  return payload as TokenPayload;
+}
+
+export async function setAuthCookies(access: string, refresh: string) {
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  cookieStore.set('access_token', access, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 15,
+  });
+  cookieStore.set('refresh_token', refresh, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+```
+
+---
+
+### /middleware.ts
+
+```typescript
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { verifyAccessToken } from './lib/auth/session';
+
+const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Public API routes
+  if (pathname === '/api/health' || pathname === '/api/auth/login') {
+    return NextResponse.next();
+  }
+  
+  // Protect API routes
+  if (pathname.startsWith('/api/')) {
+    const accessToken = request.cookies.get('access_token')?.value;
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    try {
+      await verifyAccessToken(accessToken);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+  
+  // Public files
+  if (/\.(.*)$/.test(pathname)) {
+    return NextResponse.next();
+  }
+  
+  // Admin login is public
+  if (pathname === `${ADMIN_PATH}/login`) {
+    return NextResponse.next();
+  }
+  
+  // All other admin routes need auth
+  if (pathname.startsWith(ADMIN_PATH)) {
+    const accessToken = request.cookies.get('access_token')?.value;
+    if (!accessToken) {
+      return NextResponse.redirect(new URL(`${ADMIN_PATH}/login`, request.url));
+    }
+    try {
+      await verifyAccessToken(accessToken);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL(`${ADMIN_PATH}/login`, request.url));
+    }
+  }
+  
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
+```
+
+---
+
+### /app/globals.css
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --admin-bg: #0c0e13;
+    --admin-surface: #14161f;
+    --admin-elevated: #1c1e2a;
+    --admin-line: #1e2028;
+    --admin-text: #f0f0f5;
+    --admin-text-secondary: #9aa3b5;
+    --admin-text-muted: #7d8596;
+    --admin-primary: #6366f1;
+    --admin-primary-hover: #818cf8;
+    --admin-primary-muted: rgba(99, 102, 241, 0.15);
+  }
+
+  [dir="rtl"] { font-family: 'Cairo', sans-serif; }
+  [dir="ltr"] { font-family: 'Inter', sans-serif; }
+}
+
+@layer components {
+  .admin-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200;
+  }
+  .admin-btn-primary {
+    @apply admin-btn bg-[var(--admin-primary)] text-white hover:bg-[var(--admin-primary-hover)];
+  }
+  .admin-input {
+    @apply w-full px-3 py-2.5 rounded-md bg-[var(--admin-surface)] border border-[var(--admin-line)] text-[var(--admin-text)] placeholder-[var(--admin-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)] focus:border-transparent transition-all;
+  }
+  .admin-card {
+    @apply rounded-lg bg-[var(--admin-surface)] border border-[var(--admin-line)] p-5;
+  }
+}
+```
+
+---
+
+### /app/layout.tsx
+
+```typescript
+import type { Metadata } from 'next';
+import { Cairo, Inter } from 'next/font/google';
+import './globals.css';
+
+const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+
+export const metadata: Metadata = { title: 'New Aeon CMS' };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ar" dir="rtl" className={`${cairo.variable} ${inter.variable}`}>
+      <body className="min-h-full flex flex-col antialiased">{children}</body>
+    </html>
+  );
+}
+```
+
+---
+
+### /app/(admin-public)/layout.tsx
+
+```typescript
+export default function PublicAdminLayout({ children }: { children: React.ReactNode }) {
+  return <div className="min-h-screen bg-[var(--admin-bg)]" dir="rtl">{children}</div>;
+}
+```
+
+---
+
+### /app/(admin-public)/admin/login/page.tsx
+
+```typescript
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+const ADMIN_PATH = process.env.NEXT_PUBLIC_ADMIN_PATH || '/admin';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error?.message || 'Invalid');
+
+      router.push(ADMIN_PATH);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="w-full max-w-md p-8 space-y-4">
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">تسجيل الدخول</h1>
+        {error && <div className="p-3 rounded bg-red-500/10 text-red-400 text-sm">{error}</div>}
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="admin-input" placeholder="Email" required />
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="admin-input" placeholder="Password" required />
+        <button type="submit" disabled={loading} className="admin-btn-primary w-full">{loading ? '...' : 'Login'}</button>
+      </form>
+    </div>
+  );
+}
+```
+
+---
+
+### /app/(admin-guarded)/layout.tsx
+
+```typescript
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { verifyAccessToken } from '@/lib/auth/session';
+
+const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
+
+export default async function GuardedAdminLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('access_token')?.value;
+
+  if (!accessToken) {
+    redirect(`${ADMIN_PATH}/login`);
+  }
+
+  try {
+    await verifyAccessToken(accessToken);
+    return <div className="min-h-screen bg-[var(--admin-bg)] text-[var(--admin-text)]" dir="rtl">{children}</div>;
+  } catch {
+    redirect(`${ADMIN_PATH}/login`);
+  }
+}
+```
+
+---
+
+### /app/(admin-guarded)/admin/page.tsx
+
+```typescript
+export default function Dashboard() {
+  return <div className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1></div>;
+}
+```
+
+---
+
+### /app/(site)/[locale]/layout.tsx
+
+```typescript
+export default async function SiteLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  return <div className={`min-h-screen ${locale === 'ar' ? 'font-cairo' : 'font-inter'}`}>{children}</div>;
+}
+```
+
+---
+
+### /app/(site)/[locale]/page.tsx
+
+```typescript
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  return <h1>Home ({locale})</h1>;
+}
+```
+
+---
+
+### /app/api/auth/login/route.ts
+
+```typescript
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { verifyPassword } from '@/lib/auth/password';
+import { createAccessToken, setAuthCookies } from '@/lib/auth/session';
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const user = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
+    
+    if (!user.length) {
+      return NextResponse.json({ success: false, error: { message: 'Invalid' } }, { status: 401 });
+    }
+
+    const valid = await verifyPassword(user[0].passwordHash, body.password);
+    if (!valid) {
+      return NextResponse.json({ success: false, error: { message: 'Invalid' } }, { status: 401 });
+    }
+
+    const token = await createAccessToken({
+      sub: user[0].id,
+      email: user[0].email,
+      name: user[0].name,
+      role: user[0].role,
+      jti: crypto.randomUUID(),
+    });
+
+    await setAuthCookies(token, 'refresh');
+
+    return NextResponse.json({ success: true, data: { user: { id: user[0].id, name: user[0].name } } });
+  } catch {
+    return NextResponse.json({ success: false, error: { message: 'Failed' } }, { status: 500 });
+  }
+}
+```
+
+---
+
+### /app/api/health/route.ts
+
+```typescript
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  return NextResponse.json({ status: 'ok' });
+}
+```
+
+---
+
+## BUILD VERIFICATION
+
+```bash
+# 1. Install
+npm install
+
+# 2. Type check (should pass with 0 errors)
+npm run typecheck
+
+# 3. Build (should succeed)
+npm run build
+```
+
+If typecheck passes, the architecture is sound. If not, the errors are real and need fixing.

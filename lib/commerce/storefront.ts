@@ -121,7 +121,21 @@ export async function getShopProduct(slug: string, locale: 'ar' | 'en') {
 
   const inStock = variants.length === 0 || variants.some((v) => (v.stock ?? 0) > 0);
 
-  return { product, images, specs, options: optionValues, variants, inStock };
+  const optionNameById = new Map(options.map((o) => [o.id, o.name]));
+
+  // Shaped for the client selector: each variant carries its axis -> value map.
+  const selectable = variants.map((v) => ({
+    id: v.id,
+    sku: v.sku,
+    stock: v.stock ?? 0,
+    values: Object.fromEntries(
+      values
+        .filter((ov) => ov.variantId === v.id)
+        .map((ov) => [optionNameById.get(ov.optionId) ?? '', ov.value])
+    ),
+  }));
+
+  return { product, images, specs, options: optionValues, variants, selectable, inStock };
 }
 
 export async function getShopCategory(slug: string, locale: 'ar' | 'en') {

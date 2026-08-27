@@ -29,3 +29,7 @@ next-env.d.ts
 cookies.txt
 c[0-9].txt
 ce.txt
+
+# curl cookie jars from local API testing
+*.cookies
+shop.txt

@@ -6,6 +6,7 @@ import { getShopProduct } from '@/lib/commerce/storefront';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
 import { formatPrice } from '@/lib/money';
+import { AddToCart } from '@/components/site/add-to-cart';
 import { locales, type Locale } from '@/lib/env';
 
 interface Props {
@@ -37,7 +38,7 @@ export default async function ProductPage({ params }: Props) {
   if (!record) notFound();
 
   const currency = settings?.currency ?? 'JOD';
-  const { product, images, specs, options, inStock } = record;
+  const { product, images, specs, options, selectable, inStock } = record;
   const ar = typedLocale === 'ar';
 
   return (
@@ -87,25 +88,9 @@ export default async function ProductPage({ params }: Props) {
             {inStock ? (ar ? 'متوفّر' : 'In stock') : ar ? 'غير متوفّر حالياً' : 'Out of stock'}
           </p>
 
-          {/*
-            Read-only in C1. There is no cart yet, so a clickable selector would
-            promise a purchase the site cannot complete.
-          */}
-          {options.map((option) => (
-            <div key={option.id}>
-              <p className="mb-1 text-sm font-medium text-gray-700">{option.name}</p>
-              <div className="flex flex-wrap gap-2">
-                {option.values.map((v) => (
-                  <span
-                    key={v}
-                    className="rounded-full border border-gray-300 px-3 py-1 text-sm text-gray-700"
-                  >
-                    {v}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+          {/* C1 rendered these as read-only chips because there was no cart.
+              Now they select a variant and add it. */}
+          <AddToCart options={options} variants={selectable} locale={typedLocale} />
 
           {product.description && (
             <p className="whitespace-pre-line text-gray-700">{product.description}</p>

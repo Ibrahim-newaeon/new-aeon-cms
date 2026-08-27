@@ -1,0 +1,1129 @@
+
+# CORRECTED ARCHITECTURE IMPLEMENTATION
+
+## Files to Create/Update
+
+---
+
+### /lib/types/content-blocks.ts (NEW)
+
+```typescript
+// /lib/types/content-blocks.ts
+// Canonical ContentBlock union — our format, not TipTap's
+
+export type ContentBlock =
+  // Text (simple, no marks — for hero subtitles, captions, etc.)
+  | { type: 'heading'; level: 1 | 2 | 3 | 4; text: string; anchor?: string }
+  | { type: 'paragraph'; text: string; align?: 'left' | 'center' | 'right' | 'justify' }
+  
+  // Media
+  | { type: 'image'; src: string; alt: string; caption?: string; width?: number; height?: number; layout: 'full' | 'wide' | 'normal' }
+  | { type: 'gallery'; images: { src: string; alt: string }[]; layout: 'grid' | 'masonry' | 'carousel' | 'slideshow' }
+  | { type: 'video'; url: string; provider: 'youtube' | 'vimeo' | 'self'; poster?: string; autoplay?: boolean }
+  
+  // Quotes
+  | { type: 'quote'; text: string; author?: string; source?: string; style: 'bordered' | 'pull' }
+  
+  // Embeds
+  | { type: 'embed'; url: string; type: 'instagram' | 'twitter' | 'tiktok' | 'facebook' }
+  
+  // CTA
+  | { type: 'button'; text: string; url: string; variant: 'primary' | 'secondary' | 'outline' | 'ghost'; size: 'sm' | 'md' | 'lg'; fullWidth?: boolean }
+  
+  // Spacing
+  | { type: 'divider'; style: 'line' | 'space' | 'dots' | 'stars' }
+  | { type: 'spacer'; height: number }
+  
+  // Raw HTML (sanitized)
+  | { type: 'html'; content: string }
+  
+  // Complex layout
+  | { type: 'table'; rows: number; cols: number; data: string[][]; headerRow?: boolean }
+  | { type: 'accordion'; items: { title: string; content: ContentBlock[] }[] }
+  | { type: 'tabs'; items: { label: string; content: ContentBlock[] }[] }
+  | { type: 'cta'; title: string; text: string; button: { text: string; url: string }; backgroundImage?: string; overlay?: boolean }
+  | { type: 'feature-grid'; items: { icon?: string; title: string; description: string }[]; columns: 2 | 3 | 4 }
+  | { type: 'testimonial'; items: { quote: string; author: string; role?: string; avatar?: string; rating?: number }[] }
+  | { type: 'team'; members: { name: string; role: string; bio?: string; photo?: string; social?: Record<string, string> }[] }
+  | { type: 'stats'; items: { value: string; label: string; prefix?: string; suffix?: string }[] }
+  | { type: 'timeline'; items: { date: string; title: string; description: string; icon?: string }[] }
+  | { type: 'comparison'; items: { feature: string; values: Record<string, string | boolean> }[]; columns: string[] }
+  | { type: 'pricing'; plans: { name: string; price: string; period?: string; features: string[]; cta: { text: string; url: string }; highlighted?: boolean }[] }
+  | { type: 'map'; location: { lat: number; lng: number }; zoom?: number; marker?: string }
+  | { type: 'contact-form'; fields: ('name' | 'email' | 'phone' | 'message' | 'subject')[]; submitLabel?: string; successMessage?: string }
+  | { type: 'newsletter'; title: string; description?: string; buttonText?: string; privacyNote?: string }
+  | { type: 'social-links'; platforms: ('facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok')[]; style: 'icons' | 'buttons' | 'floating' }
+  | { type: 'recent-posts'; title: string; category?: string; count: number; layout: 'list' | 'grid' | 'carousel' }
+  | { type: 'product-grid'; productIds: string[]; layout: 'grid' | 'list' | 'carousel' }
+  
+  // THE KEY BLOCK: Rich text via TipTap (opaque to us)
+  | { type: 'rich-text'; content: object }
+  
+  // Developer extension
+  | { type: 'custom'; component: string; props: Record<string, unknown> };
+```
+
+---
+
+### /lib/db/schema.ts (UPDATED — body type)
+
+```typescript
+// In contentI18n table:
+body: jsonb('body').$type<ContentBlock[]>(),
+```
+
+Full schema with correct import:
+
+```typescript
+// /lib/db/schema.ts
+import { 
+  pgTable, uuid, varchar, text, integer, boolean, 
+  timestamp, jsonb, pgEnum, index, uniqueIndex, primaryKey 
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import type { ContentBlock } from '../types/content-blocks';
+
+// ... enums same as before ...
+
+export const contentI18n = pgTable('content_i18n', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contentId: uuid('content_id').notNull().references(() => content.id, { onDelete: 'cascade' }),
+  locale: localeEnum('locale').notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  excerpt: text('excerpt'),
+  body: jsonb('body').$type<ContentBlock[]>(), // <-- corrected
+  metaTitle: varchar('meta_title', { length: 255 }),
+  metaDescription: text('meta_description'),
+  ogImage: text('og_image'),
+  noIndex: boolean('no_index').default(false),
+}, (table) => ({
+  contentLocaleIdx: uniqueIndex('content_i18n_content_locale_idx').on(table.contentId, table.locale),
+}));
+
+// ... rest of schema same ...
+```
+
+---
+
+### /components/admin/block-builder.tsx (NEW)
+
+```typescript
+// /components/admin/block-builder.tsx
+'use client';
+
+import { useState } from 'react';
+import { Plus, GripVertical, Trash2, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { RichTextBlockEditor } from './rich-text-block-editor';
+import type { ContentBlock } from '@/lib/types/content-blocks';
+
+interface BlockBuilderProps {
+  blocks: ContentBlock[];
+  onChange: (blocks: ContentBlock[]) => void;
+}
+
+const blockTypeLabels: Record<string, string> = {
+  'heading': 'عنوان',
+  'paragraph': 'فقرة',
+  'image': 'صورة',
+  'gallery': 'معرض صور',
+  'video': 'فيديو',
+  'quote': 'اقتباس',
+  'embed': 'تضمين',
+  'button': 'زر',
+  'divider': 'فاصل',
+  'spacer': 'مسافة',
+  'rich-text': 'نص منسق (TipTap)',
+  'table': 'جدول',
+  'accordion': 'أكورديون',
+  'tabs': 'تبويبات',
+  'cta': 'دعوة للإجراء',
+  'feature-grid': 'شبكة مميزات',
+  'testimonial': 'توصيات',
+  'team': 'فريق',
+  'stats': 'إحصائيات',
+  'timeline': 'خط زمني',
+  'comparison': 'مقارنة',
+  'pricing': 'أسعار',
+  'map': 'خريطة',
+  'contact-form': 'نموذج اتصال',
+  'newsletter': 'نشرة بريدية',
+  'social-links': 'روابط اجتماعية',
+  'recent-posts': 'منشورات حديثة',
+  'product-grid': 'منتجات',
+  'html': 'HTML',
+};
+
+export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+
+  const addBlock = (type: string) => {
+    const newBlock = createDefaultBlock(type);
+    onChange([...blocks, newBlock]);
+    setExpandedIndex(blocks.length);
+    setShowAddMenu(false);
+  };
+
+  const updateBlock = (index: number, block: ContentBlock) => {
+    const updated = [...blocks];
+    updated[index] = block;
+    onChange(updated);
+  };
+
+  const removeBlock = (index: number) => {
+    const updated = blocks.filter((_, i) => i !== index);
+    onChange(updated);
+  };
+
+  const moveBlock = (from: number, to: number) => {
+    const updated = [...blocks];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
+    onChange(updated);
+  };
+
+  return (
+    <div className="space-y-4">
+      {blocks.map((block, idx) => (
+        <BlockItem
+          key={idx}
+          index={idx}
+          block={block}
+          isExpanded={expandedIndex === idx}
+          onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
+          onUpdate={(b) => updateBlock(idx, b)}
+          onRemove={() => removeBlock(idx)}
+          onMoveUp={() => moveBlock(idx, idx - 1)}
+          onMoveDown={() => moveBlock(idx, idx + 1)}
+          isFirst={idx === 0}
+          isLast={idx === blocks.length - 1}
+        />
+      ))}
+
+      <div className="relative">
+        <button
+          onClick={() => setShowAddMenu(!showAddMenu)}
+          className="admin-btn-primary w-full"
+        >
+          <Plus size={18} />
+          إضافة قسم
+        </button>
+
+        {showAddMenu && (
+          <div className="absolute z-50 mt-2 w-full bg-[var(--admin-elevated)] border border-[var(--admin-line)] rounded-lg shadow-xl max-h-80 overflow-y-auto">
+            <div className="p-2 grid grid-cols-2 gap-1">
+              {Object.entries(blockTypeLabels).map(([type, label]) => (
+                <button
+                  key={type}
+                  onClick={() => addBlock(type)}
+                  className="text-start px-3 py-2 text-sm rounded hover:bg-white/5 transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BlockItem({ index, block, isExpanded, onToggle, onUpdate, onRemove, onMoveUp, onMoveDown, isFirst, isLast }: {
+  index: number;
+  block: ContentBlock;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onUpdate: (b: ContentBlock) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  return (
+    <div className="border border-[var(--admin-line)] rounded-lg bg-[var(--admin-surface)]">
+      {/* Header */}
+      <div className="flex items-center gap-2 p-3 border-b border-[var(--admin-line)]">
+        <GripVertical size={16} className="text-[var(--admin-text-muted)] cursor-grab" />
+        <span className="text-sm font-medium flex-1">
+          {blockTypeLabels[block.type] || block.type}
+        </span>
+        <button onClick={onToggle} className="p-1.5 hover:bg-white/5 rounded">
+          <ChevronDown size={16} className={cn("transition-transform", isExpanded && "rotate-180")} />
+        </button>
+        <button onClick={onRemove} className="p-1.5 hover:bg-red-500/10 rounded text-red-400">
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      {/* Editor */}
+      {isExpanded && (
+        <div className="p-4">
+          <BlockEditor block={block} onChange={onUpdate} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlockEditor({ block, onChange }: { block: ContentBlock; onChange: (b: ContentBlock) => void }) {
+  switch (block.type) {
+    case 'rich-text':
+      return <RichTextBlockEditor block={block} onChange={onChange} />;
+    
+    case 'heading':
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm mb-2">المستوى</label>
+            <select
+              value={block.level}
+              onChange={(e) => onChange({ ...block, level: Number(e.target.value) as 1|2|3|4 })}
+              className="admin-input"
+            >
+              <option value={1}>H1</option>
+              <option value={2}>H2</option>
+              <option value={3}>H3</option>
+              <option value={4}>H4</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm mb-2">النص</label>
+            <input
+              type="text"
+              value={block.text}
+              onChange={(e) => onChange({ ...block, text: e.target.value })}
+              className="admin-input"
+            />
+          </div>
+        </div>
+      );
+    
+    case 'paragraph':
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm mb-2">النص</label>
+            <textarea
+              value={block.text}
+              onChange={(e) => onChange({ ...block, text: e.target.value })}
+              className="admin-input min-h-[100px]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-2">المحاذاة</label>
+            <select
+              value={block.align || 'right'}
+              onChange={(e) => onChange({ ...block, align: e.target.value as any })}
+              className="admin-input"
+            >
+              <option value="right">يمين</option>
+              <option value="left">يسار</option>
+              <option value="center">وسط</option>
+              <option value="justify"> justify</option>
+            </select>
+          </div>
+        </div>
+      );
+    
+    case 'image':
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm mb-2">رابط الصورة</label>
+            <input
+              type="url"
+              value={block.src}
+              onChange={(e) => onChange({ ...block, src: e.target.value })}
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-2">نص بديل (alt)</label>
+            <input
+              type="text"
+              value={block.alt}
+              onChange={(e) => onChange({ ...block, alt: e.target.value })}
+              className="admin-input"
+            />
+          </div>
+        </div>
+      );
+    
+    case 'spacer':
+      return (
+        <div>
+          <label className="block text-sm mb-2">الارتفاع (rem)</label>
+          <input
+            type="number"
+            value={block.height}
+            onChange={(e) => onChange({ ...block, height: Number(e.target.value) })}
+            className="admin-input"
+            min={1}
+            max={20}
+            step={0.5}
+          />
+        </div>
+      );
+    
+    case 'divider':
+      return (
+        <div>
+          <label className="block text-sm mb-2">النمط</label>
+          <select
+            value={block.style}
+            onChange={(e) => onChange({ ...block, style: e.target.value as any })}
+            className="admin-input"
+          >
+            <option value="line">خط</option>
+            <option value="space">مسافة</option>
+            <option value="dots">نقاط</option>
+          </select>
+        </div>
+      );
+    
+    default:
+      return (
+        <div className="text-[var(--admin-text-muted)] text-sm">
+          محرر هذا القسم قيد التطوير ({block.type})
+        </div>
+      );
+  }
+}
+
+function createDefaultBlock(type: string): ContentBlock {
+  switch (type) {
+    case 'heading':
+      return { type: 'heading', level: 2, text: '' };
+    case 'paragraph':
+      return { type: 'paragraph', text: '' };
+    case 'image':
+      return { type: 'image', src: '', alt: '', layout: 'normal' };
+    case 'spacer':
+      return { type: 'spacer', height: 2 };
+    case 'divider':
+      return { type: 'divider', style: 'line' };
+    case 'rich-text':
+      return { type: 'rich-text', content: { type: 'doc', content: [{ type: 'paragraph', content: [] }] } };
+    case 'quote':
+      return { type: 'quote', text: '', style: 'bordered' };
+    case 'button':
+      return { type: 'button', text: '', url: '', variant: 'primary', size: 'md' };
+    case 'cta':
+      return { type: 'cta', title: '', text: '', button: { text: '', url: '' } };
+    default:
+      return { type: type as any, text: '' };
+  }
+}
+```
+
+---
+
+### /components/admin/rich-text-block-editor.tsx (NEW — TipTap inside rich-text block)
+
+```typescript
+// /components/admin/rich-text-block-editor.tsx
+'use client';
+
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Bold, Italic, List, ListOrdered, Image as ImageIcon, Link as LinkIcon, Undo, Redo } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface RichTextBlockEditorProps {
+  block: { type: 'rich-text'; content: object };
+  onChange: (block: { type: 'rich-text'; content: object }) => void;
+}
+
+export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProps) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Image,
+      Link.configure({ openOnClick: false }),
+      Placeholder.configure({ placeholder: 'ابدأ الكتابة هنا...' }),
+    ],
+    content: block.content,
+    onUpdate: ({ editor }) => {
+      onChange({
+        type: 'rich-text',
+        content: editor.getJSON(),
+      });
+    },
+  });
+
+  if (!editor) return null;
+
+  return (
+    <div className="border border-[var(--admin-line)] rounded-lg overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 p-2 border-b border-[var(--admin-line)] bg-[var(--admin-elevated)] flex-wrap">
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive('bold')} title="Bold">
+          <Bold size={16} />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive('italic')} title="Italic">
+          <Italic size={16} />
+        </ToolbarButton>
+        <div className="w-px h-6 bg-[var(--admin-line)] mx-1" />
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive('bulletList')} title="Bullet List">
+          <List size={16} />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive('orderedList')} title="Numbered List">
+          <ListOrdered size={16} />
+        </ToolbarButton>
+        <div className="w-px h-6 bg-[var(--admin-line)] mx-1" />
+        <ToolbarButton onClick={() => {
+          const url = window.prompt('رابط الصورة:');
+          if (url) editor.chain().focus().setImage({ src: url }).run();
+        }} title="Image">
+          <ImageIcon size={16} />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => {
+          const url = window.prompt('الرابط:');
+          if (url) editor.chain().focus().setLink({ href: url }).run();
+        }} title="Link">
+          <LinkIcon size={16} />
+        </ToolbarButton>
+        <div className="w-px h-6 bg-[var(--admin-line)] mx-1" />
+        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
+          <Undo size={16} />
+        </ToolbarButton>
+        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Redo">
+          <Redo size={16} />
+        </ToolbarButton>
+      </div>
+      
+      {/* Editor */}
+      <EditorContent
+        editor={editor}
+        className="prose prose-invert max-w-none p-4 min-h-[300px] bg-[var(--admin-surface)]"
+      />
+    </div>
+  );
+}
+
+function ToolbarButton({ onClick, isActive, children, title }: { onClick: () => void; isActive?: boolean; children: React.ReactNode; title: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "p-2 rounded hover:bg-white/5 transition-colors",
+        isActive && "bg-[var(--admin-primary-muted)] text-[var(--admin-primary)]"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+---
+
+### /components/site/content-renderer.tsx (FULL REWRITE — correct architecture)
+
+```typescript
+// /components/site/content-renderer.tsx
+import { generateHTML } from '@tiptap/html';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
+import type { ContentBlock } from '@/lib/types/content-blocks';
+
+// TipTap extensions for HTML generation
+const tiptapExtensions = [StarterKit, Image, Link];
+
+interface ContentRendererProps {
+  blocks: ContentBlock[] | null | undefined;
+}
+
+export function ContentRenderer({ blocks }: ContentRendererProps) {
+  if (!blocks || !Array.isArray(blocks)) return null;
+
+  return (
+    <div className="space-y-6">
+      {blocks.map((block, idx) => (
+        <BlockRenderer key={idx} block={block} />
+      ))}
+    </div>
+  );
+}
+
+function BlockRenderer({ block }: { block: ContentBlock }) {
+  switch (block.type) {
+    // --- Simple text blocks ---
+    
+    case 'heading':
+      const HeadingTag = `h${block.level}` as keyof JSX.IntrinsicElements;
+      return (
+        <HeadingTag 
+          id={block.anchor} 
+          className={`font-bold text-gray-900 ${
+            block.level === 1 ? 'text-3xl' : 
+            block.level === 2 ? 'text-2xl' : 
+            block.level === 3 ? 'text-xl' : 'text-lg'
+          }`}
+        >
+          {block.text}
+        </HeadingTag>
+      );
+
+    case 'paragraph':
+      return (
+        <p className={cn("text-gray-700 leading-relaxed", {
+          'text-right': block.align === 'right' || !block.align,
+          'text-left': block.align === 'left',
+          'text-center': block.align === 'center',
+          'text-justify': block.align === 'justify',
+        })}>
+          {block.text}
+        </p>
+      );
+
+    // --- Media blocks ---
+    
+    case 'image':
+      return (
+        <figure className={cn("my-8", {
+          'max-w-full': block.layout === 'full',
+          'max-w-4xl mx-auto': block.layout === 'wide',
+          'max-w-2xl mx-auto': block.layout === 'normal',
+        })}>
+          <img 
+            src={block.src} 
+            alt={block.alt} 
+            className="w-full rounded-lg"
+            width={block.width}
+            height={block.height}
+          />
+          {block.caption && (
+            <figcaption className="text-center text-sm text-gray-500 mt-2">
+              {block.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
+
+    case 'gallery':
+      return (
+        <div className={cn("grid gap-4", {
+          'grid-cols-2 md:grid-cols-3': block.layout === 'grid',
+          'columns-2 md:columns-3': block.layout === 'masonry',
+        })}>
+          {block.images.map((img, idx) => (
+            <img 
+              key={idx}
+              src={img.src} 
+              alt={img.alt} 
+              className="w-full rounded-lg object-cover break-inside-avoid"
+            />
+          ))}
+        </div>
+      );
+
+    case 'video':
+      if (block.provider === 'youtube') {
+        const videoId = extractYouTubeId(block.url);
+        return (
+          <div className="aspect-video">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}${block.autoplay ? '?autoplay=1' : ''}`}
+              className="w-full h-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        );
+      }
+      return <a href={block.url} className="text-blue-600 underline">{block.url}</a>;
+
+    // --- Quote ---
+    
+    case 'quote':
+      return (
+        <blockquote className={cn("pr-4 py-2 my-6 rounded-r-lg", {
+          'border-r-4 border-indigo-500 bg-gray-50': block.style === 'bordered',
+          'text-xl italic': block.style === 'pull',
+        })}>
+          <p className="text-lg text-gray-700 italic">{block.text}</p>
+          {block.author && (
+            <cite className="block mt-2 text-sm text-gray-500 not-italic">
+              — {block.author}
+              {block.source && `, ${block.source}`}
+            </cite>
+          )}
+        </blockquote>
+      );
+
+    // --- Embed ---
+    
+    case 'embed':
+      return (
+        <div className="my-6">
+          <a href={block.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+            {block.type === 'instagram' && 'Instagram'}
+            {block.type === 'twitter' && 'Twitter'}
+            {block.type === 'tiktok' && 'TikTok'}
+            {block.type === 'facebook' && 'Facebook'}
+            : {block.url}
+          </a>
+        </div>
+      );
+
+    // --- Button ---
+    
+    case 'button':
+      return (
+        <a
+          href={block.url}
+          className={cn("inline-flex items-center px-6 py-3 rounded-lg font-medium transition-colors", {
+            'bg-indigo-600 text-white hover:bg-indigo-700': block.variant === 'primary',
+            'bg-gray-200 text-gray-900 hover:bg-gray-300': block.variant === 'secondary',
+            'border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50': block.variant === 'outline',
+            'text-indigo-600 hover:bg-indigo-50': block.variant === 'ghost',
+            'text-sm px-4 py-2': block.size === 'sm',
+            'px-6 py-3': block.size === 'md',
+            'text-lg px-8 py-4': block.size === 'lg',
+            'w-full justify-center': block.fullWidth,
+          })}
+        >
+          {block.text}
+        </a>
+      );
+
+    // --- Spacing ---
+    
+    case 'divider':
+      if (block.style === 'space') {
+        return <div className="py-8" />;
+      }
+      return <hr className={cn("my-8", {
+        'border-gray-200': block.style === 'line',
+        'border-dotted border-gray-300': block.style === 'dots',
+        'border-gray-200 opacity-50': block.style === 'stars',
+      })} />;
+
+    case 'spacer':
+      return <div style={{ height: `${block.height}rem` }} />;
+
+    // --- Raw HTML ---
+    
+    case 'html':
+      return <div dangerouslySetInnerHTML={{ __html: block.content }} />;
+
+    // --- Complex layout: CTA ---
+    
+    case 'cta':
+      return (
+        <section className={cn("relative py-16 px-4 rounded-xl overflow-hidden", {
+          'bg-gradient-to-br from-indigo-900 to-purple-900': !block.backgroundImage,
+        })}>
+          {block.backgroundImage && (
+            <>
+              <img src={block.backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              {block.overlay && <div className="absolute inset-0 bg-black/40" />}
+            </>
+          )}
+          <div className="relative z-10 text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-white mb-4">{block.title}</h2>
+            <p className="text-lg text-white/90 mb-8">{block.text}</p>
+            <a
+              href={block.button.url}
+              className="inline-flex items-center px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors"
+            >
+              {block.button.text}
+            </a>
+          </div>
+        </section>
+      );
+
+    // --- Complex layout: Feature Grid ---
+    
+    case 'feature-grid':
+      return (
+        <div className={cn("grid gap-6", {
+          'grid-cols-2': block.columns === 2,
+          'grid-cols-3': block.columns === 3,
+          'grid-cols-4': block.columns === 4,
+        })}>
+          {block.items.map((item, idx) => (
+            <div key={idx} className="p-6 rounded-lg bg-gray-50">
+              {item.icon && <div className="text-3xl mb-4">{item.icon}</div>}
+              <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+              <p className="text-gray-600">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      );
+
+    // --- Complex layout: Testimonial ---
+    
+    case 'testimonial':
+      return (
+        <div className="space-y-6">
+          {block.items.map((item, idx) => (
+            <div key={idx} className="p-6 rounded-lg bg-gray-50">
+              <div className="flex gap-1 mb-4">
+                {Array.from({ length: item.rating || 5 }).map((_, i) => (
+                  <span key={i} className="text-yellow-400">★</span>
+                ))}
+              </div>
+              <p className="text-lg italic mb-4">"{item.quote}"</p>
+              <div className="flex items-center gap-3">
+                {item.avatar && <img src={item.avatar} alt="" className="w-10 h-10 rounded-full" />}
+                <div>
+                  <p className="font-medium">{item.author}</p>
+                  {item.role && <p className="text-sm text-gray-500">{item.role}</p>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+
+    // --- THE KEY CASE: Rich text via TipTap ---
+    
+    case 'rich-text': {
+      // Generate HTML from TipTap document using TipTap's own renderer
+      const html = generateHTML(block.content, tiptapExtensions);
+      return (
+        <div 
+          className="prose prose-lg max-w-none"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      );
+    }
+
+    // --- Fallback ---
+    
+    default:
+      return (
+        <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg">
+          نوع القسم غير معروف: {(block as any).type}
+        </div>
+      );
+  }
+}
+
+// Helper functions
+function cn(...classes: (string | false | undefined | Record<string, boolean>)[]) {
+  return classes
+    .flatMap(c => {
+      if (typeof c === 'string') return c;
+      if (typeof c === 'object' && c !== null) {
+        return Object.entries(c).filter(([, v]) => v).map(([k]) => k);
+      }
+      return [];
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
+  return match?.[1] || '';
+}
+```
+
+---
+
+### /app/(admin)/admin/content/pages/new/page.tsx (UPDATED — use BlockBuilder)
+
+```typescript
+// /app/(admin)/admin/content/pages/new/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { LocaleTabs } from '@/components/admin/locale-tabs';
+import { SEOFields } from '@/components/admin/seo-fields';
+import { BlockBuilder } from '@/components/admin/block-builder';
+import type { ContentBlock } from '@/lib/types/content-blocks';
+
+export default function NewPagePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    slug: '',
+    status: 'draft' as const,
+    featuredImage: '',
+    translations: {
+      ar: {
+        locale: 'ar' as const,
+        title: '',
+        excerpt: '',
+        body: [] as ContentBlock[],
+        metaTitle: '',
+        metaDescription: '',
+        ogImage: '',
+        noIndex: false,
+      },
+      en: {
+        locale: 'en' as const,
+        title: '',
+        excerpt: '',
+        body: [] as ContentBlock[],
+        metaTitle: '',
+        metaDescription: '',
+        ogImage: '',
+        noIndex: false,
+      },
+    },
+  });
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'page',
+          slug: formData.slug,
+          status: formData.status,
+          featuredImage: formData.featuredImage,
+          translations: Object.values(formData.translations),
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Failed to create page');
+      }
+
+      router.push('/admin/content/pages');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTranslation = (locale: 'ar' | 'en', field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      translations: {
+        ...prev.translations,
+        [locale]: {
+          ...prev.translations[locale],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">صفحة جديدة</h1>
+        <p className="text-[var(--admin-text-muted)] mt-1">إنشاء صفحة ثابتة جديدة</p>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="admin-card space-y-4">
+        <h2 className="text-lg font-medium">المعلومات الأساسية</h2>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm mb-2">الرابط (Slug) *</label>
+            <input
+              type="text"
+              value={formData.slug}
+              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              className="admin-input"
+              placeholder="about-us"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm mb-2">الحالة</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+              className="admin-input"
+            >
+              <option value="draft">مسودة</option>
+              <option value="published">منشور</option>
+              <option value="archived">مؤرشف</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm mb-2">صورة الغلاف</label>
+          <input
+            type="url"
+            value={formData.featuredImage}
+            onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
+            className="admin-input"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+      </div>
+
+      <LocaleTabs defaultLocale="ar">
+        {(locale) => (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm mb-2">العنوان *</label>
+              <input
+                type="text"
+                value={formData.translations[locale].title}
+                onChange={(e) => updateTranslation(locale, 'title', e.target.value)}
+                className="admin-input"
+                placeholder="عنوان الصفحة"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2">مقتطف</label>
+              <textarea
+                value={formData.translations[locale].excerpt}
+                onChange={(e) => updateTranslation(locale, 'excerpt', e.target.value)}
+                className="admin-input min-h-[80px]"
+                placeholder="وصف مختصر للصفحة"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2">المحتوى</label>
+              <BlockBuilder
+                blocks={formData.translations[locale].body}
+                onChange={(blocks) => updateTranslation(locale, 'body', blocks)}
+              />
+            </div>
+
+            <SEOFields
+              values={formData.translations[locale]}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  translations: {
+                    ...prev.translations,
+                    [locale]: {
+                      ...prev.translations[locale],
+                      ...values,
+                    },
+                  },
+                }));
+              }}
+            />
+          </div>
+        )}
+      </LocaleTabs>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="admin-btn-primary disabled:opacity-50"
+        >
+          {loading ? 'جاري الحفظ...' : 'حفظ الصفحة'}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="admin-btn-ghost"
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### /lib/db/schema.ts (CORRECTED — body type)
+
+```typescript
+// In the imports at top, add:
+import type { ContentBlock } from '../types/content-blocks';
+
+// In contentI18n table:
+body: jsonb('body').$type<ContentBlock[]>(),
+```
+
+---
+
+### /lib/db/queries.ts (CORRECTED — no type/typeId confusion)
+
+```typescript
+// getContentList — remove type filter since we query by typeId if needed
+export async function getContentList(typeId?: string, status?: string, locale: 'ar' | 'en' = 'ar') {
+  const conditions = [];
+  if (typeId) conditions.push(eq(content.typeId, typeId));
+  if (status) conditions.push(eq(content.status, status as any));
+  
+  // ...
+}
+```
+
+---
+
+## VERIFICATION
+
+| Check | Status |
+|-------|--------|
+| `body` stores `ContentBlock[]` | ✅ |
+| `rich-text` block holds TipTap doc opaquely | ✅ |
+| `generateHTML()` used for TipTap rendering | ✅ |
+| No traversal of TipTap internals | ✅ |
+| Marks handled by TipTap, not our code | ✅ |
+| BlockBuilder for layout sections | ✅ |
+| RichTextBlockEditor for prose | ✅ |
+
+---
+
+## FILES CREATED/UPDATED
+
+| File | Action |
+|------|--------|
+| `/lib/types/content-blocks.ts` | **NEW** — canonical ContentBlock union |
+| `/components/admin/block-builder.tsx` | **NEW** — add/edit/reorder blocks |
+| `/components/admin/rich-text-block-editor.tsx` | **NEW** — TipTap inside rich-text block |
+| `/components/site/content-renderer.tsx` | **REWRITE** — correct architecture |
+| `/app/(admin)/admin/content/pages/new/page.tsx` | **UPDATE** — use BlockBuilder |
+| `/lib/db/schema.ts` | **UPDATE** — body: ContentBlock[] |
+
+---
+
+## USAGE FLOW
+
+```
+Admin creates page:
+  → Enters slug, status
+  → Switches locale tab (ar/en)
+  → Clicks "إضافة قسم"
+    → Chooses block type:
+      → "نص منسق (TipTap)" → rich-text block with TipTap editor inside
+      → "عنوان" → heading block with text input
+      → "صورة" → image block with URL input
+      → etc.
+  → Reorders sections via drag handles
+  → Saves
+
+Public renders:
+  → body: ContentBlock[]
+  → For each block:
+    → heading/paragraph/image/etc. → our JSX
+    → rich-text → generateHTML(block.content) → dangerouslySetInnerHTML
+```

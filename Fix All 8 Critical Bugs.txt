@@ -1,0 +1,353 @@
+
+## MISSING COMPONENT DEFINITIONS
+
+These three components were referenced but never defined. Add them to your project:
+
+---
+
+### /components/admin/stat-card.tsx
+
+```typescript
+// /components/admin/stat-card.tsx
+import { LucideIcon } from 'lucide-react';
+import { FileText, CheckCircle, Edit, Image, TrendingUp, TrendingDown } from 'lucide-react';
+
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: string;
+  trend?: string;
+}
+
+const icons: Record<string, LucideIcon> = {
+  'file-text': FileText,
+  'check-circle': CheckCircle,
+  'edit': Edit,
+  'image': Image,
+};
+
+export function StatCard({ title, value, icon, trend }: StatCardProps) {
+  const Icon = icons[icon] || FileText;
+  const isPositive = trend?.startsWith('+');
+
+  return (
+    <div className="admin-card">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-[var(--admin-text-muted)]">{title}</p>
+          <p className="text-2xl font-bold mt-2">{value.toLocaleString('ar-SA')}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-[var(--admin-primary-muted)]">
+          <Icon size={20} className="text-[var(--admin-primary)]" />
+        </div>
+      </div>
+      
+      {trend && (
+        <div className="flex items-center gap-1 mt-4">
+          {isPositive ? (
+            <TrendingUp size={14} className="text-green-400" />
+          ) : (
+            <TrendingDown size={14} className="text-red-400" />
+          )}
+          <span className={`text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {trend}
+          </span>
+          <span className="text-xs text-[var(--admin-text-muted)]">من الشهر الماضي</span>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### /components/admin/activity-feed.tsx
+
+```typescript
+// /components/admin/activity-feed.tsx
+import { db } from '@/lib/db';
+import { auditLog, users } from '@/lib/db/schema';
+import { desc, eq } from 'drizzle-orm';
+
+export async function ActivityFeed() {
+  const activities = await db.select({
+    id: auditLog.id,
+    action: auditLog.action,
+    entityType: auditLog.entityType,
+    createdAt: auditLog.createdAt,
+    userName: users.name,
+  })
+  .from(auditLog)
+  .leftJoin(users, eq(auditLog.userId, users.id))
+  .orderBy(desc(auditLog.createdAt))
+  .limit(10);
+
+  const actionLabels: Record<string, string> = {
+    'content.created': 'أضاف محتوى جديد',
+    'content.updated': 'عدّل محتوى',
+    'content.published': 'نشر محتوى',
+    'media.uploaded': 'رفع ملف',
+    'user.login': 'سجل دخول',
+  };
+
+  return (
+    <div className="admin-card">
+      <h2 className="text-lg font-semibold mb-4">النشاط الأخير</h2>
+      <div className="space-y-3">
+        {activities.length === 0 ? (
+          <p className="text-[var(--admin-text-muted)] text-sm">لا يوجد نشاط حديث</p>
+        ) : (
+          activities.map((activity) => (
+            <div key={activity.id} className="flex items-start gap-3 py-2">
+              <div className="w-8 h-8 rounded-full bg-[var(--admin-primary-muted)] flex items-center justify-center shrink-0">
+                <span className="text-xs text-[var(--admin-primary)]">
+                  {(activity.userName || 'S').charAt(0)}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm">
+                  <span className="font-medium">{activity.userName || 'System'}</span>
+                  {' '}
+                  {actionLabels[activity.action] || activity.action}
+                </p>
+                <p className="text-xs text-[var(--admin-text-muted)]">
+                  {activity.createdAt ? new Date(activity.createdAt).toLocaleDateString('ar-SA') : ''}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### /components/admin/data-table.tsx
+
+```typescript
+// /components/admin/data-table.tsx
+'use client';
+
+import { useState, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, ArrowUpDown, Eye, Edit, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface Column<T> {
+  key: keyof T | string;
+  header: string;
+  sortable?: boolean;
+  width?: string;
+  render?: (row: T) => React.ReactNode;
+}
+
+interface DataTableProps<T> {
+  data: T[];
+  columns: Column<T>[];
+  keyField: keyof T;
+  searchable?: boolean;
+  searchFields?: (keyof T)[];
+  sortable?: boolean;
+  onEdit?: (row: T) => void;
+  onDelete?: (row: T) => void;
+  onView?: (row: T) => void;
+}
+
+export function DataTable<T extends Record<string, any>>({
+  data,
+  columns,
+  keyField,
+  searchable = true,
+  searchFields,
+  sortable = true,
+  onEdit,
+  onDelete,
+  onView,
+}: DataTableProps<T>) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const processedData = useCallback(() => {
+    let result = [...data];
+
+    if (searchQuery && searchFields) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(row => 
+        searchFields.some(field => {
+          const value = row[field];
+          return value && String(value).toLowerCase().includes(query);
+        })
+      );
+    }
+
+    if (sortField && sortable) {
+      result.sort((a, b) => {
+        const aVal = a[sortField];
+        const bVal = b[sortField];
+        const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [data, searchQuery, searchFields, sortField, sortDirection, sortable])();
+
+  const toggleSort = (field: string) => {
+    if (!sortable) return;
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {searchable && (
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" size={18} />
+          <input
+            type="text"
+            placeholder="بحث..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="admin-input pe-10"
+          />
+        </div>
+      )}
+
+      <div className="admin-card overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[var(--admin-line)] bg-[var(--admin-elevated)]">
+                {columns.map(col => (
+                  <th 
+                    key={String(col.key)}
+                    className={cn(
+                      "px-4 py-3 text-start text-sm font-medium text-[var(--admin-text-secondary)]",
+                      col.sortable && sortable && "cursor-pointer hover:text-[var(--admin-text)]"
+                    )}
+                    style={{ width: col.width }}
+                    onClick={() => col.sortable && toggleSort(String(col.key))}
+                  >
+                    <div className="flex items-center gap-2">
+                      {col.header}
+                      {col.sortable && sortable && sortField === col.key && (
+                        <ArrowUpDown size={14} className={sortDirection === 'asc' ? 'rotate-180' : ''} />
+                      )}
+                    </div>
+                  </th>
+                ))}
+                {(onEdit || onDelete || onView) && (
+                  <th className="px-4 py-3 w-10">إجراءات</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {processedData.map((row, idx) => (
+                <tr 
+                  key={String(row[keyField])}
+                  className={cn(
+                    "border-b border-[var(--admin-line)] last:border-0 hover:bg-white/5 transition-colors",
+                    idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'
+                  )}
+                >
+                  {columns.map(col => (
+                    <td key={String(col.key)} className="px-4 py-3 text-sm">
+                      {col.render ? col.render(row) : String(row[col.key as keyof T] ?? '-')}
+                    </td>
+                  ))}
+                  {(onEdit || onDelete || onView) && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {onView && (
+                          <button onClick={() => onView(row)} className="p-1.5 hover:bg-white/5 rounded">
+                            <Eye size={16} className="text-[var(--admin-text-muted)]" />
+                          </button>
+                        )}
+                        {onEdit && (
+                          <button onClick={() => onEdit(row)} className="p-1.5 hover:bg-white/5 rounded">
+                            <Edit size={16} className="text-[var(--admin-primary)]" />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button onClick={() => onDelete(row)} className="p-1.5 hover:bg-white/5 rounded">
+                            <Trash2 size={16} className="text-red-400" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## UPDATED FILE TREE
+
+```
+new-aeon-cms/
+├── components/
+│   ├── admin/
+│   │   ├── shell.tsx
+│   │   ├── sidebar.tsx
+│   │   ├── header.tsx
+│   │   ├── stat-card.tsx          ← NEW
+│   │   ├── activity-feed.tsx      ← NEW
+│   │   ├── data-table.tsx         ← NEW
+│   │   ├── rich-editor.tsx
+│   │   ├── seo-fields.tsx
+│   │   └── locale-tabs.tsx
+│   ├── site/
+│   │   ├── navbar.tsx
+│   │   ├── footer.tsx
+│   │   ├── hero-section.tsx
+│   │   └── content-renderer.tsx
+│   └── ui/
+│       └── tabs.tsx
+```
+
+---
+
+## VERIFICATION
+
+After adding these three files, all imports should resolve correctly:
+
+| Import | File | Status |
+|--------|------|--------|
+| `StatCard` | `/components/admin/stat-card.tsx` | ✅ Defined |
+| `ActivityFeed` | `/components/admin/activity-feed.tsx` | ✅ Defined |
+| `DataTable` | `/components/admin/data-table.tsx` | ✅ Defined |
+
+---
+
+## QUICK FIX SCRIPT
+
+If you're setting up the project now, create these three files:
+
+```bash
+# Create the missing component files
+touch components/admin/stat-card.tsx
+touch components/admin/activity-feed.tsx
+touch components/admin/data-table.tsx
+
+# Then copy the content from above into each file
+```
+
+---
+
+*All missing components now defined. Project should compile without import errors.*

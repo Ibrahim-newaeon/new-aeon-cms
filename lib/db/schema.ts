@@ -14,6 +14,21 @@ export const contentStatusEnum = pgEnum('content_status', ['draft', 'published',
 export const localeEnum = pgEnum('locale', ['ar', 'en']);
 export const navLocationEnum = pgEnum('nav_location', ['header', 'footer', 'sidebar', 'mobile']);
 
+// orders.status was a bare varchar(50): any typo created a phantom status.
+export const orderStatusEnum = pgEnum('order_status', [
+  'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded',
+]);
+
+// `authorized` and `failed` are unused by COD. They exist so adding a payment
+// gateway later needs no migration — the point of the "COD now, online later"
+// decision.
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'pending', 'authorized', 'paid', 'failed', 'refunded',
+]);
+
+export const paymentMethodEnum = pgEnum('payment_method', ['cod', 'card', 'wallet']);
+export const couponTypeEnum = pgEnum('coupon_type', ['percent', 'fixed']);
+
 // ─── USERS & AUTH ──────────────────────────────────────────
 
 export const users = pgTable('users', {
@@ -328,10 +343,64 @@ export const productSpecs = pgTable('product_specs', {
   sortOrder: integer('sort_order').default(0),
 });
 
+/**
+ * Keyed on phone, not email: this is a cash-on-delivery shop, the courier calls
+ * the number, and email is frequently not given. The phone is normalised before
+ * lookup (see lib/commerce/phone.ts) so one person cannot become two customers.
+ */
+export const customers = pgTable('customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  phone: varchar('phone', { length: 32 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }),
+  governorate: varchar('governorate', { length: 100 }),
+  city: varchar('city', { length: 100 }),
+  addressLine: text('address_line'),
+  landmark: text('landmark'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const shippingZones = pgTable('shipping_zones', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  governorates: jsonb('governorates').$type<string[]>().notNull(),
+  flatRate: integer('flat_rate').notNull(),
+  /** Compared against the subtotal AFTER discount. */
+  freeOver: integer('free_over'),
+  etaDays: integer('eta_days').default(3),
+  isActive: boolean('is_active').default(true),
+  sortOrder: integer('sort_order').default(0),
+});
+
+export const coupons = pgTable('coupons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  type: couponTypeEnum('type').notNull(),
+  /** percent: 1-100. fixed: minor units. */
+  value: integer('value').notNull(),
+  minSubtotal: integer('min_subtotal').default(0),
+  usageLimit: integer('usage_limit'),
+  usedCount: integer('used_count').default(0),
+  startsAt: timestamp('starts_at'),
+  endsAt: timestamp('ends_at'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
   orderNumber: varchar('order_number', { length: 50 }).notNull().unique(),
-  status: varchar('status', { length: 50 }).default('pending'),
+  /**
+   * Idempotency. A UNIQUE constraint is the only reliable guard against a
+   * double submit: two concurrent requests both pass an application-level
+   * "have I seen this?" check, but only one can win the index.
+   */
+  idempotencyKey: varchar('idempotency_key', { length: 128 }).unique(),
+  status: orderStatusEnum('status').notNull().default('pending'),
+  customerId: uuid('customer_id').references(() => customers.id),
+  shippingZoneId: uuid('shipping_zone_id').references(() => shippingZones.id),
   subtotal: integer('subtotal').notNull(),
   shipping: integer('shipping').notNull(),
   discount: integer('discount').default(0),
@@ -344,8 +413,8 @@ export const orders = pgTable('orders', {
   city: varchar('city', { length: 255 }).notNull(),
   addressLine: text('address_line').notNull(),
   landmark: text('landmark'),
-  paymentMethod: varchar('payment_method', { length: 50 }).default('cod'),
-  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'),
+  paymentMethod: paymentMethodEnum('payment_method').notNull().default('cod'),
+  paymentStatus: paymentStatusEnum('payment_status').notNull().default('pending'),
   notes: text('notes'),
   couponCode: varchar('coupon_code', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -361,6 +430,20 @@ export const orderItems = pgTable('order_items', {
   priceSnapshot: integer('price_snapshot').notNull(),
   qty: integer('qty').notNull(),
 });
+
+/** Answers "when did this ship, and who marked it?" — written by C2 at
+ *  placement and by the admin in C3. */
+export const orderStatusHistory = pgTable('order_status_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  fromStatus: orderStatusEnum('from_status'),
+  toStatus: orderStatusEnum('to_status').notNull(),
+  note: text('note'),
+  changedBy: uuid('changed_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  orderIdx: index('order_status_history_order_idx').on(table.orderId, table.createdAt),
+}));
 
 // ─── RELATIONS ───────────────────────────────────────────
 

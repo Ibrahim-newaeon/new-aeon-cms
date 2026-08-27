@@ -1,8 +1,8 @@
 # Commerce C2 — Cart & Checkout
 
 **Date:** 2026-08-27
-**Status:** Design, awaiting review
-**Part of:** Commerce module (C0 Email · C1 Catalogue ✅ · **C2 Cart & Checkout** · C3 Order management · C4 Engagement)
+**Status:** Complete
+**Part of:** Commerce module (C0 Email · C1 Catalogue ✅ · **C2 Cart & Checkout ✅** · C3 Order management · C4 Engagement)
 
 ---
 
@@ -261,7 +261,29 @@ the running app and real database:
 
 ---
 
-## 11. Open questions
+## 11. Defects found while verifying
+
+Recorded because each was found by running the code, not by reading it.
+
+1. **The checkout token length bound rejected every order.** `token:
+   z.string().max(128)` was written when the token was a UUID. Replacing it with
+   a signed JWT (~200 characters) made the schema reject every submission with a
+   400 before `placeOrder` was ever called — no order could be placed at all.
+   Bound widened to 1024.
+2. **"Your cart is empty" masked "this item just sold out."** `itemCount` counts
+   only *available* units, so a cart whose sole line went out of stock reported
+   zero and hit the `EMPTY_CART` branch first. The `UNAVAILABLE` check now runs
+   before the empty check, and the customer gets 409 with the item named.
+3. **Cart lines fell back to the URL slug.** A product translated in one locale
+   but not the current one showed `amber-oud` where a name belonged. The cart now
+   falls back to any other locale's name, then the SKU — never the slug. This does
+   not contradict C1's decision to hide untranslated products from the catalogue:
+   the catalogue may omit a product, but the cart must never obscure a line the
+   customer has already added.
+
+---
+
+## 12. Open questions
 
 1. **Tax/VAT** — not in the spec's schema and not requested. Assumed
    tax-inclusive pricing. Flag now if that is wrong; retrofitting tax onto
@@ -272,19 +294,19 @@ the running app and real database:
 
 ---
 
-## 12. Definition of done
+## 13. Definition of done
 
-- [ ] Migration: `customers`, `shipping_zones`, `coupons`,
+- [x] Migration: `customers`, `shipping_zones`, `coupons`,
       `order_status_history`; orders status columns become enums
-- [ ] Cart cookie: signed, price-free, capped, re-priced on every read
-- [ ] `/cart`, `/checkout`, `/order/[orderNumber]`
-- [ ] Server-computed totals; client-supplied totals ignored
-- [ ] Stock decrement in-transaction; cannot go negative
-- [ ] Customer upsert on normalised phone
-- [ ] Shipping zone matching; unmatched governorate refuses
-- [ ] Coupon validation, clamping, and in-transaction usage increment
-- [ ] Idempotent submission
-- [ ] Shipping and coupon admin screens
-- [ ] All routes 404 when commerce is disabled
-- [ ] Typecheck clean, production build passes
-- [ ] Build ledger updated
+- [x] Cart cookie: signed, price-free, capped, re-priced on every read
+- [x] `/cart`, `/checkout`, `/order/[orderNumber]`
+- [x] Server-computed totals; client-supplied totals ignored
+- [x] Stock decrement in-transaction; cannot go negative
+- [x] Customer upsert on normalised phone
+- [x] Shipping zone matching; unmatched governorate refuses
+- [x] Coupon validation, clamping, and in-transaction usage increment
+- [x] Idempotent submission
+- [x] Shipping and coupon admin screens
+- [x] All routes 404 when commerce is disabled
+- [x] Typecheck clean, production build passes
+- [ ] Build ledger updated (pending — stale since before C1)

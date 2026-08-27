@@ -1,0 +1,766 @@
+
+## THE BUG
+
+```
+app/(admin)/layout.tsx        ← guards with auth check
+├── admin/login/page.tsx      ← Client Component, needs NO auth
+└── admin/page.tsx            ← Server Component, needs auth
+
+Result: /admin/login → layout checks cookie → no cookie → redirect /admin/login → infinite loop
+```
+
+## THE FIX
+
+Split into two route groups:
+
+```
+app/
+├── (admin-guarded)/          ← Has auth layout
+│   └── admin/
+│       ├── page.tsx            ← Dashboard
+│       ├── content/
+│       ├── media/
+│       └── settings/
+│
+└── (admin-public)/           ← NO auth layout
+    └── admin/
+        └── login/
+            └── page.tsx        ← Login page
+```
+
+---
+
+## FILES TO CREATE/MODIFY
+
+### /app/(admin-public)/admin/login/page.tsx
+
+```typescript
+// /app/(admin-public)/admin/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+
+// Use NEXT_PUBLIC_ADMIN_PATH for client-side redirect
+const ADMIN_PATH = process.env.NEXT_PUBLIC_ADMIN_PATH || '/admin';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Invalid credentials');
+      }
+
+      // Redirect to admin dashboard after login
+      router.push(ADMIN_PATH);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--admin-bg)]" dir="rtl">
+      <div className="w-full max-w-md p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[var(--admin-text)]">تسجيل الدخول</h1>
+          <p className="text-[var(--admin-text-muted)] mt-2">أدخل بيانات حسابك للمتابعة</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 rounded-md bg-red-500/10 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2">البريد الإلكتروني</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="admin-input"
+              placeholder="admin@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">كلمة المرور</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="admin-input pe-10"
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 left-3 flex items-center text-[var(--admin-text-muted)]"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="admin-btn-primary w-full disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : 'تسجيل الدخول'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### /app/(admin-public)/layout.tsx
+
+```typescript
+// /app/(admin-public)/layout.tsx
+// NO auth check — public routes only (login)
+
+export default function PublicAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // No auth wrapper, no redirect
+  // Just minimal layout for consistency
+  return (
+    <div className="min-h-screen bg-[var(--admin-bg)]" dir="rtl">
+      {children}
+    </div>
+  );
+}
+```
+
+---
+
+### /app/(admin-guarded)/layout.tsx
+
+```typescript
+// /app/(admin-guarded)/layout.tsx
+// Auth check for ALL routes in this group
+
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { verifyAccessToken } from '@/lib/auth/session';
+import { AdminShell } from '@/components/admin/shell';
+import { getSettings } from '@/lib/db/queries';
+
+const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
+
+export default async function GuardedAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('access_token')?.value;
+
+  if (!accessToken) {
+    redirect(`${ADMIN_PATH}/login`);
+  }
+
+  try {
+    const payload = await verifyAccessToken(accessToken);
+    const settings = await getSettings();
+    
+    return (
+      <AdminShell 
+        user={{
+          name: payload.name,
+          email: payload.email,
+          role: payload.role,
+        }}
+        siteName={settings?.siteName || 'New Aeon'}
+      >
+        {children}
+      </AdminShell>
+    );
+  } catch {
+    redirect(`${ADMIN_PATH}/login`);
+  }
+}
+```
+
+---
+
+### /app/(admin-guarded)/admin/page.tsx
+
+```typescript
+// /app/(admin-guarded)/admin/page.tsx
+// Dashboard — protected by layout
+
+import { Suspense } from 'react';
+import { StatCard } from '@/components/admin/stat-card';
+import { ActivityFeed } from '@/components/admin/activity-feed';
+import { db } from '@/lib/db';
+import { content, contentI18n, mediaAssets, users } from '@/lib/db/schema';
+import { count, eq, and } from 'drizzle-orm';
+
+export default async function AdminDashboard() {
+  const [contentCount, publishedCount, draftCount, mediaCount, userCount] = await Promise.all([
+    db.select({ count: count() }).from(content),
+    db.select({ count: count() }).from(content).where(eq(content.status, 'published')),
+    db.select({ count: count() }).from(content).where(eq(content.status, 'draft')),
+    db.select({ count: count() }).from(mediaAssets),
+    db.select({ count: count() }).from(users),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">لوحة التحكم</h1>
+        <p className="text-[var(--admin-text-muted)] mt-1">نظرة عامة على المحتوى</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="إجمالي المحتوى"
+          value={contentCount[0]?.count ?? 0}
+          icon="file-text"
+          trend="+12%"
+        />
+        <StatCard
+          title="منشور"
+          value={publishedCount[0]?.count ?? 0}
+          icon="check-circle"
+          trend="+5%"
+        />
+        <StatCard
+          title="مسودة"
+          value={draftCount[0]?.count ?? 0}
+          icon="edit"
+          trend="+3%"
+        />
+        <StatCard
+          title="الوسائط"
+          value={mediaCount[0]?.count ?? 0}
+          icon="image"
+          trend="+8%"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Suspense fallback={<div className="admin-card h-64 animate-pulse" />}>
+          <RecentContent />
+        </Suspense>
+        <Suspense fallback={<div className="admin-card h-64 animate-pulse" />}>
+          <ActivityFeed />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+async function RecentContent() {
+  const recent = await db.select({
+    content: content,
+    i18n: contentI18n,
+  })
+  .from(content)
+  .leftJoin(contentI18n, and(
+    eq(content.id, contentI18n.contentId),
+    eq(contentI18n.locale, 'ar')
+  ))
+  .orderBy(content.createdAt)
+  .limit(5);
+
+  return (
+    <div className="admin-card">
+      <h2 className="text-lg font-semibold mb-4">آخر المحتوى</h2>
+      <div className="space-y-3">
+        {recent.map((item) => (
+          <div key={item.content.id} className="flex items-center justify-between py-2 border-b border-[var(--admin-line)] last:border-0">
+            <div>
+              <p className="font-medium">{item.i18n?.title || '—'}</p>
+              <p className="text-sm text-[var(--admin-text-muted)]">{item.content.slug}</p>
+            </div>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              item.content.status === 'published' ? 'bg-green-500/20 text-green-400' :
+              item.content.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-gray-500/20 text-gray-400'
+            }`}>
+              {item.content.status === 'published' ? 'منشور' :
+               item.content.status === 'draft' ? 'مسودة' : 'مؤرشف'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### /app/(admin-guarded)/admin/content/pages/page.tsx
+
+```typescript
+// /app/(admin-guarded)/admin/content/pages/page.tsx
+// Pages list — protected by layout
+
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
+import { getContentList, getContentTypeBySlug } from '@/lib/db/queries';
+import { DataTable } from '@/components/admin/data-table';
+
+export default async function PagesPage() {
+  const pageType = await getContentTypeBySlug('page');
+  const pages = await getContentList(
+    pageType.length ? pageType[0].id : undefined,
+    undefined,
+    'ar'
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--admin-text)]">الصفحات</h1>
+          <p className="text-[var(--admin-text-muted)] mt-1">إدارة صفحات الموقع الثابتة</p>
+        </div>
+        <Link href="/admin/content/pages/new" className="admin-btn-primary">
+          <Plus size={18} />
+          صفحة جديدة
+        </Link>
+      </div>
+
+      <Suspense fallback={<div className="admin-card h-96 animate-pulse" />}>
+        <DataTable
+          data={pages}
+          keyField="id"
+          columns={[
+            { key: 'title', header: 'العنوان', sortable: true },
+            { key: 'slug', header: 'الرابط', sortable: true },
+            { 
+              key: 'status', 
+              header: 'الحالة',
+              render: (row) => (
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  row.status === 'published' ? 'bg-green-500/20 text-green-400' :
+                  row.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {row.status === 'published' ? 'منشور' :
+                   row.status === 'draft' ? 'مسودة' : 'مؤرشف'}
+                </span>
+              )
+            },
+            { 
+              key: 'createdAt', 
+              header: 'تاريخ الإنشاء',
+              render: (row) => new Date(row.createdAt).toLocaleDateString('ar-SA')
+            },
+          ]}
+          searchFields={['title', 'slug']}
+          editPath="/admin/content/pages"
+          deleteEndpoint="/api/content"
+        />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+---
+
+### /app/(admin-guarded)/admin/content/pages/new/page.tsx
+
+```typescript
+// /app/(admin-guarded)/admin/content/pages/new/page.tsx
+// New page form — protected by layout
+
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { LocaleTabs } from '@/components/admin/locale-tabs';
+import { SEOFields } from '@/components/admin/seo-fields';
+import { BlockBuilder } from '@/components/admin/block-builder';
+import type { ContentBlock } from '@/lib/types/content-blocks';
+
+const ADMIN_PATH = process.env.NEXT_PUBLIC_ADMIN_PATH || '/admin';
+
+export default function NewPagePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    slug: '',
+    status: 'draft' as const,
+    featuredImage: '',
+    translations: {
+      ar: {
+        locale: 'ar' as const,
+        title: '',
+        excerpt: '',
+        body: [] as ContentBlock[],
+        metaTitle: '',
+        metaDescription: '',
+        ogImage: '',
+        noIndex: false,
+      },
+      en: {
+        locale: 'en' as const,
+        title: '',
+        excerpt: '',
+        body: [] as ContentBlock[],
+        metaTitle: '',
+        metaDescription: '',
+        ogImage: '',
+        noIndex: false,
+      },
+    },
+  });
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'page',
+          slug: formData.slug,
+          status: formData.status,
+          featuredImage: formData.featuredImage,
+          translations: Object.values(formData.translations),
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Failed to create page');
+      }
+
+      router.push(`${ADMIN_PATH}/content/pages`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTranslation = (locale: 'ar' | 'en', field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      translations: {
+        ...prev.translations,
+        [locale]: {
+          ...prev.translations[locale],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">صفحة جديدة</h1>
+        <p className="text-[var(--admin-text-muted)] mt-1">إنشاء صفحة ثابتة جديدة</p>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="admin-card space-y-4">
+        <h2 className="text-lg font-medium">المعلومات الأساسية</h2>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm mb-2">الرابط (Slug) *</label>
+            <input
+              type="text"
+              value={formData.slug}
+              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              className="admin-input"
+              placeholder="about-us"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm mb-2">الحالة</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+              className="admin-input"
+            >
+              <option value="draft">مسودة</option>
+              <option value="published">منشور</option>
+              <option value="archived">مؤرشف</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm mb-2">صورة الغلاف</label>
+          <input
+            type="url"
+            value={formData.featuredImage}
+            onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
+            className="admin-input"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+      </div>
+
+      <LocaleTabs defaultLocale="ar">
+        {(locale) => (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm mb-2">العنوان *</label>
+              <input
+                type="text"
+                value={formData.translations[locale].title}
+                onChange={(e) => updateTranslation(locale, 'title', e.target.value)}
+                className="admin-input"
+                placeholder="عنوان الصفحة"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2">مقتطف</label>
+              <textarea
+                value={formData.translations[locale].excerpt}
+                onChange={(e) => updateTranslation(locale, 'excerpt', e.target.value)}
+                className="admin-input min-h-[80px]"
+                placeholder="وصف مختصر للصفحة"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2">المحتوى</label>
+              <BlockBuilder
+                blocks={formData.translations[locale].body}
+                onChange={(blocks) => updateTranslation(locale, 'body', blocks)}
+              />
+            </div>
+
+            <SEOFields
+              values={formData.translations[locale]}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  translations: {
+                    ...prev.translations,
+                    [locale]: {
+                      ...prev.translations[locale],
+                      ...values,
+                    },
+                  },
+                }));
+              }}
+            />
+          </div>
+        )}
+      </LocaleTabs>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="admin-btn-primary disabled:opacity-50"
+        >
+          {loading ? 'جاري الحفظ...' : 'حفظ الصفحة'}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push(`${ADMIN_PATH}/content/pages`)}
+          className="admin-btn-ghost"
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### /.env.example (UPDATED — both variables)
+
+```bash
+# Admin path — must match on server and client
+ADMIN_PATH="/admin"
+NEXT_PUBLIC_ADMIN_PATH="/admin"
+
+# IMPORTANT: These must be identical. 
+# ADMIN_PATH is used by server components (layout, middleware)
+# NEXT_PUBLIC_ADMIN_PATH is used by client components (login form, navigation)
+```
+
+---
+
+### /middleware.ts (UPDATED — handle both route groups)
+
+```typescript
+// /middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { verifyAccessToken } from './lib/auth/session';
+
+const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
+const PUBLIC_FILE = /\.(.*)$/;
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Public API routes
+  const publicApiRoutes = ['/api/health', '/api/auth/login'];
+  if (publicApiRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+  
+  // Protect API routes
+  if (pathname.startsWith('/api/')) {
+    const accessToken = request.cookies.get('access_token')?.value;
+    
+    if (!accessToken) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    try {
+      await verifyAccessToken(accessToken);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+  
+  if (PUBLIC_FILE.test(pathname)) {
+    return NextResponse.next();
+  }
+  
+  // Admin login page is public — don't redirect
+  if (pathname === `${ADMIN_PATH}/login`) {
+    return NextResponse.next();
+  }
+  
+  // All other admin routes need auth
+  if (pathname.startsWith(ADMIN_PATH)) {
+    const accessToken = request.cookies.get('access_token')?.value;
+    
+    if (!accessToken) {
+      return NextResponse.redirect(new URL(`${ADMIN_PATH}/login`, request.url));
+    }
+    
+    try {
+      const payload = await verifyAccessToken(accessToken);
+      
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-user-id', payload.sub);
+      requestHeaders.set('x-user-role', payload.role);
+      
+      return NextResponse.next({
+        request: { headers: requestHeaders },
+      });
+    } catch {
+      return NextResponse.redirect(new URL(`${ADMIN_PATH}/login`, request.url));
+    }
+  }
+  
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
+```
+
+---
+
+## CORRECTED FILE STRUCTURE
+
+```
+app/
+├── (admin-public)/           ← NO auth layout
+│   └── admin/
+│       └── login/
+│           └── page.tsx        ← Client Component, uses NEXT_PUBLIC_ADMIN_PATH
+│
+├── (admin-guarded)/           ← HAS auth layout
+│   ├── layout.tsx              ← Auth check, redirect to /admin/login
+│   └── admin/
+│       ├── page.tsx            ← Dashboard
+│       ├── content/
+│       │   └── pages/
+│       │       ├── page.tsx    ← Pages list
+│       │       └── new/
+│       │           └── page.tsx ← New page form
+│       └── ...other routes
+│
+└── (site)/
+    └── [locale]/
+        ├── layout.tsx
+        └── page.tsx
+```
+
+---
+
+## VERIFICATION
+
+| Check | Before | After |
+|-------|--------|-------|
+| /admin/login with no cookie | Infinite redirect loop | ✅ Renders login form |
+| /admin with no cookie | Redirect to /admin/login | ✅ Redirect to /admin/login |
+| /admin with valid cookie | Works | ✅ Works |
+| Login form redirect after success | Hardcoded '/admin' | ✅ Uses NEXT_PUBLIC_ADMIN_PATH |
+| Both env vars set | Only ADMIN_PATH | ✅ ADMIN_PATH + NEXT_PUBLIC_ADMIN_PATH |
+
+---
+
+## IMPORTANT: Environment Variables Must Match
+
+```bash
+# .env
+ADMIN_PATH="/admin"
+NEXT_PUBLIC_ADMIN_PATH="/admin"
+
+# If you change one, you MUST change the other to the same value
+# Mismatch causes post-login 404
+```
