@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Layout/structure tokens read from the live Juman admin
+       (jumanlady.com/jojo-wadmin); accent replaced with the New Aeon brand
+       yellow sampled from logo-dark.png (#FFC619 is 5288px of the mark). */
+    --admin-bg: #0f1115;
+    --admin-sidebar: #0c0e13;
+    --admin-surface: #171a21;
+    --admin-elevated: #1c2029;
+    --admin-line: #2a303c;
+    --admin-text: #e8eaef;
+    --admin-text-secondary: #aeb4c0;
+    --admin-text-muted: #8b93a5;
+    --admin-accent: #ffc619;
+    --admin-accent-soft: #fddc0d;
+    --admin-accent-muted: rgba(255, 198, 25, 0.15);
+    /* Kept as aliases so existing components using --admin-primary still work. */
+    --admin-primary: #ffc619;
+    --admin-primary-hover: #fddc0d;
+    --admin-primary-muted: rgba(255, 198, 25, 0.15);
+    --admin-success: #2f6b4f;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ee4958;
+    --admin-info: #3b82f6;
+    --sidebar-width: 16rem;
+    --header-height: 4rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  /*
+   * next/font generates a hashed family name and exposes it as --font-cairo.
+   * The previous rules named the literal families 'Cairo' / 'Inter', which the
+   * generated stylesheet never defines — so the fonts silently never applied.
+   */
+  [dir='rtl'] {
+    font-family: var(--font-cairo), system-ui, sans-serif;
+  }
+
+  [dir='ltr'] {
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+
+  /* Latin runs inside Arabic copy need an explicit LTR context. */
+  [dir='rtl'] :is(code, kbd, samp, pre) {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-family: ui-monospace, monospace;
+  }
+
+
+  /*
+   * Chrome repaints autofilled inputs with its own pale-blue background,
+   * which overrides the dark theme and makes the text unreadable. There is no
+   * way to set background-color directly on :-webkit-autofill, so the colour
+   * is painted with a large inset shadow and the caret/text set explicitly.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--admin-text);
+    -webkit-box-shadow: 0 0 0 1000px var(--admin-bg) inset;
+    caret-color: var(--admin-text);
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--admin-primary);
+    outline-offset: 2px;
+  }
+
+  .admin-scroll::-webkit-scrollbar { width: 6px; }
+  .admin-scroll::-webkit-scrollbar-track { background: transparent; }
+  .admin-scroll::-webkit-scrollbar-thumb { background: var(--admin-line); border-radius: 3px; }
+  .admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--admin-text-muted); }
+}
+
+@layer components {
+  .admin-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
+    background: var(--admin-accent);
+    color: #130c0e; /* the logo's ink, for text on the yellow accent */
+    min-block-size: 2.75rem;
+  }
+
+  .admin-btn:hover {
+    background: var(--admin-accent-soft);
+  }
+
+  .admin-btn-primary {
+    @apply admin-btn;
+  }
+
+  .admin-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
+    border: 1px solid var(--admin-line);
+    color: var(--admin-text-secondary);
+    min-block-size: 2.75rem;
+  }
+
+  .admin-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--admin-text);
+  }
+
+  .admin-input {
+    @apply w-full rounded-xl px-3 py-2.5 text-sm transition-all focus:outline-none focus:ring-2;
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-line);
+    color: var(--admin-text);
+  }
+
+  .admin-input:focus {
+    --tw-ring-color: var(--admin-accent);
+    border-color: transparent;
+  }
+
+  /* 14px radius, matching the live Juman cards. */
+  .admin-card {
+    @apply rounded-[14px] p-5;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+  }
+
+  .admin-nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors;
+    color: var(--admin-text-secondary);
+  }
+
+  .admin-nav-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+  }
+
+  .admin-nav-link[aria-current='page'],
+  .admin-nav-link.is-active {
+    background: var(--admin-accent-muted);
+    color: var(--admin-accent-soft);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

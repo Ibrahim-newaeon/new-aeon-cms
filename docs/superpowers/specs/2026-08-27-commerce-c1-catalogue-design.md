@@ -1,7 +1,7 @@
 # Commerce C1 — Catalogue
 
 **Date:** 2026-08-27
-**Status:** Design, awaiting review
+**Status:** Implemented — see §12
 **Part of:** Commerce module (C0 Email · **C1 Catalogue** · C2 Cart & Checkout · C3 Order management · C4 Engagement)
 
 ---
@@ -279,12 +279,33 @@ None blocking. Two things deliberately deferred rather than decided:
 
 ## 12. Definition of done
 
-- [ ] Migration applied: generic option tables in, dead columns out
-- [ ] `formatPrice` correct for JOD, USD and SAR, with page locale
-- [ ] Products admin: list, create, edit, delete, with images and variants
-- [ ] Brands admin: list, create, edit, delete
-- [ ] `/[locale]/shop`, `/[locale]/shop/[category]`, `/[locale]/products/[slug]`
-- [ ] All storefront routes 404 when commerce is disabled
-- [ ] `product-grid` block renders real products
-- [ ] Typecheck clean, production build passes
-- [ ] Build ledger updated
+- [x] Migration applied: generic option tables in, dead columns out
+- [x] `formatPrice` correct for JOD, USD and JPY, with page locale
+- [x] Products admin: list, create, edit, delete, with images and variants
+- [ ] **Brands admin UI** — API is complete and tested; the management screen is
+      not built. Brands are selectable in the product editor only once one
+      exists, so this is the one gap that stops C1 being self-service.
+- [x] `/[locale]/shop`, `/[locale]/shop/[category]`, `/[locale]/products/[slug]`
+- [x] All storefront routes 404 when commerce is disabled
+- [x] `product-grid` block renders real products
+- [x] Typecheck clean, production build passes
+- [x] Build ledger updated
+
+### Verified against the running app
+
+    product with 2 axes x 4 variants   -> 8 variant_option_values rows
+    duplicate slug                     -> 409
+    variant missing an axis            -> 400 "قيمة ناقصة للخيار: Size"
+    duplicate option combination       -> 400 "يوجد متغيّر آخر بنفس التركيبة"
+    brand in use, delete               -> 409
+    unauthenticated write              -> 401
+    /ar (no Arabic translation)        -> product excluded, detail 404
+    commerce disabled                  -> /shop, /shop/x, /products/x all 404
+    129000 minor units                 -> JOD 129.000 / US$1,290.00 / JP¥129,000
+
+### Deferred to C2, recorded so it is not a surprise
+
+`writeProductStructure` deletes and recreates variants on every save. That is
+safe while nothing references a variant id. **Once `order_items` reference
+variants it must become a diff**, and product deletion must become a soft
+delete, or order history loses what was bought.

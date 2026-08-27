@@ -1,0 +1,373 @@
+// components/admin/page-form.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Loader2, Save, ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { BlockBuilder } from './block-builder';
+// Types and the factory live in a non-client module so the server pages can
+// import them without crossing the client boundary.
+import { TaxonomyPicker } from './taxonomy-picker';
+import {
+  emptyTranslation,
+  type PageFormValue,
+  type TaxonomyOption,
+  type TranslationDraft,
+} from '@/lib/content/page-draft';
+
+export type { PageFormValue, TranslationDraft };
+
+const LOCALES: ReadonlyArray<'ar' | 'en'> = ['ar', 'en'];
+const LOCALE_LABEL: Record<'ar' | 'en', string> = { ar: 'العربية', en: 'English' };
+
+interface PageFormProps {
+  mode: 'create' | 'edit';
+  contentId?: string;
+  initial: PageFormValue;
+  adminPath: string;
+  /** Which content type this form writes. Drives the API payload and labels. */
+  contentType?: 'page' | 'post';
+  taxonomy?: {
+    categories: TaxonomyOption[];
+    tags: TaxonomyOption[];
+    hasCategories: boolean;
+    hasTags: boolean;
+  };
+}
+
+const TYPE_LABEL: Record<'page' | 'post', { newTitle: string; editTitle: string; segment: string }> = {
+  page: { newTitle: 'صفحة جديدة', editTitle: 'تعديل الصفحة', segment: 'pages' },
+  post: { newTitle: 'مقال جديد', editTitle: 'تعديل المقال', segment: 'posts' },
+};
+
+export function PageForm({
+  mode,
+  contentId,
+  initial,
+  adminPath,
+  contentType = 'page',
+  taxonomy,
+}: PageFormProps) {
+  const labels = TYPE_LABEL[contentType];
+  const router = useRouter();
+  const [value, setValue] = useState<PageFormValue>(initial);
+  const [activeLocale, setActiveLocale] = useState<'ar' | 'en'>('ar');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const active =
+    value.translations.find((t) => t.locale === activeLocale) ?? emptyTranslation(activeLocale);
+
+  const patchTranslation = (patch: Partial<TranslationDraft>) => {
+    setValue((prev) => {
+      const exists = prev.translations.some((t) => t.locale === activeLocale);
+      const translations = exists
+        ? prev.translations.map((t) => (t.locale === activeLocale ? { ...t, ...patch } : t))
+        : [...prev.translations, { ...emptyTranslation(activeLocale), ...patch }];
+      return { ...prev, translations };
+    });
+  };
+
+  /**
+   * Locale trees are independent by design (see the brainstorming decision):
+   * body lives on contentI18n, one row per locale, so no migration is needed.
+   * The trade-off is drift — this copies the Arabic structure across when the
+   * other locale is still empty.
+   */
+  const copyStructureFrom = (from: 'ar' | 'en') => {
+    const source = value.translations.find((t) => t.locale === from);
+    if (!source) return;
+    if (active.body.length > 0 && !window.confirm('سيتم استبدال الأقسام الحالية. متابعة؟')) return;
+    patchTranslation({ body: structuredClone(source.body) });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    // Locales the author never filled in would otherwise be saved as empty
+    // rows, which the public site would render as a blank page.
+    const payloadTranslations = value.translations.filter((t) => t.title.trim().length > 0);
+
+    if (payloadTranslations.length === 0) {
+      setError('أدخل عنواناً للغة واحدة على الأقل.');
+      setSaving(false);
+      return;
+    }
+
+    const payload = {
+      slug: value.slug,
+      status: value.status,
+      ...(value.featuredImage ? { featuredImage: value.featuredImage } : {}),
+      ...(mode === 'create' ? { type: contentType } : {}),
+      categoryIds: value.categoryIds,
+      tagIds: value.tagIds,
+      translations: payloadTranslations.map((t) => ({
+        locale: t.locale,
+        title: t.title,
+        ...(t.excerpt ? { excerpt: t.excerpt } : {}),
+        body: t.body,
+        ...(t.metaTitle ? { metaTitle: t.metaTitle } : {}),
+        ...(t.metaDescription ? { metaDescription: t.metaDescription } : {}),
+        ...(t.ogImage ? { ogImage: t.ogImage } : {}),
+        noIndex: t.noIndex,
+      })),
+    };
+
+    try {
+      const res = await fetch(
+        mode === 'create' ? '/api/content' : `/api/content/${contentId}`,
+        {
+          method: mode === 'create' ? 'POST' : 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success) {
+        const issue = data?.error?.issues?.[0];
+        throw new Error(
+          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? 'تعذّر الحفظ'
+        );
+      }
+
+      router.push(`${adminPath}/content/${labels.segment}`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6" data-test-id="page-form">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">
+          {mode === 'create' ? labels.newTitle : labels.editTitle}
+        </h1>
+
+        <div className="flex items-center gap-2">
+          {mode === 'edit' && value.slug && (
+            <Link
+              href={`/ar/${value.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-btn-ghost"
+              data-test-id="page-preview"
+            >
+              <ExternalLink size={16} aria-hidden="true" />
+              معاينة
+            </Link>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="admin-btn-primary disabled:opacity-50"
+            data-test-id="page-save"
+          >
+            {saving ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Save size={16} aria-hidden="true" />
+            )}
+            {saving ? 'جارٍ الحفظ…' : 'حفظ'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="admin-card border-[var(--admin-danger)] text-sm text-[var(--admin-danger)]">
+          {error}
+        </p>
+      )}
+
+      <div className="admin-card grid gap-4 sm:grid-cols-3">
+        <label className="block sm:col-span-2">
+          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">الرابط (slug)</span>
+          <input
+            type="text"
+            dir="ltr"
+            required
+            className="admin-input text-start"
+            value={value.slug}
+            onChange={(e) => setValue((p) => ({ ...p, slug: e.target.value }))}
+            placeholder="about-us"
+            data-test-id="page-slug"
+          />
+          <span className="mt-1 block text-xs text-[var(--admin-text-muted)]">
+            أحرف صغيرة وأرقام وشرطات فقط.
+          </span>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">الحالة</span>
+          <select
+            className="admin-input"
+            value={value.status}
+            onChange={(e) =>
+              setValue((p) => ({ ...p, status: e.target.value as PageFormValue['status'] }))
+            }
+            data-test-id="page-status"
+          >
+            <option value="draft">مسودة</option>
+            <option value="published">منشور</option>
+            <option value="archived">مؤرشف</option>
+          </select>
+        </label>
+      </div>
+
+      {taxonomy && (taxonomy.hasCategories || taxonomy.hasTags) && (
+        <div className="admin-card space-y-5">
+          {taxonomy.hasCategories && (
+            <TaxonomyPicker
+              label="الفئات"
+              emptyHint="لا توجد فئات بعد — أنشئها من قسم الفئات."
+              options={taxonomy.categories}
+              selected={value.categoryIds}
+              onChange={(categoryIds) => setValue((p) => ({ ...p, categoryIds }))}
+              testId="picker-categories"
+            />
+          )}
+
+          {taxonomy.hasTags && (
+            <TaxonomyPicker
+              label="الوسوم"
+              emptyHint="لا توجد وسوم بعد — أنشئها من قسم الوسوم."
+              options={taxonomy.tags}
+              selected={value.tagIds}
+              onChange={(tagIds) => setValue((p) => ({ ...p, tagIds }))}
+              testId="picker-tags"
+            />
+          )}
+
+          <p className="text-xs text-[var(--admin-text-muted)]">
+            الفئات والوسوم تخصّ العنصر ككل، لا كل لغة على حدة.
+          </p>
+        </div>
+      )}
+
+      {/* Locale tabs */}
+      <div role="tablist" aria-label="اللغات" className="flex gap-1 border-b border-[var(--admin-line)]">
+        {LOCALES.map((locale) => {
+          const filled = value.translations.some(
+            (t) => t.locale === locale && t.title.trim().length > 0
+          );
+          return (
+            <button
+              key={locale}
+              type="button"
+              role="tab"
+              aria-selected={activeLocale === locale}
+              onClick={() => setActiveLocale(locale)}
+              data-test-id={`locale-tab-${locale}`}
+              className={cn(
+                'flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition-colors',
+                activeLocale === locale
+                  ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
+                  : 'border-transparent text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]'
+              )}
+            >
+              {LOCALE_LABEL[locale]}
+              <span
+                aria-label={filled ? 'مكتمل' : 'فارغ'}
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  filled ? 'bg-[var(--admin-success)]' : 'bg-[var(--admin-text-muted)]'
+                )}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      <div role="tabpanel" className="space-y-6">
+        <div className="admin-card space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">العنوان</span>
+            <input
+              type="text"
+              className="admin-input"
+              value={active.title}
+              onChange={(e) => patchTranslation({ title: e.target.value })}
+              data-test-id="page-title"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">المقتطف</span>
+            <textarea
+              rows={2}
+              className="admin-input resize-y"
+              value={active.excerpt}
+              onChange={(e) => patchTranslation({ excerpt: e.target.value })}
+            />
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-[var(--admin-text)]">الأقسام</h2>
+          {LOCALES.filter((l) => l !== activeLocale).map((other) => (
+            <button
+              key={other}
+              type="button"
+              onClick={() => copyStructureFrom(other)}
+              className="admin-btn-ghost text-xs"
+              data-test-id={`copy-structure-${other}`}
+            >
+              نسخ الأقسام من {LOCALE_LABEL[other]}
+            </button>
+          ))}
+        </div>
+
+        {/* Remounted per locale so BlockBuilder's internal keys reset cleanly. */}
+        <BlockBuilder
+          key={activeLocale}
+          blocks={active.body}
+          onChange={(body) => patchTranslation({ body })}
+        />
+
+        <details className="admin-card">
+          <summary className="cursor-pointer text-sm font-medium">تحسين محركات البحث (SEO)</summary>
+          <div className="mt-4 space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">عنوان الميتا</span>
+              <input
+                type="text"
+                className="admin-input"
+                value={active.metaTitle}
+                onChange={(e) => patchTranslation({ metaTitle: e.target.value })}
+                maxLength={255}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">وصف الميتا</span>
+              <textarea
+                rows={2}
+                className="admin-input resize-y"
+                value={active.metaDescription}
+                onChange={(e) => patchTranslation({ metaDescription: e.target.value })}
+                maxLength={500}
+              />
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={active.noIndex}
+                onChange={(e) => patchTranslation({ noIndex: e.target.checked })}
+                data-test-id="page-noindex"
+              />
+              <span className="text-sm">منع الفهرسة (noindex)</span>
+            </label>
+          </div>
+        </details>
+      </div>
+    </form>
+  );
+}

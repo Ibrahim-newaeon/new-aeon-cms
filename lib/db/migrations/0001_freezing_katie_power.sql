@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "snap_pixel_id" varchar(255);
