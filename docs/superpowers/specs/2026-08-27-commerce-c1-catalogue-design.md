@@ -136,8 +136,9 @@ new Intl.NumberFormat('ar-SA', { currency, minimumFractionDigits: 3 })
 Prices are stored as integers in the currency's minor unit. `/1000` and three
 decimals are correct for **JOD only** (1 dinar = 1000 fils). Currency is
 user-configurable in Settings, so a store set to `USD` or `SAR` — two decimal
-places, minor unit of 100 — displays every price **10× too high**. The locale is
-also pinned to `ar-SA` regardless of the page.
+places, minor unit of 100 — renders `12900` as **`$12.900` instead of
+`$129.00`**: a tenth of the real price. On a live store that is selling at 90%
+off. The locale is also pinned to `ar-SA` regardless of the page.
 
 **Fix in C1**, because C1 is where prices first reach a visitor:
 
