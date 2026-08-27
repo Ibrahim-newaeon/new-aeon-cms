@@ -1,7 +1,7 @@
 # Commerce C1 — Catalogue
 
 **Date:** 2026-08-27
-**Status:** Implemented — see §12
+**Status:** Complete
 **Part of:** Commerce module (C0 Email · **C1 Catalogue** · C2 Cart & Checkout · C3 Order management · C4 Engagement)
 
 ---
@@ -282,9 +282,8 @@ None blocking. Two things deliberately deferred rather than decided:
 - [x] Migration applied: generic option tables in, dead columns out
 - [x] `formatPrice` correct for JOD, USD and JPY, with page locale
 - [x] Products admin: list, create, edit, delete, with images and variants
-- [ ] **Brands admin UI** — API is complete and tested; the management screen is
-      not built. Brands are selectable in the product editor only once one
-      exists, so this is the one gap that stops C1 being self-service.
+- [x] Brands admin: list, create, edit, delete — with a product count so the
+      in-use delete refusal is visible before clicking rather than after
 - [x] `/[locale]/shop`, `/[locale]/shop/[category]`, `/[locale]/products/[slug]`
 - [x] All storefront routes 404 when commerce is disabled
 - [x] `product-grid` block renders real products

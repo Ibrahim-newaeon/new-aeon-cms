@@ -46,6 +46,7 @@ function buildNavigation(adminPath: string): NavItem[] {
     { key: 'nav.media', href: `${adminPath}/media`, icon: ImageIcon },
     { key: 'nav.navigation', href: `${adminPath}/navigation`, icon: Images },
     { key: 'nav.products', href: `${adminPath}/commerce/products`, icon: ShoppingBag, commerceOnly: true },
+    { key: 'nav.brands', href: `${adminPath}/commerce/brands`, icon: Tag, commerceOnly: true },
     { key: 'nav.orders', href: `${adminPath}/commerce/orders`, icon: Package, commerceOnly: true },
     { key: 'nav.coupons', href: `${adminPath}/commerce/coupons`, icon: Ticket, commerceOnly: true },
     { key: 'nav.forms', href: `${adminPath}/forms`, icon: Link2 },
