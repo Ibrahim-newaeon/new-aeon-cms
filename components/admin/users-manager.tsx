@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, X, Loader2, KeyRound, Pencil, UserX, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { userRoles, ROLE_LABEL, ROLE_DESCRIPTION, type UserRole } from '@/lib/user-schema';
+import { useT } from './i18n-provider';
 
 export interface UserRow {
   id: string;
@@ -18,6 +19,7 @@ export interface UserRow {
 }
 
 export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; currentUserId: string }) {
+  const t = useT();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [mode, setMode] = useState<'idle' | 'create' | 'edit' | 'password'>('idle');
@@ -47,7 +49,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
-      throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر التنفيذ');
+      throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.actionFailed'));
     }
     return data;
   };
@@ -59,36 +61,36 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
     try {
       if (mode === 'create') {
         await call('/api/users', 'POST', { ...form, password });
-        setNotice('تم إنشاء الحساب.');
+        setNotice(t('users.created'));
       } else if (mode === 'edit' && targetId) {
         await call(`/api/users/${targetId}`, 'PATCH', {
           name: form.name,
           role: form.role,
           isActive: form.isActive,
         });
-        setNotice('تم حفظ التغييرات.');
+        setNotice(t('users.savedChanges'));
       } else if (mode === 'password' && targetId) {
         await call(`/api/users/${targetId}`, 'PUT', { password });
-        setNotice('تم تغيير كلمة المرور. ستُغلق جلسات هذا المستخدم.');
+        setNotice(t('users.passwordChanged'));
       }
       reset();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر التنفيذ');
+      setError(err instanceof Error ? err.message : t('common.actionFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const deactivate = async (row: UserRow) => {
-    if (!window.confirm(`سيتم تعطيل حساب ${row.name}. يمكن إعادة تفعيله لاحقاً. متابعة؟`)) return;
+    if (!window.confirm(t('users.deactivateConfirm', { name: row.name }))) return;
     setError(null);
     try {
       await call(`/api/users/${row.id}`, 'DELETE', {});
       setRows((p) => p.map((r) => (r.id === row.id ? { ...r, isActive: false } : r)));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر التعطيل');
+      setError(err instanceof Error ? err.message : t('users.deactivateFailed'));
     }
   };
 
@@ -96,7 +98,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
     <div className="space-y-5" data-test-id="users-manager">
       {activeAdmins === 1 && (
         <p className="admin-card border-[var(--admin-warning)] text-sm text-[var(--admin-warning)]">
-          يوجد مدير عام نشط واحد فقط. لا يمكن تعطيله أو تغيير صلاحيته — لا توجد وسيلة استرجاع إذا فُقد الوصول.
+          {t('users.lastAdminWarning')}
         </p>
       )}
 
@@ -112,7 +114,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
           data-test-id="user-new"
         >
           <Plus size={16} aria-hidden="true" />
-          مستخدم جديد
+          {t('users.new')}
         </button>
       )}
 
@@ -126,9 +128,9 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">
-              {mode === 'create' ? 'مستخدم جديد' : mode === 'edit' ? 'تعديل المستخدم' : 'تغيير كلمة المرور'}
+              {mode === 'create' ? t('users.new') : mode === 'edit' ? t('users.edit') : t('users.changePassword')}
             </h2>
-            <button type="button" onClick={reset} aria-label="إغلاق" className="rounded p-1.5 hover:bg-white/5">
+            <button type="button" onClick={reset} aria-label={t('common.close')} className="rounded p-1.5 hover:bg-white/5">
               <X size={16} aria-hidden="true" />
             </button>
           </div>
@@ -136,7 +138,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
           {mode !== 'password' && (
             <div className="grid gap-4 sm:grid-cols-2">
               {mode === 'create' && (
-                <Field label="البريد الإلكتروني">
+                <Field label={t('auth.email')}>
                   <input
                     type="email"
                     dir="ltr"
@@ -148,7 +150,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 </Field>
               )}
 
-              <Field label="الاسم">
+              <Field label={t('common.name')}>
                 <input
                   type="text"
                   className="admin-input"
@@ -158,7 +160,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 />
               </Field>
 
-              <Field label="الصلاحية" hint={ROLE_DESCRIPTION[form.role]}>
+              <Field label={t('users.role')} hint={ROLE_DESCRIPTION[form.role]}>
                 <select
                   className="admin-input"
                   value={form.role}
@@ -180,13 +182,13 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                   onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
                   data-test-id="user-active"
                 />
-                الحساب مفعّل
+                {t('users.accountActive')}
               </label>
             </div>
           )}
 
           {(mode === 'create' || mode === 'password') && (
-            <Field label="كلمة المرور" hint="١٢ حرفاً على الأقل. الطول أهم من تعقيد الرموز.">
+            <Field label={t('users.password')} hint={t('users.passwordHint')}>
               <input
                 type="password"
                 dir="ltr"
@@ -198,7 +200,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
               />
               {password.length > 0 && password.length < 12 && (
                 <span className="mt-1 block text-xs text-[var(--admin-danger)]">
-                  ناقص {12 - password.length} حرفاً
+                  {t('users.passwordShort', { count: 12 - password.length })}
                 </span>
               )}
             </Field>
@@ -212,7 +214,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
 
           <button type="button" onClick={() => void submit()} disabled={busy} className="admin-btn" data-test-id="user-save">
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
@@ -232,7 +234,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                   )}
                   {isSelf && (
                     <span className="rounded-full bg-[var(--admin-accent-muted)] px-2 py-0.5 text-[10px] text-[var(--admin-accent-soft)]">
-                      أنت
+                      {t('users.you')}
                     </span>
                   )}
                 </p>
@@ -251,7 +253,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                     : 'bg-white/5 text-[var(--admin-text-muted)]'
                 )}
               >
-                {row.isActive ? 'مفعّل' : 'معطّل'}
+                {row.isActive ? t('common.enabled') : t('common.disabled')}
               </span>
 
               <span className="w-28 text-xs text-[var(--admin-text-muted)]" dir="ltr">
@@ -266,7 +268,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                   setMode('edit');
                   setNotice(null);
                 }}
-                aria-label={`تعديل ${row.name}`}
+                aria-label={t('common.editItem', { name: row.name })}
                 className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
                 data-test-id={`user-edit-${row.id}`}
               >
@@ -281,7 +283,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                   setMode('password');
                   setNotice(null);
                 }}
-                aria-label={`تغيير كلمة مرور ${row.name}`}
+                aria-label={t('users.changePasswordFor', { name: row.name })}
                 className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
                 data-test-id={`user-password-${row.id}`}
               >
@@ -292,8 +294,8 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 type="button"
                 onClick={() => void deactivate(row)}
                 disabled={isSelf || isLastAdmin || !row.isActive}
-                aria-label={`تعطيل ${row.name}`}
-                title={isSelf ? 'لا يمكنك تعطيل حسابك' : isLastAdmin ? 'آخر مدير عام نشط' : 'تعطيل'}
+                aria-label={t('users.deactivate', { name: row.name })}
+                title={isSelf ? t('users.cannotDeactivateSelf') : isLastAdmin ? t('users.lastActiveAdmin') : t('users.deactivateAction')}
                 className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10 disabled:opacity-30"
                 data-test-id={`user-deactivate-${row.id}`}
               >
