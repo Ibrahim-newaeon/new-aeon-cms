@@ -1,6 +1,8 @@
 // components/admin/section-placeholder.tsx
 import Link from 'next/link';
 import { Construction } from 'lucide-react';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 /**
  * Every sidebar entry needs a destination, otherwise the nav renders as
@@ -8,7 +10,7 @@ import { Construction } from 'lucide-react';
  * here — styled like the rest of the panel and explicit that they are not built,
  * rather than silently broken.
  */
-export function SectionPlaceholder({
+export async function SectionPlaceholder({
   title,
   description,
   backHref,
@@ -17,6 +19,8 @@ export function SectionPlaceholder({
   description: string;
   backHref: string;
 }) {
+  const t = createTranslator(await getAdminLocale());
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,10 +31,10 @@ export function SectionPlaceholder({
       <div className="admin-card flex flex-col items-center gap-3 py-16 text-center">
         <Construction size={28} aria-hidden="true" className="text-[var(--admin-accent)]" />
         <p className="text-sm text-[var(--admin-text-secondary)]">
-          هذا القسم قيد التطوير ولم يُنفَّذ بعد.
+          {t('common.notImplemented')}
         </p>
         <Link href={backHref} className="admin-btn-ghost mt-2">
-          العودة إلى لوحة التحكم
+          {t('common.back')}
         </Link>
       </div>
     </div>

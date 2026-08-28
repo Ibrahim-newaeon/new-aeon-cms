@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Search, ArrowUpDown, Eye, Edit, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n-provider';
 
 export interface Column<T> {
   key: keyof T | string;
@@ -45,8 +46,9 @@ export function DataTable<T extends Record<string, unknown>>({
   deleteEndpoint,
   viewPath,
   onDeleted,
-  emptyMessage = 'لا توجد عناصر لعرضها',
+  emptyMessage,
 }: DataTableProps<T>) {
+  const t = useT();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -100,7 +102,7 @@ export function DataTable<T extends Record<string, unknown>>({
    */
   const handleDelete = async (id: string) => {
     if (!deleteEndpoint) return;
-    if (!window.confirm('هل أنت متأكد من الحذف؟')) return;
+    if (!window.confirm(t('common.confirmDelete'))) return;
 
     setDeletingId(id);
     setError(null);
@@ -112,7 +114,7 @@ export function DataTable<T extends Record<string, unknown>>({
       if (!res.ok) throw new Error('Delete failed');
       onDeleted?.(id);
     } catch {
-      setError('تعذّر الحذف. حاول مرة أخرى.');
+      setError(t('common.deleteFailed'));
     } finally {
       setDeletingId(null);
     }
@@ -132,8 +134,8 @@ export function DataTable<T extends Record<string, unknown>>({
           />
           <input
             type="search"
-            placeholder="بحث..."
-            aria-label="بحث"
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="admin-input pe-10"
@@ -193,7 +195,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 })}
                 {hasActions && (
                   <th scope="col" className="px-4 py-3 w-10">
-                    إجراءات
+                    {t('common.actions')}
                   </th>
                 )}
               </tr>
@@ -205,7 +207,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     colSpan={columns.length + (hasActions ? 1 : 0)}
                     className="px-4 py-10 text-center text-sm text-[var(--admin-text-muted)]"
                   >
-                    {emptyMessage}
+                    {emptyMessage ?? t('common.empty')}
                   </td>
                 </tr>
               )}
@@ -235,7 +237,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           {viewPath && (
                             <Link
                               href={`${viewPath}/${id}`}
-                              aria-label="عرض"
+                              aria-label={t('common.view')}
                               className="inline-block rounded p-1.5 hover:bg-white/5"
                               data-test-id={`data-table-view-${id}`}
                             >
@@ -245,7 +247,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           {editPath && (
                             <Link
                               href={`${editPath}/${id}/edit`}
-                              aria-label="تعديل"
+                              aria-label={t('common.edit')}
                               className="inline-block rounded p-1.5 hover:bg-white/5"
                               data-test-id={`data-table-edit-${id}`}
                             >
@@ -257,7 +259,7 @@ export function DataTable<T extends Record<string, unknown>>({
                               type="button"
                               onClick={() => handleDelete(id)}
                               disabled={deletingId === id}
-                              aria-label="حذف"
+                              aria-label={t('common.delete')}
                               className="rounded p-1.5 hover:bg-white/5 disabled:opacity-40"
                               data-test-id={`data-table-delete-${id}`}
                             >

@@ -3,6 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/admin/data-table';
+import { useT } from './i18n-provider';
 
 /**
  * Column definitions carry `render` callbacks — functions. A Server Component
@@ -19,12 +20,6 @@ export interface PageRow extends Record<string, unknown> {
   createdAt: string | null;
 }
 
-const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
-  published: 'منشور',
-  draft: 'مسودة',
-  archived: 'مؤرشف',
-};
-
 const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
   published: 'bg-green-500/20 text-green-400',
   draft: 'bg-yellow-500/20 text-yellow-400',
@@ -33,6 +28,16 @@ const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
 
 export function PagesTable({ rows, adminPath }: { rows: PageRow[]; adminPath: string }) {
   const router = useRouter();
+  const t = useT();
+
+  // Built inside the component rather than at module scope: it needs the
+  // translator, and a hook cannot be called at module level.
+  const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
+    published: t('status.published'),
+    draft: t('status.draft'),
+    archived: t('status.archived'),
+  };
+
 
   return (
     <DataTable<PageRow>
@@ -43,11 +48,11 @@ export function PagesTable({ rows, adminPath }: { rows: PageRow[]; adminPath: st
       onDeleted={() => router.refresh()}
       deleteEndpoint="/api/content"
       columns={[
-        { key: 'title', header: 'العنوان', sortable: true },
-        { key: 'slug', header: 'الرابط', sortable: true },
+        { key: 'title', header: t('pages.colTitle'), sortable: true },
+        { key: 'slug', header: t('common.slug'), sortable: true },
         {
           key: 'status',
-          header: 'الحالة',
+          header: t('common.status'),
           render: (row) => {
             const status = row.status ?? 'draft';
             return (
@@ -59,7 +64,7 @@ export function PagesTable({ rows, adminPath }: { rows: PageRow[]; adminPath: st
         },
         {
           key: 'createdAt',
-          header: 'تاريخ الإنشاء',
+          header: t('common.createdAt'),
           // Formatted client-side so server and client agree on timezone.
           render: (row) =>
             row.createdAt ? new Date(row.createdAt).toLocaleDateString('ar-SA') : '—',

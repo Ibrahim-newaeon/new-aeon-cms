@@ -3,6 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/admin/data-table';
+import { useT } from './i18n-provider';
 
 /**
  * Shared list table for every content type. Pages and Posts differ only in
@@ -18,12 +19,6 @@ export interface ContentRow extends Record<string, unknown> {
   createdAt: string | null;
 }
 
-const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
-  published: 'منشور',
-  draft: 'مسودة',
-  archived: 'مؤرشف',
-};
-
 const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
   published: 'bg-green-500/20 text-green-400',
   draft: 'bg-yellow-500/20 text-yellow-400',
@@ -32,6 +27,16 @@ const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
 
 export function ContentTable({ rows, basePath }: { rows: ContentRow[]; basePath: string }) {
   const router = useRouter();
+  const t = useT();
+
+  // Built inside the component rather than at module scope: it needs the
+  // translator, and a hook cannot be called at module level.
+  const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
+    published: t('status.published'),
+    draft: t('status.draft'),
+    archived: t('status.archived'),
+  };
+
 
   return (
     <DataTable<ContentRow>
@@ -42,11 +47,11 @@ export function ContentTable({ rows, basePath }: { rows: ContentRow[]; basePath:
       deleteEndpoint="/api/content"
       onDeleted={() => router.refresh()}
       columns={[
-        { key: 'title', header: 'العنوان', sortable: true },
-        { key: 'slug', header: 'الرابط', sortable: true },
+        { key: 'title', header: t('pages.colTitle'), sortable: true },
+        { key: 'slug', header: t('common.slug'), sortable: true },
         {
           key: 'status',
-          header: 'الحالة',
+          header: t('common.status'),
           render: (row) => {
             const status = row.status ?? 'draft';
             return (
@@ -58,7 +63,7 @@ export function ContentTable({ rows, basePath }: { rows: ContentRow[]; basePath:
         },
         {
           key: 'createdAt',
-          header: 'تاريخ الإنشاء',
+          header: t('common.createdAt'),
           render: (row) =>
             row.createdAt ? new Date(row.createdAt).toLocaleDateString('ar-SA') : '—',
         },

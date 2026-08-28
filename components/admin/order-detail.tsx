@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/money';
+import { useT, useAdminI18n } from './i18n-provider';
 import {
   nextStatuses,
   restoresStock,
@@ -50,11 +51,13 @@ export function OrderDetail({
   currency: string;
 }) {
   const router = useRouter();
+  const t = useT();
+  const { locale } = useAdminI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
-  const money = (n: number) => formatPrice(n, currency, 'ar');
+  const money = (n: number) => formatPrice(n, currency, locale);
   const allowed = nextStatuses(order.status);
 
   async function patch(body: Record<string, unknown>) {
@@ -70,14 +73,14 @@ export function OrderDetail({
       const json = await res.json();
 
       if (!res.ok || !json.success) {
-        setError(json?.error?.message ?? 'تعذّر تحديث الطلب');
+        setError(json?.error?.message ?? t('order.updateFailed'));
         return;
       }
 
       setNote('');
       router.refresh();
     } catch {
-      setError('تعذّر الاتصال بالخادم');
+      setError(t('order.networkFailed'));
     } finally {
       setBusy(false);
     }
@@ -91,17 +94,17 @@ export function OrderDetail({
             href={basePath}
             className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text)]"
           >
-            <ArrowRight className="h-4 w-4" /> كل الطلبات
+            <ArrowRight className="h-4 w-4" /> {t('order.allOrders')}
           </Link>
           <h1 className="text-2xl font-bold text-[var(--admin-text)]" dir="ltr">{order.orderNumber}</h1>
         </div>
 
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-3 py-1 text-xs ${STATUS_TONE[order.status]}`}>
-            {STATUS_LABEL[order.status].ar}
+            {STATUS_LABEL[order.status][locale]}
           </span>
           <span className={`rounded-full px-3 py-1 text-xs ${PAYMENT_TONE[order.paymentStatus]}`}>
-            {PAYMENT_LABEL[order.paymentStatus].ar}
+            {PAYMENT_LABEL[order.paymentStatus][locale]}
           </span>
         </div>
       </div>
@@ -115,7 +118,7 @@ export function OrderDetail({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card title="المنتجات">
+          <Card title={t('order.items')}>
             <table className="w-full text-sm">
               <tbody>
                 {order.items.map((item) => (
@@ -134,29 +137,29 @@ export function OrderDetail({
             </table>
 
             <div className="mt-4 space-y-2 border-t border-[var(--admin-line)] pt-4 text-sm">
-              <Row label="المجموع الفرعي" value={money(order.subtotal)} />
+              <Row label={t('order.subtotal')} value={money(order.subtotal)} />
               {order.discount > 0 && (
                 <Row
-                  label={order.couponCode ? `الخصم (${order.couponCode})` : 'الخصم'}
+                  label={order.couponCode ? t('order.discountWithCode', { code: order.couponCode }) : t('order.discount')}
                   value={`- ${money(order.discount)}`}
                 />
               )}
-              <Row label="التوصيل" value={money(order.shipping)} />
-              <Row label="الإجمالي" value={money(order.total)} strong />
+              <Row label={t('order.shipping')} value={money(order.shipping)} />
+              <Row label={t('order.total')} value={money(order.total)} strong />
             </div>
           </Card>
 
-          <Card title="سجل الحالات">
+          <Card title={t('order.history')}>
             <ol className="space-y-3 text-sm">
               {order.history.map((h) => (
                 <li key={h.id} className="flex flex-wrap items-center gap-2">
                   <span className="text-[var(--admin-text-muted)] text-xs" dir="ltr">
-                    {h.createdAt ? new Date(h.createdAt).toLocaleString('en-GB') : '—'}
+                    {h.createdAt ? new Date(h.createdAt).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—'}
                   </span>
                   <span className="text-[var(--admin-text-secondary)]">
                     {h.fromStatus
-                      ? `${STATUS_LABEL[h.fromStatus as OrderStatus].ar} ← ${STATUS_LABEL[h.toStatus as OrderStatus].ar}`
-                      : STATUS_LABEL[h.toStatus as OrderStatus].ar}
+                      ? `${STATUS_LABEL[h.fromStatus as OrderStatus][locale]} ← ${STATUS_LABEL[h.toStatus as OrderStatus][locale]}`
+                      : STATUS_LABEL[h.toStatus as OrderStatus][locale]}
                   </span>
                   {h.note && <span className="text-xs text-[var(--admin-text-muted)]">— {h.note}</span>}
                 </li>
@@ -166,30 +169,30 @@ export function OrderDetail({
         </div>
 
         <div className="space-y-6">
-          <Card title="العميل">
+          <Card title={t('order.customer')}>
             <dl className="space-y-2 text-sm">
-              <Row label="الاسم" value={order.customerName} />
-              <Row label="الهاتف" value={order.phone} ltr />
-              <Row label="البريد" value={order.email || '—'} ltr />
-              <Row label="المحافظة" value={order.governorate} />
-              <Row label="المدينة" value={order.city} />
-              <Row label="العنوان" value={order.addressLine} />
-              {order.landmark && <Row label="أقرب معلم" value={order.landmark} />}
-              {order.notes && <Row label="ملاحظات العميل" value={order.notes} />}
+              <Row label={t('common.name')} value={order.customerName} />
+              <Row label={t('order.phone')} value={order.phone} ltr />
+              <Row label={t('order.email')} value={order.email || '—'} ltr />
+              <Row label={t('orders.colGovernorate')} value={order.governorate} />
+              <Row label={t('order.city')} value={order.city} />
+              <Row label={t('order.address')} value={order.addressLine} />
+              {order.landmark && <Row label={t('order.landmark')} value={order.landmark} />}
+              {order.notes && <Row label={t('order.customerNotes')} value={order.notes} />}
             </dl>
           </Card>
 
-          <Card title="تغيير الحالة">
+          <Card title={t('order.changeStatus')}>
             {allowed.length === 0 ? (
               <p className="text-sm text-[var(--admin-text-muted)]">
-                هذه حالة نهائية ولا يمكن تغييرها.
+                {t('order.terminal')}
               </p>
             ) : (
               <div className="space-y-3">
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="ملاحظة تُحفظ في السجل (اختياري)"
+                  placeholder={t('order.notePlaceholder')}
                   rows={2}
                   className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-text-muted)]"
                 />
@@ -204,7 +207,7 @@ export function OrderDetail({
                       className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--admin-line)] bg-[var(--admin-elevated)] px-3 py-2 text-sm text-[var(--admin-text)] hover:border-[var(--admin-accent)] disabled:opacity-50"
                     >
                       {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      {STATUS_LABEL[s].ar}
+                      {STATUS_LABEL[s][locale]}
                     </button>
                   ))}
                 </div>
@@ -212,21 +215,21 @@ export function OrderDetail({
                 {/* Both consequences are stated before the click, not after. */}
                 {allowed.some(restoresStock) && (
                   <p className="text-xs text-[var(--admin-text-muted)]">
-                    الإلغاء أو الاسترجاع يعيد الكميات إلى المخزون تلقائياً.
+                    {t('order.restoreHint')}
                   </p>
                 )}
                 {order.email && allowed.some(notifiesCustomer) && (
                   <p className="text-xs text-[var(--admin-text-muted)]">
-                    سيصل العميل بريد بالتحديث على <span dir="ltr">{order.email}</span>.
+                    {t('order.emailHint')} <span dir="ltr">{order.email}</span>
                   </p>
                 )}
               </div>
             )}
           </Card>
 
-          <Card title="حالة الدفع">
+          <Card title={t('order.paymentStatus')}>
             <p className="mb-3 text-xs text-[var(--admin-text-muted)]">
-              مستقلة عن حالة الطلب — طلب مُوصَّل قد يبقى غير مُحصَّل حتى يسلّم المندوب المبلغ.
+              {t('order.paymentHint')}
             </p>
             <select
               value={order.paymentStatus}
@@ -235,7 +238,7 @@ export function OrderDetail({
               className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] disabled:opacity-50"
             >
               {PAYMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>{PAYMENT_LABEL[s].ar}</option>
+                <option key={s} value={s}>{PAYMENT_LABEL[s][locale]}</option>
               ))}
             </select>
           </Card>

@@ -1,8 +1,12 @@
 import { db } from '@/lib/db';
 import { auditLog, users } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
+import { createTranslator, type MessageKey } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export async function ActivityFeed() {
+  const t = createTranslator(await getAdminLocale());
+
   const activities = await db.select({
     id: auditLog.id,
     action: auditLog.action,
@@ -15,20 +19,24 @@ export async function ActivityFeed() {
   .orderBy(desc(auditLog.createdAt))
   .limit(10);
 
-  const actionLabels: Record<string, string> = {
-    'content.created': 'أضاف محتوى جديد',
-    'content.updated': 'عدّل محتوى',
-    'content.published': 'نشر محتوى',
-    'media.uploaded': 'رفع ملف',
-    'user.login': 'سجل دخول',
+  // Audit-log action -> message key. Unknown actions fall through to the raw
+  // action string rather than rendering blank.
+  const actionKeys: Record<string, MessageKey> = {
+    'content.created': 'activity.contentCreated',
+    'content.updated': 'activity.contentUpdated',
+    'content.published': 'activity.contentPublished',
+    'media.uploaded': 'activity.mediaUploaded',
+    'user.login': 'activity.userLogin',
   };
+  const actionLabel = (action: string) =>
+    actionKeys[action] ? t(actionKeys[action]) : action;
 
   return (
     <div className="admin-card">
-      <h2 className="text-lg font-semibold mb-4">النشاط الأخير</h2>
+      <h2 className="text-lg font-semibold mb-4">{t('activity.title')}</h2>
       <div className="space-y-3">
         {activities.length === 0 ? (
-          <p className="text-[var(--admin-text-muted)] text-sm">لا يوجد نشاط حديث</p>
+          <p className="text-[var(--admin-text-muted)] text-sm">{t('activity.empty')}</p>
         ) : (
           activities.map((activity) => (
             <div key={activity.id} className="flex items-start gap-3 py-2">
@@ -41,7 +49,7 @@ export async function ActivityFeed() {
                 <p className="text-sm">
                   <span className="font-medium">{activity.userName || 'System'}</span>
                   {' '}
-                  {actionLabels[activity.action] || activity.action}
+                  {actionLabel(activity.action)}
                 </p>
                 <p className="text-xs text-[var(--admin-text-muted)]">
                   {activity.createdAt ? new Date(activity.createdAt).toLocaleDateString('ar-SA') : ''}

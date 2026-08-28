@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { MediaPickerDialog, type MediaAsset } from './media-library';
+import { useT } from './i18n-provider';
 
 /**
  * A URL input with a "choose from library" button.
@@ -28,6 +29,7 @@ export function MediaField({
   preview?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -66,7 +68,7 @@ export function MediaField({
           type="button"
           onClick={() => setOpen(true)}
           className="admin-btn-ghost shrink-0 px-3"
-          aria-label="اختيار من المكتبة"
+          aria-label={t('common.pickFromLibrary')}
           data-test-id={`${testId}-pick`}
         >
           <ImagePlus size={16} aria-hidden="true" />
@@ -86,7 +88,7 @@ export function MediaField({
             type="button"
             onClick={() => onChange('')}
             className="rounded p-1.5 text-[var(--admin-text-muted)] hover:bg-white/5"
-            aria-label="إزالة"
+            aria-label={t('common.remove')}
           >
             <X size={14} aria-hidden="true" />
           </button>

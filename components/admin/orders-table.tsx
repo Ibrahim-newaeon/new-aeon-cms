@@ -5,6 +5,8 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Search, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { formatPrice } from '@/lib/money';
+import { useT } from './i18n-provider';
+import { useAdminI18n } from './i18n-provider';
 import {
   ORDER_STATUSES,
   STATUS_LABEL,
@@ -54,6 +56,10 @@ export function OrdersTable({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const t = useT();
+  // Status labels are bilingual in order-status.ts; pick the admin's locale
+  // rather than hardcoding Arabic as the first draft did.
+  const { locale } = useAdminI18n();
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(search);
 
@@ -85,7 +91,7 @@ export function OrdersTable({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث برقم الطلب أو الاسم أو الهاتف"
+            placeholder={t('orders.searchPlaceholder')}
             className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] py-2 ps-9 pe-3 text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-text-muted)]"
           />
         </form>
@@ -95,14 +101,14 @@ export function OrdersTable({
           onChange={(e) => navigate({ status: e.target.value })}
           className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)]"
         >
-          <option value="">كل الحالات</option>
+          <option value="">{t('orders.allStatuses')}</option>
           {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABEL[s].ar}</option>
+            <option key={s} value={s}>{STATUS_LABEL[s][locale]}</option>
           ))}
         </select>
 
         <span className="text-sm text-[var(--admin-text-muted)]">
-          {total} طلب
+          {t('orders.count', { count: total })}
         </span>
       </div>
 
@@ -110,14 +116,14 @@ export function OrdersTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--admin-line)] text-start text-xs text-[var(--admin-text-muted)]">
-              <th className="px-4 py-3 text-start font-medium">رقم الطلب</th>
-              <th className="px-4 py-3 text-start font-medium">العميل</th>
-              <th className="px-4 py-3 text-start font-medium">المحافظة</th>
-              <th className="px-4 py-3 text-start font-medium">القطع</th>
-              <th className="px-4 py-3 text-start font-medium">الإجمالي</th>
-              <th className="px-4 py-3 text-start font-medium">الحالة</th>
-              <th className="px-4 py-3 text-start font-medium">الدفع</th>
-              <th className="px-4 py-3 text-start font-medium">التاريخ</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colNumber')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colCustomer')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colGovernorate')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colUnits')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colTotal')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('common.status')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('orders.colPayment')}</th>
+              <th className="px-4 py-3 text-start font-medium">{t('common.createdAt')}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -125,7 +131,7 @@ export function OrdersTable({
             {rows.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-10 text-center text-[var(--admin-text-muted)]">
-                  لا توجد طلبات مطابقة.
+                  {t('orders.noMatch')}
                 </td>
               </tr>
             )}
@@ -145,27 +151,27 @@ export function OrdersTable({
                 <td className="px-4 py-3 text-[var(--admin-text-secondary)]">{row.governorate}</td>
                 <td className="px-4 py-3 text-[var(--admin-text-secondary)]" dir="ltr">{row.itemCount}</td>
                 <td className="px-4 py-3 text-[var(--admin-text)]" dir="ltr">
-                  {formatPrice(row.total, currency, 'ar')}
+                  {formatPrice(row.total, currency, locale)}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-1 text-xs ${STATUS_TONE[row.status]}`}>
-                    {STATUS_LABEL[row.status].ar}
+                    {STATUS_LABEL[row.status][locale]}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-1 text-xs ${PAYMENT_TONE[row.paymentStatus]}`}>
-                    {PAYMENT_LABEL[row.paymentStatus].ar}
+                    {PAYMENT_LABEL[row.paymentStatus][locale]}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-[var(--admin-text-muted)]" dir="ltr">
-                  {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB') : '—'}
+                  {row.createdAt ? new Date(row.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—'}
                 </td>
                 <td className="px-4 py-3">
                   <Link
                     href={`${basePath}/${row.id}`}
                     className="inline-flex items-center gap-1 text-xs text-[var(--admin-text-muted)] hover:text-[var(--admin-text)]"
                   >
-                    <Eye className="h-4 w-4" /> عرض
+                    <Eye className="h-4 w-4" /> {t('common.view')}
                   </Link>
                 </td>
               </tr>
@@ -182,7 +188,7 @@ export function OrdersTable({
             onClick={() => navigate({ page: String(page - 1) })}
             className="inline-flex items-center gap-1 rounded-lg border border-[var(--admin-line)] px-3 py-1.5 text-[var(--admin-text-secondary)] disabled:opacity-40"
           >
-            <ChevronRight className="h-4 w-4" /> السابق
+            <ChevronRight className="h-4 w-4" /> {t('common.previous')}
           </button>
 
           <span className="text-[var(--admin-text-muted)]" dir="ltr">
@@ -195,7 +201,7 @@ export function OrdersTable({
             onClick={() => navigate({ page: String(page + 1) })}
             className="inline-flex items-center gap-1 rounded-lg border border-[var(--admin-line)] px-3 py-1.5 text-[var(--admin-text-secondary)] disabled:opacity-40"
           >
-            التالي <ChevronLeft className="h-4 w-4" />
+            {t('common.next')} <ChevronLeft className="h-4 w-4" />
           </button>
         </div>
       )}

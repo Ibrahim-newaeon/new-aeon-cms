@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar, type SidebarUser } from './sidebar';
 import { Header } from './header';
 import { cn } from '@/lib/utils';
+import { useT } from './i18n-provider';
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function AdminShell({
   logo,
 }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const t = useT();
   const pathname = usePathname();
 
   return (
@@ -32,7 +34,7 @@ export function AdminShell({
       {sidebarOpen && (
         <button
           type="button"
-          aria-label="إغلاق القائمة"
+          aria-label={t('common.closeMenu')}
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
