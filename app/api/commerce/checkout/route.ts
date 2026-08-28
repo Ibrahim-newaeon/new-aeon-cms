@@ -7,6 +7,7 @@ import { verifyCheckoutToken } from '@/lib/commerce/checkout-token';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { isValidJordanianMobile, isGovernorate } from '@/lib/commerce/phone';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { notifyOrderPlaced } from '@/lib/email/notify';
 
 export const runtime = 'nodejs';
 
@@ -126,6 +127,17 @@ export async function POST(request: Request) {
 
     // Empty the cart only after the order exists.
     await clearCart();
+
+    // Mail comes last, after the order is committed and outside its
+    // transaction. `notifyOrderPlaced` never throws — a failed confirmation
+    // must not turn a real order into a 500 the customer reads as "it did not
+    // go through", especially since the idempotency key would swallow a retry.
+    //
+    // Skipped for a duplicate submit: the order already exists and was already
+    // announced, and sending again would tell the customer they bought twice.
+    if (!result.duplicate) {
+      await notifyOrderPlaced(result.orderId, data.locale);
+    }
 
     return NextResponse.json({
       success: true,

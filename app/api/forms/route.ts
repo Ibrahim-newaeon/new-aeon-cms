@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { formSubmissions } from '@/lib/db/schema';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { notifyFormSubmission } from '@/lib/email/notify';
 
 /**
  * Public endpoint — no auth, by definition. Protections are: rate limiting, a
@@ -71,6 +72,16 @@ export async function POST(request: Request) {
       locale: parsed.data.locale ?? null,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') ?? null,
+    });
+
+    // The row is what we promise to keep; the email is a courtesy on top. So
+    // this runs after the insert and cannot fail the request — a submission
+    // that is stored but unannounced is recoverable, one that is neither is not.
+    await notifyFormSubmission({
+      type: parsed.data.type,
+      locale: parsed.data.locale ?? 'ar',
+      fields: parsed.data.fields,
+      pageSlug: parsed.data.pageSlug,
     });
 
     return NextResponse.json({ success: true });

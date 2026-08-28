@@ -41,6 +41,25 @@ const envSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
 
+  /**
+   * Mail driver. Defaults to `log` on purpose: seed and staging databases hold
+   * real customer addresses, so running checkout locally must not be one
+   * missing variable away from emailing them.
+   */
+  MAIL_DRIVER: z.enum(['log', 'smtp', 'resend']).default('log'),
+  MAIL_FROM: z.string().email().optional(),
+  MAIL_FROM_NAME: z.string().optional(),
+  /** Overrides settings.contactEmail for store-facing notifications. */
+  MAIL_ADMIN_TO: z.string().email().optional(),
+
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().max(65535).optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_SECURE: z.enum(['true', 'false']).optional(),
+
+  RESEND_API_KEY: z.string().min(1).optional(),
+
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
@@ -50,6 +69,29 @@ const envSchema = z.object({
  * on the editor's first upload — by which point the file is already lost.
  */
 const withStorageRules = envSchema.superRefine((cfg, ctx) => {
+  // Mail: a driver that cannot reach its provider must fail at boot, not on
+  // the first order — by which point the customer has no confirmation and
+  // nobody has been told the order exists.
+  const require = (key: keyof typeof cfg, when: string) => {
+    if (!cfg[key]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required when ${when}`,
+      });
+    }
+  };
+
+  if (cfg.MAIL_DRIVER === 'smtp') {
+    require('SMTP_HOST', 'MAIL_DRIVER=smtp');
+    require('MAIL_FROM', 'MAIL_DRIVER=smtp');
+  }
+
+  if (cfg.MAIL_DRIVER === 'resend') {
+    require('RESEND_API_KEY', 'MAIL_DRIVER=resend');
+    require('MAIL_FROM', 'MAIL_DRIVER=resend');
+  }
+
   if (cfg.STORAGE_DRIVER !== 's3') return;
 
   const required = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;

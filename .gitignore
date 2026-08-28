@@ -15,6 +15,9 @@ dist/
 # Local uploads — user content, not source
 public/uploads/
 
+# Rendered mail from the log driver — holds real customer names and addresses
+.mail-outbox/
+
 coverage/
 playwright-report/
 test-results/
@@ -37,3 +40,6 @@ ce.txt
 # curl cookie jars from local API testing
 *.cookies
 shop.txt
+
+# Scratch files from local verification runs
+.tmp-verify/
