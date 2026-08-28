@@ -1,5 +1,6 @@
 // components/site/blocks/testimonial.tsx
 // Server Component — no interactivity, so no 'use client'.
+import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseTestimonialBlock, type TestimonialItemInput } from '@/lib/blocks/testimonial';
@@ -48,11 +49,10 @@ function TestimonialCard({ item, index }: { item: TestimonialItemInput; index: n
 
       <figcaption className="flex items-center gap-3">
         {item.avatar ? (
-          <img
+          <Image
             src={item.avatar}
             alt=""
             aria-hidden="true"
-            loading="lazy"
             width={40}
             height={40}
             className="h-10 w-10 shrink-0 rounded-full object-cover"

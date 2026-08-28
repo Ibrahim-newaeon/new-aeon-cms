@@ -1,4 +1,5 @@
 // components/site/archive-list.tsx
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ArchiveEntry } from '@/lib/db/archives';
 
@@ -25,12 +26,15 @@ export function ArchiveList({
             className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
           >
             {entry.featuredImage && (
-              <img
-                src={entry.featuredImage}
-                alt=""
-                loading="lazy"
-                className="aspect-video w-full object-cover"
-              />
+              <div className="relative aspect-video w-full">
+                <Image
+                  src={entry.featuredImage}
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover"
+                />
+              </div>
             )}
             <div className="flex flex-1 flex-col gap-2 p-4">
               <h2 className="font-semibold text-gray-900">{entry.title}</h2>

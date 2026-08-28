@@ -1,4 +1,5 @@
 // app/(site)/[locale]/products/[slug]/page.tsx
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -45,11 +46,16 @@ export default async function ProductPage({ params }: Props) {
     <article className="mx-auto max-w-6xl px-4 py-16">
       <div className="grid gap-10 lg:grid-cols-2">
         <div className="space-y-3">
+          {/* The main product shot is the LCP element on this page. */}
           {images[0] ? (
-            <img
+            <Image
               src={images[0].url}
               alt={images[0].alt ?? ''}
-              className="w-full rounded-lg object-cover"
+              width={800}
+              height={800}
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="h-auto w-full rounded-lg"
             />
           ) : (
             <div className="aspect-square w-full rounded-lg bg-gray-100" />
@@ -58,13 +64,15 @@ export default async function ProductPage({ params }: Props) {
           {images.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
               {images.slice(1).map((img) => (
-                <img
-                  key={img.id}
-                  src={img.url}
-                  alt={img.alt ?? ''}
-                  loading="lazy"
-                  className="aspect-square w-full rounded object-cover"
-                />
+                <div key={img.id} className="relative aspect-square w-full">
+                  <Image
+                    src={img.url}
+                    alt={img.alt ?? ''}
+                    fill
+                    sizes="(max-width: 1024px) 25vw, 12vw"
+                    className="rounded object-cover"
+                  />
+                </div>
               ))}
             </div>
           )}

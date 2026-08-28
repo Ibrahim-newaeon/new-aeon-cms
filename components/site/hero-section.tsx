@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 interface HeroSectionProps {
@@ -13,7 +14,17 @@ export function HeroSection({ title, subtitle, cta, backgroundImage, overlay = t
     <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
       {backgroundImage ? (
         <>
-          <img src={backgroundImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          {/* priority: this is the LCP element on almost every page it appears
+              on, so it must not be lazy-loaded. fill + sizes lets Next serve a
+              viewport-appropriate width instead of the full-size original. */}
+          <Image
+            src={backgroundImage}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           {overlay && <div className="absolute inset-0 bg-black/40" />}
         </>
       ) : (

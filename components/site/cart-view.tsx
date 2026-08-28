@@ -1,6 +1,7 @@
 // components/site/cart-view.tsx
 'use client';
 
+import Image from 'next/image';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -88,7 +89,13 @@ export function CartViewClient({
         {cart.lines.map((line) => (
           <li key={line.variantId} className="flex gap-4 py-4" data-test-id={`cart-line-${line.variantId}`}>
             {line.image ? (
-              <img src={line.image} alt="" className="h-20 w-20 rounded object-cover" />
+              <Image
+                src={line.image}
+                alt=""
+                width={80}
+                height={80}
+                className="h-20 w-20 rounded object-cover"
+              />
             ) : (
               <div className="h-20 w-20 rounded bg-gray-100" />
             )}

@@ -2,6 +2,7 @@
 // Server Component. Renders the canonical ContentBlock[] stored in
 // contentI18n.body. See lib/blocks/types.ts for why body is an array of our
 // blocks rather than a TipTap document.
+import Image from 'next/image';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapImage from '@tiptap/extension-image';
@@ -107,13 +108,16 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
             'max-w-2xl mx-auto': block.layout === 'normal',
           })}
         >
-          <img
+          {/* The editor stores real dimensions when it has them. The fallback
+              only sizes the placeholder box — `h-auto` means the rendered
+              height still follows the file's true aspect ratio. */}
+          <Image
             src={block.src}
             alt={block.alt}
-            width={block.width}
-            height={block.height}
-            loading="lazy"
-            className="w-full rounded-lg"
+            width={block.width ?? 1200}
+            height={block.height ?? 800}
+            sizes="(max-width: 768px) 100vw, 768px"
+            className="h-auto w-full rounded-lg"
           />
           {block.caption && (
             <figcaption className="text-center text-sm text-gray-500 mt-2">
@@ -132,12 +136,14 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
           })}
         >
           {block.images.map((img, idx) => (
-            <img
+            <Image
               key={idx}
               src={img.src}
               alt={img.alt}
-              loading="lazy"
-              className="w-full rounded-lg object-cover"
+              width={800}
+              height={600}
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="h-auto w-full rounded-lg object-cover"
             />
           ))}
         </div>

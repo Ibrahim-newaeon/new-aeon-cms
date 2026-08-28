@@ -1,4 +1,5 @@
 // components/site/shop-grid.tsx
+import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/money';
 import type { ShopCard } from '@/lib/commerce/storefront';
@@ -29,12 +30,17 @@ export function ShopGrid({
             className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
           >
             {item.image && (
-              <img
-                src={item.image.url}
-                alt={item.image.alt ?? ''}
-                loading="lazy"
-                className="aspect-square w-full object-cover"
-              />
+              // fill needs a positioned ancestor; the wrapper also holds the
+              // aspect ratio that used to sit on the <img> itself.
+              <div className="relative aspect-square w-full">
+                <Image
+                  src={item.image.url}
+                  alt={item.image.alt ?? ''}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover"
+                />
+              </div>
             )}
             <div className="flex flex-1 flex-col gap-2 p-4">
               <h2 className="font-semibold text-gray-900">{item.name}</h2>

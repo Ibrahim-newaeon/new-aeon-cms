@@ -1,8 +1,10 @@
 // components/site/blocks/extra-blocks.tsx
 // Renderers for the layout blocks that live outside content-renderer's core
 // switch, kept here so that file stays readable.
+import Image from 'next/image';
+import { cache } from 'react';
 import { db } from '@/lib/db';
-import { content, contentI18n } from '@/lib/db/schema';
+import { content, contentI18n, settings } from '@/lib/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { cn } from '@/lib/utils';
 import type { ContentBlock } from '@/lib/blocks/types';
@@ -82,10 +84,11 @@ export function TeamBlock({ block }: { block: Pick_<'team'> }) {
       {block.members.map((m, idx) => (
         <div key={idx} className="rounded-lg border border-gray-200 p-6 text-center">
           {m.photo ? (
-            <img
+            <Image
               src={m.photo}
               alt=""
-              loading="lazy"
+              width={96}
+              height={96}
               className="mx-auto h-24 w-24 rounded-full object-cover"
             />
           ) : (
@@ -241,18 +244,63 @@ const SOCIAL_URL: Record<string, string> = {
   tiktok: 'https://tiktok.com/@',
 };
 
-export function SocialLinksBlock({
+/**
+ * Turns a saved handle into a URL.
+ *
+ * The settings form is a free-text field, so an editor may type a full URL or a
+ * bare username with equal confidence. A bare username concatenated onto the
+ * platform prefix is the intent in both cases; anything already absolute is
+ * left alone. An unknown platform with no handle yields '#' rather than a
+ * broken link to nowhere.
+ */
+function socialHref(platform: string, handle: string | undefined): string {
+  const base = SOCIAL_URL[platform];
+  const value = handle?.trim();
+
+  if (!value) return base ?? '#';
+  if (/^https?:\/\//i.test(value)) return value;
+
+  return base ? `${base}${value.replace(/^@/, '')}` : '#';
+}
+
+/**
+ * Saved handles, deduped per request.
+ *
+ * React's cache() means several social-links blocks on one page — or a repeat
+ * render — issue a single query, not one each.
+ */
+const getSocialHandles = cache(async (): Promise<Record<string, string>> => {
+  try {
+    const rows = await db.select({ links: settings.socialLinks }).from(settings).limit(1);
+    const links = rows[0]?.links;
+    return links && typeof links === 'object' ? (links as Record<string, string>) : {};
+  } catch {
+    // Settings being unreadable must not take down a whole page for a
+    // decorative block; the platform home pages below still render.
+    return {};
+  }
+});
+
+/**
+ * Reads its own handles instead of taking them as a prop.
+ *
+ * It used to accept `handles`, and content-renderer never passed it — so every
+ * icon silently linked to the platform's bare home page while the editor's
+ * saved handles sat unused in settings. A prop that every caller must remember
+ * is exactly the shape of that bug; RecentPostsBlock below already fetches its
+ * own data for the same reason.
+ */
+export async function SocialLinksBlock({
   block,
-  handles,
 }: {
   block: Pick_<'social-links'>;
-  /** From settings.socialLinks; falls back to the platform's home page. */
-  handles?: Record<string, string> | null;
 }) {
+  const handles = await getSocialHandles();
+
   return (
     <ul className="flex flex-wrap items-center gap-3">
       {block.platforms.map((p) => {
-        const href = handles?.[p] ?? SOCIAL_URL[p] ?? '#';
+        const href = socialHref(p, handles[p]);
         return (
           <li key={p}>
             <a

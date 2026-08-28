@@ -1,4 +1,5 @@
 // components/site/blocks/product-grid.tsx
+import Image from 'next/image';
 import { db } from '@/lib/db';
 import { products, productI18n, productImages } from '@/lib/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -73,12 +74,15 @@ export async function ProductGridBlock({
             className="block overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
           >
             {image && (
-              <img
-                src={image.url}
-                alt={image.alt ?? ''}
-                loading="lazy"
-                className="aspect-square w-full object-cover"
-              />
+              <div className="relative aspect-square w-full">
+                <Image
+                  src={image.url}
+                  alt={image.alt ?? ''}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover"
+                />
+              </div>
             )}
             <div className="p-4">
               <h3 className="font-medium text-gray-900">{product.name ?? product.slug}</h3>

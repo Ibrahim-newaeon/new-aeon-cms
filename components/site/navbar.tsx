@@ -1,6 +1,7 @@
 // components/site/navbar.tsx
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -48,7 +49,14 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
             data-test-id="navbar-home"
           >
             {logo ? (
-              <img src={logo} alt={siteName} className="h-8 w-auto" />
+              <Image
+                src={logo}
+                alt={siteName}
+                width={160}
+                height={32}
+                priority
+                className="h-8 w-auto"
+              />
             ) : (
               <span className="text-xl font-bold text-gray-900">{siteName}</span>
             )}

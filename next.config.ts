@@ -9,6 +9,12 @@ const withNextIntl = createNextIntlPlugin();
  * Allows next/image to optimise media served from the configured bucket.
  * Reads S3_PUBLIC_URL, falling back to S3_ENDPOINT. Returns nothing when
  * neither is set, so a local-storage install adds no host.
+ *
+ * IMPORTANT: this file is evaluated at BUILD time and the result is baked into
+ * the build. `S3_PUBLIC_URL` must therefore be present when `next build` runs,
+ * not only at runtime. Supplying it only to the running container leaves the
+ * bucket host out of remotePatterns, and every bucket-hosted image 400s — a
+ * worse failure than the plain <img> tags this replaced.
  */
 function mediaRemotePattern(): { protocol: 'http' | 'https'; hostname: string }[] {
   const base = process.env.S3_PUBLIC_URL || process.env.S3_ENDPOINT;

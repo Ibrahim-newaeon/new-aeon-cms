@@ -1,4 +1,5 @@
 // components/site/coming-soon.tsx
+import Image from 'next/image';
 import type { SiteSettings } from '@/lib/db/queries';
 
 /**
@@ -24,7 +25,14 @@ export function ComingSoon({
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-6 text-center">
       <div className="max-w-lg space-y-5">
         {settings?.logo ? (
-          <img src={settings.logo} alt={siteName} className="mx-auto h-12 w-auto object-contain" />
+          <Image
+            src={settings.logo}
+            alt={siteName}
+            width={240}
+            height={48}
+            priority
+            className="mx-auto h-12 w-auto object-contain"
+          />
         ) : (
           <h1 className="text-3xl font-bold text-white">{siteName}</h1>
         )}
