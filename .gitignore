@@ -5,6 +5,10 @@ build/
 dist/
 
 .env
+# Only the literal name .env was ignored, so .env.local and any
+# .env.<something> holding credentials showed up in git status.
+.env.*
+!.env.example
 .env.local
 .env.*.local
 

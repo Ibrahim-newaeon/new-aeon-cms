@@ -25,12 +25,58 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('./public/uploads'),
   REDIS_URL: z.string().url().optional(),
 
+  /**
+   * Storage driver. Defaults to `local` on purpose: a developer who clones this
+   * and runs `npm run dev` must not need bucket credentials.
+   */
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+
+  // S3-compatible: AWS S3, Cloudflare R2, MinIO, Spaces. Optional here and
+  // required conditionally below — see the superRefine on the schema.
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_REGION: z.string().min(1).default('auto'),
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_PUBLIC_URL: z.string().url().optional(),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
+
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
+/**
+ * A half-configured bucket must stop the process at boot, not surface as a 500
+ * on the editor's first upload — by which point the file is already lost.
+ */
+const withStorageRules = envSchema.superRefine((cfg, ctx) => {
+  if (cfg.STORAGE_DRIVER !== 's3') return;
+
+  const required = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;
+
+  for (const key of required) {
+    if (!cfg[key]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required when STORAGE_DRIVER=s3`,
+      });
+    }
+  }
+
+  // Without an endpoint we fall back to the AWS virtual-host URL, which needs a
+  // real region. `auto` is an R2 convention and is meaningless to AWS.
+  if (!cfg.S3_ENDPOINT && !cfg.S3_PUBLIC_URL && cfg.S3_REGION === 'auto') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['S3_REGION'],
+      message: 'S3_REGION must be a real AWS region when neither S3_ENDPOINT nor S3_PUBLIC_URL is set',
+    });
+  }
+});
+
 function parseEnv() {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = withStorageRules.safeParse(process.env);
 
   if (!parsed.success) {
     const details = parsed.error.issues
