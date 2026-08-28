@@ -1,0 +1,42 @@
+# The builder stage does `COPY . .`, so anything not listed here is baked into
+# an image layer. Two of these are not merely wasteful:
+#
+#   .env*          — secrets. A layer is readable by anyone who can pull the
+#                    image, and deleting the file in a later layer does not
+#                    remove it from the earlier one.
+#   node_modules   — host-built native modules. argon2 and sharp are compiled
+#                    against the host's libc; copying Windows/glibc builds over
+#                    the image's musl ones produces a container that builds
+#                    fine and then fails at runtime.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+out
+build
+dist
+
+.git
+.gitignore
+.github
+
+# Local user content and generated output — the container has its own.
+public/uploads
+.mail-outbox
+.tmp-verify
+coverage
+playwright-report
+test-results
+
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Docs and specs are not needed to run the app.
+docs
+README.md
