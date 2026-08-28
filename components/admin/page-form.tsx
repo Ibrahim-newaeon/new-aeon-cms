@@ -16,11 +16,13 @@ import {
   type TaxonomyOption,
   type TranslationDraft,
 } from '@/lib/content/page-draft';
+import { useT } from './i18n-provider';
+import type { MessageKey } from '@/lib/admin-i18n';
 
 export type { PageFormValue, TranslationDraft };
 
 const LOCALES: ReadonlyArray<'ar' | 'en'> = ['ar', 'en'];
-const LOCALE_LABEL: Record<'ar' | 'en', string> = { ar: 'العربية', en: 'English' };
+const LOCALE_KEY: Record<'ar' | 'en', MessageKey> = { ar: 'form.localeAr', en: 'form.localeEn' };
 
 interface PageFormProps {
   mode: 'create' | 'edit';
@@ -37,9 +39,9 @@ interface PageFormProps {
   };
 }
 
-const TYPE_LABEL: Record<'page' | 'post', { newTitle: string; editTitle: string; segment: string }> = {
-  page: { newTitle: 'صفحة جديدة', editTitle: 'تعديل الصفحة', segment: 'pages' },
-  post: { newTitle: 'مقال جديد', editTitle: 'تعديل المقال', segment: 'posts' },
+const TYPE_LABEL: Record<'page' | 'post', { newTitle: MessageKey; editTitle: MessageKey; segment: string }> = {
+  page: { newTitle: 'form.newPage', editTitle: 'form.editPage', segment: 'pages' },
+  post: { newTitle: 'form.newPost', editTitle: 'form.editPost', segment: 'posts' },
 };
 
 export function PageForm({
@@ -50,6 +52,7 @@ export function PageForm({
   contentType = 'page',
   taxonomy,
 }: PageFormProps) {
+  const t = useT();
   const labels = TYPE_LABEL[contentType];
   const router = useRouter();
   const [value, setValue] = useState<PageFormValue>(initial);
@@ -79,7 +82,7 @@ export function PageForm({
   const copyStructureFrom = (from: 'ar' | 'en') => {
     const source = value.translations.find((t) => t.locale === from);
     if (!source) return;
-    if (active.body.length > 0 && !window.confirm('سيتم استبدال الأقسام الحالية. متابعة؟')) return;
+    if (active.body.length > 0 && !window.confirm(t('form.replaceSections'))) return;
     patchTranslation({ body: structuredClone(source.body) });
   };
 
@@ -93,7 +96,7 @@ export function PageForm({
     const payloadTranslations = value.translations.filter((t) => t.title.trim().length > 0);
 
     if (payloadTranslations.length === 0) {
-      setError('أدخل عنواناً للغة واحدة على الأقل.');
+      setError(t('form.titleRequired'));
       setSaving(false);
       return;
     }
@@ -133,14 +136,14 @@ export function PageForm({
       if (!res.ok || !data?.success) {
         const issue = data?.error?.issues?.[0];
         throw new Error(
-          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? 'تعذّر الحفظ'
+          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? t('common.saveFailed')
         );
       }
 
       router.push(`${adminPath}/content/${labels.segment}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -150,7 +153,7 @@ export function PageForm({
     <form onSubmit={handleSubmit} className="space-y-6" data-test-id="page-form">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">
-          {mode === 'create' ? labels.newTitle : labels.editTitle}
+          {mode === 'create' ? t(labels.newTitle) : t(labels.editTitle)}
         </h1>
 
         <div className="flex items-center gap-2">
@@ -163,7 +166,7 @@ export function PageForm({
               data-test-id="page-preview"
             >
               <ExternalLink size={16} aria-hidden="true" />
-              معاينة
+              {t('form.preview')}
             </Link>
           )}
           <button
@@ -177,7 +180,7 @@ export function PageForm({
             ) : (
               <Save size={16} aria-hidden="true" />
             )}
-            {saving ? 'جارٍ الحفظ…' : 'حفظ'}
+            {saving ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -190,7 +193,7 @@ export function PageForm({
 
       <div className="admin-card grid gap-4 sm:grid-cols-3">
         <label className="block sm:col-span-2">
-          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">الرابط (slug)</span>
+          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('common.slugField')}</span>
           <input
             type="text"
             dir="ltr"
@@ -202,12 +205,12 @@ export function PageForm({
             data-test-id="page-slug"
           />
           <span className="mt-1 block text-xs text-[var(--admin-text-muted)]">
-            أحرف صغيرة وأرقام وشرطات فقط.
+            {t('common.slugHint')}
           </span>
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">الحالة</span>
+          <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('common.status')}</span>
           <select
             className="admin-input"
             value={value.status}
@@ -216,9 +219,9 @@ export function PageForm({
             }
             data-test-id="page-status"
           >
-            <option value="draft">مسودة</option>
-            <option value="published">منشور</option>
-            <option value="archived">مؤرشف</option>
+            <option value="draft">{t('status.draft')}</option>
+            <option value="published">{t('status.published')}</option>
+            <option value="archived">{t('status.archived')}</option>
           </select>
         </label>
       </div>
@@ -227,8 +230,8 @@ export function PageForm({
         <div className="admin-card space-y-5">
           {taxonomy.hasCategories && (
             <TaxonomyPicker
-              label="الفئات"
-              emptyHint="لا توجد فئات بعد — أنشئها من قسم الفئات."
+              label={t('form.categories')}
+              emptyHint={t('form.categoriesEmpty')}
               options={taxonomy.categories}
               selected={value.categoryIds}
               onChange={(categoryIds) => setValue((p) => ({ ...p, categoryIds }))}
@@ -238,8 +241,8 @@ export function PageForm({
 
           {taxonomy.hasTags && (
             <TaxonomyPicker
-              label="الوسوم"
-              emptyHint="لا توجد وسوم بعد — أنشئها من قسم الوسوم."
+              label={t('form.tags')}
+              emptyHint={t('form.tagsEmpty')}
               options={taxonomy.tags}
               selected={value.tagIds}
               onChange={(tagIds) => setValue((p) => ({ ...p, tagIds }))}
@@ -248,13 +251,13 @@ export function PageForm({
           )}
 
           <p className="text-xs text-[var(--admin-text-muted)]">
-            الفئات والوسوم تخصّ العنصر ككل، لا كل لغة على حدة.
+            {t('form.taxonomyHint')}
           </p>
         </div>
       )}
 
       {/* Locale tabs */}
-      <div role="tablist" aria-label="اللغات" className="flex gap-1 border-b border-[var(--admin-line)]">
+      <div role="tablist" aria-label={t('form.languages')} className="flex gap-1 border-b border-[var(--admin-line)]">
         {LOCALES.map((locale) => {
           const filled = value.translations.some(
             (t) => t.locale === locale && t.title.trim().length > 0
@@ -274,9 +277,9 @@ export function PageForm({
                   : 'border-transparent text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]'
               )}
             >
-              {LOCALE_LABEL[locale]}
+              {t(LOCALE_KEY[locale])}
               <span
-                aria-label={filled ? 'مكتمل' : 'فارغ'}
+                aria-label={filled ? t('form.filled') : t('form.blank')}
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
                   filled ? 'bg-[var(--admin-success)]' : 'bg-[var(--admin-text-muted)]'
@@ -290,7 +293,7 @@ export function PageForm({
       <div role="tabpanel" className="space-y-6">
         <div className="admin-card space-y-4">
           <label className="block">
-            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">العنوان</span>
+            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('form.title')}</span>
             <input
               type="text"
               className="admin-input"
@@ -301,7 +304,7 @@ export function PageForm({
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">المقتطف</span>
+            <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('form.excerpt')}</span>
             <textarea
               rows={2}
               className="admin-input resize-y"
@@ -312,7 +315,7 @@ export function PageForm({
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--admin-text)]">الأقسام</h2>
+          <h2 className="text-lg font-semibold text-[var(--admin-text)]">{t('form.sections')}</h2>
           {LOCALES.filter((l) => l !== activeLocale).map((other) => (
             <button
               key={other}
@@ -321,7 +324,7 @@ export function PageForm({
               className="admin-btn-ghost text-xs"
               data-test-id={`copy-structure-${other}`}
             >
-              نسخ الأقسام من {LOCALE_LABEL[other]}
+              {t('form.copySections', { locale: t(LOCALE_KEY[other]) })}
             </button>
           ))}
         </div>
@@ -334,10 +337,10 @@ export function PageForm({
         />
 
         <details className="admin-card">
-          <summary className="cursor-pointer text-sm font-medium">تحسين محركات البحث (SEO)</summary>
+          <summary className="cursor-pointer text-sm font-medium">{t('form.seo')}</summary>
           <div className="mt-4 space-y-4">
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">عنوان الميتا</span>
+              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('form.metaTitle')}</span>
               <input
                 type="text"
                 className="admin-input"
@@ -347,7 +350,7 @@ export function PageForm({
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">وصف الميتا</span>
+              <span className="mb-2 block text-sm text-[var(--admin-text-secondary)]">{t('form.metaDescription')}</span>
               <textarea
                 rows={2}
                 className="admin-input resize-y"
@@ -363,7 +366,7 @@ export function PageForm({
                 onChange={(e) => patchTranslation({ noIndex: e.target.checked })}
                 data-test-id="page-noindex"
               />
-              <span className="text-sm">منع الفهرسة (noindex)</span>
+              <span className="text-sm">{t('form.noindex')}</span>
             </label>
           </div>
         </details>

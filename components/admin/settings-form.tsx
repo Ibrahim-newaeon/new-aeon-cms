@@ -7,13 +7,15 @@ import { Loader2, Save, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { socialPlatforms, type SettingsInput } from '@/lib/settings-schema';
 import { MediaField } from './media-field';
+import { useT } from './i18n-provider';
+import type { MessageKey } from '@/lib/admin-i18n';
 
-const TABS = [
-  { id: 'general', label: 'عام' },
-  { id: 'social', label: 'التواصل' },
-  { id: 'tracking', label: 'أكواد التتبع' },
-  { id: 'appearance', label: 'المظهر' },
-  { id: 'commerce', label: 'المتجر' },
+const TABS: { id: string; key: MessageKey }[] = [
+  { id: 'general', key: 'settings.tab.general' },
+  { id: 'social', key: 'settings.tab.social' },
+  { id: 'tracking', key: 'settings.tab.tracking' },
+  { id: 'appearance', key: 'settings.tab.appearance' },
+  { id: 'commerce', key: 'settings.tab.commerce' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -28,6 +30,7 @@ const SOCIAL_LABEL: Record<string, string> = {
 };
 
 export function SettingsForm({ initial }: { initial: SettingsInput }) {
+  const t = useT();
   const router = useRouter();
   const [value, setValue] = useState<SettingsInput>(initial);
   const [tab, setTab] = useState<TabId>('general');
@@ -57,7 +60,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       if (!res.ok || !data?.success) {
         const issue = data?.error?.issues?.[0];
         throw new Error(
-          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? 'تعذّر الحفظ'
+          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? t('common.saveFailed')
         );
       }
 
@@ -65,7 +68,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       // Sidebar and layout read these values, so refresh the server tree.
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -75,9 +78,9 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
     <form onSubmit={handleSubmit} method="post" className="space-y-6" data-test-id="settings-form">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--admin-text)]">إعدادات الموقع</h1>
+          <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('settings.title')}</h1>
           <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-            الاسم، الشعار، أكواد التتبع، ووحدة المتجر.
+            {t('settings.subtitle')}
           </p>
         </div>
 
@@ -94,7 +97,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
           ) : (
             <Save size={16} aria-hidden="true" />
           )}
-          {saving ? 'جارٍ الحفظ…' : saved ? 'تم الحفظ' : 'حفظ'}
+          {saving ? t('common.saving') : saved ? t('common.saved') : t('common.save')}
         </button>
       </div>
 
@@ -104,23 +107,24 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
         </p>
       )}
 
-      <div role="tablist" aria-label="أقسام الإعدادات" className="flex flex-wrap gap-1 border-b border-[var(--admin-line)]">
-        {TABS.map((t) => (
+      <div role="tablist" aria-label={t('settings.sections')} className="flex flex-wrap gap-1 border-b border-[var(--admin-line)]">
+        {/* `item`, not `t` — the translator is in scope here and would be shadowed. */}
+        {TABS.map((item) => (
           <button
-            key={t.id}
+            key={item.id}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            data-test-id={`settings-tab-${t.id}`}
+            aria-selected={tab === item.id}
+            onClick={() => setTab(item.id)}
+            data-test-id={`settings-tab-${item.id}`}
             className={cn(
               'border-b-2 px-4 py-2 text-sm transition-colors',
-              tab === t.id
+              tab === item.id
                 ? 'border-[var(--admin-accent)] text-[var(--admin-accent-soft)]'
                 : 'border-transparent text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]'
             )}
           >
-            {t.label}
+            {t(item.key)}
           </button>
         ))}
       </div>
@@ -128,7 +132,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       <div role="tabpanel" className="admin-card space-y-4">
         {tab === 'general' && (
           <>
-            <Field label="اسم الموقع" required>
+            <Field label={t('settings.siteName')} required>
               <input
                 type="text"
                 required
@@ -139,7 +143,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
               />
             </Field>
 
-            <Field label="وصف الموقع">
+            <Field label={t('settings.siteDescription')}>
               <textarea
                 rows={2}
                 className="admin-input resize-y"
@@ -150,21 +154,21 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <MediaField
-                label="رابط الشعار"
-                hint="شعار فاتح — الشريط الجانبي داكن"
+                label={t('settings.logo')}
+                hint={t('settings.logoHint')}
                 value={value.logo ?? ''}
                 onChange={(logo) => patch({ logo })}
                 testId="settings-logo"
               />
 
               <MediaField
-                label="رابط الأيقونة (favicon)"
+                label={t('settings.favicon')}
                 value={value.favicon ?? ''}
                 onChange={(favicon) => patch({ favicon })}
                 testId="settings-favicon"
               />
 
-              <Field label="بريد التواصل">
+              <Field label={t('settings.contactEmail')}>
                 <input
                   type="email"
                   dir="ltr"
@@ -174,7 +178,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
                 />
               </Field>
 
-              <Field label="هاتف التواصل">
+              <Field label={t('settings.contactPhone')}>
                 <input
                   type="tel"
                   dir="ltr"
@@ -186,15 +190,15 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
             </div>
 
             <Toggle
-              label="وضع قريباً (Coming soon)"
-              hint="يُظهر رسالة بدل الموقع للزوار."
+              label={t('settings.comingSoon')}
+              hint={t('settings.comingSoonHint')}
               checked={value.comingSoonMode}
               onChange={(comingSoonMode) => patch({ comingSoonMode })}
               testId="settings-coming-soon"
             />
 
             {value.comingSoonMode && (
-              <Field label="رسالة وضع قريباً">
+              <Field label={t('settings.comingSoonMessage')}>
                 <textarea
                   rows={2}
                   className="admin-input resize-y"
@@ -229,7 +233,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
         {tab === 'tracking' && (
           <>
             <p className="text-xs text-[var(--admin-text-muted)]">
-              تُحقن هذه المعرّفات داخل وسوم سكربت، لذا يُسمح بالأحرف والأرقام والشرطات فقط.
+              {t('settings.trackingIdHint')}
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Google Tag Manager"><TrackInput v={value.gtmId} on={(gtmId) => patch({ gtmId })} ph="GTM-XXXXXXX" id="gtm" /></Field>
@@ -239,13 +243,13 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
               <Field label="Snap Pixel"><TrackInput v={value.snapPixelId} on={(snapPixelId) => patch({ snapPixelId })} ph="00000000-0000-0000-0000-000000000000" id="snap" /></Field>
             </div>
             <p className="text-xs text-[var(--admin-text-muted)]">
-              تُحقن هذه الأكواد في الواجهة العامة تلقائياً بعد الحفظ — في وضع الإنتاج فقط.
+              {t('settings.trackingHint')}
             </p>
           </>
         )}
 
         {tab === 'appearance' && (
-          <Field label="CSS مخصص" hint="يُضاف داخل وسم style في الواجهة العامة.">
+          <Field label={t('settings.customCss')} hint={t('settings.customCssHint')}>
             <textarea
               rows={12}
               dir="ltr"
@@ -260,14 +264,14 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
         {tab === 'commerce' && (
           <>
             <Toggle
-              label="تفعيل وحدة المتجر"
-              hint="يُظهر أقسام المنتجات والطلبات والكوبونات في القائمة الجانبية."
+              label={t('settings.commerceToggle')}
+              hint={t('settings.commerceHint')}
               checked={value.eCommerceEnabled}
               onChange={(eCommerceEnabled) => patch({ eCommerceEnabled })}
               testId="settings-ecommerce"
             />
 
-            <Field label="العملة" hint="رمز ISO من ثلاثة أحرف، مثل JOD أو SAR.">
+            <Field label={t('settings.currency')} hint={t('settings.currencyHint')}>
               <input
                 type="text"
                 dir="ltr"
@@ -281,7 +285,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
 
             {value.eCommerceEnabled && (
               <p className="text-xs text-[var(--admin-warning)]">
-                أقسام المتجر تظهر في القائمة، لكنها ما زالت قيد التطوير — لا يوجد كتالوج أو سلة أو طلبات بعد.
+                {t('settings.commerceWarning')}
               </p>
             )}
           </>
