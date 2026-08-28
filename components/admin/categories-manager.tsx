@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Pencil, X, Loader2, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { slugify } from '@/lib/taxonomy-schema';
+import { useT } from './i18n-provider';
 
 export interface CategoryRow {
   id: string;
@@ -50,6 +51,7 @@ function toPayload(d: Draft) {
 }
 
 export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
+  const t = useT();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,28 +79,28 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setCreating(false);
       setEditingId(null);
       setDraft(emptyDraft());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (row: CategoryRow) => {
-    if (!window.confirm('سيُحذف التصنيف نهائياً. متابعة؟')) return;
+    if (!window.confirm(t('categories.deleteConfirm'))) return;
     const res = await fetch(`/api/categories/${row.id}`, {
       method: 'DELETE',
       credentials: 'same-origin',
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
-      setError(data?.error?.message ?? 'تعذّر الحذف');
+      setError(data?.error?.message ?? t('common.deleteFailed'));
       return;
     }
     setRows((p) => p.filter((r) => r.id !== row.id));
@@ -129,21 +131,21 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
           data-test-id="category-new"
         >
           <Plus size={16} aria-hidden="true" />
-          تصنيف جديد
+          {t('categories.new')}
         </button>
       )}
 
       {editorOpen && (
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? 'تعديل التصنيف' : 'تصنيف جديد'}</h2>
+            <h2 className="font-medium">{editingId ? t('categories.edit') : t('categories.new')}</h2>
             <button
               type="button"
               onClick={() => {
                 setCreating(false);
                 setEditingId(null);
               }}
-              aria-label="إغلاق"
+              aria-label={t('common.close')}
               className="rounded p-1.5 hover:bg-white/5"
             >
               <X size={16} aria-hidden="true" />
@@ -151,7 +153,7 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="الاسم (عربي)">
+            <Field label={t('categories.nameAr')}>
               <input
                 className="admin-input"
                 value={draft.nameAr}
@@ -176,7 +178,7 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
               />
             </Field>
 
-            <Field label="الرابط (slug)" hint="أحرف صغيرة وأرقام وشرطات فقط.">
+            <Field label={t('common.slugField')} hint={t('common.slugHint')}>
               <input
                 className="admin-input text-start"
                 dir="ltr"
@@ -187,14 +189,14 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
               />
             </Field>
 
-            <Field label="التصنيف الأب">
+            <Field label={t('categories.parent')}>
               <select
                 className="admin-input"
                 value={draft.parentId ?? ''}
                 onChange={(e) => setDraft((d) => ({ ...d, parentId: e.target.value || null }))}
                 data-test-id="category-parent"
               >
-                <option value="">— بدون —</option>
+                <option value="">{t('common.none')}</option>
                 {rows
                   // One level only, and never itself: both would create a cycle.
                   .filter((r) => r.id !== editingId && !r.parentId)
@@ -206,7 +208,7 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
               </select>
             </Field>
 
-            <Field label="الترتيب">
+            <Field label={t('common.order')}>
               <input
                 type="number"
                 dir="ltr"
@@ -223,7 +225,7 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
                 onChange={(e) => setDraft((d) => ({ ...d, isActive: e.target.checked }))}
                 data-test-id="category-active"
               />
-              مفعّل
+              {t('common.enabled')}
             </label>
           </div>
 
@@ -235,14 +237,14 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
 
           <button type="button" onClick={() => void submit()} disabled={busy} className="admin-btn" data-test-id="category-save">
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
 
       {rows.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد تصنيفات بعد.
+          {t('categories.empty')}
         </p>
       ) : (
         <ul className="admin-card divide-y divide-[var(--admin-line)] p-0">
@@ -266,17 +268,17 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
 
               {!row.isActive && (
                 <span className="rounded-full bg-[var(--admin-none-bg,rgba(255,255,255,.08))] px-2 py-0.5 text-[11px] text-[var(--admin-text-muted)]">
-                  معطّل
+                  {t('common.disabled')}
                 </span>
               )}
 
-              <button type="button" onClick={() => startEdit(row)} aria-label={`تعديل ${row.slug}`} className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5">
+              <button type="button" onClick={() => startEdit(row)} aria-label={t('common.editItem', { name: row.slug })} className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5">
                 <Pencil size={16} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => void remove(row)}
-                aria-label={`حذف ${row.slug}`}
+                aria-label={t('common.deleteItem', { name: row.slug })}
                 className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
                 data-test-id={`category-delete-${row.id}`}
               >

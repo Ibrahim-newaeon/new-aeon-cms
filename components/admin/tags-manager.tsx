@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Check, X, Pencil, Loader2 } from 'lucide-react';
 import { slugify } from '@/lib/taxonomy-schema';
+import { useT } from './i18n-provider';
 
 export interface TagRow {
   id: string;
@@ -18,6 +19,7 @@ export interface TagRow {
  * separate form page for a name and a slug would be more navigation than data.
  */
 export function TagsManager({ initial }: { initial: TagRow[] }) {
+  const t = useT();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [name, setName] = useState('');
@@ -47,7 +49,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setRows((p) => [{ ...(data.data as TagRow), usageCount: 0 }, ...p]);
       setName('');
@@ -55,7 +57,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
       setSlugTouched(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
@@ -70,7 +72,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
-      setError(data?.error?.message ?? 'تعذّر الحفظ');
+      setError(data?.error?.message ?? t('common.saveFailed'));
       return;
     }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...draft } : r)));
@@ -80,8 +82,8 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
   const remove = async (row: TagRow) => {
     const msg =
       row.usageCount > 0
-        ? `هذا الوسم مرتبط بـ ${row.usageCount} عنصر. سيُزال منها. متابعة؟`
-        : 'سيُحذف الوسم نهائياً. متابعة؟';
+        ? t('tags.deleteInUse', { count: row.usageCount })
+        : t('tags.deleteConfirm');
     if (!window.confirm(msg)) return;
 
     const res = await fetch(`/api/tags/${row.id}`, {
@@ -95,7 +97,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
     <div className="space-y-5" data-test-id="tags-manager">
       <form onSubmit={create} className="admin-card flex flex-wrap items-end gap-3">
         <label className="min-w-[180px] flex-1">
-          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الاسم</span>
+          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.name')}</span>
           <input
             type="text"
             required
@@ -107,7 +109,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
         </label>
 
         <label className="min-w-[180px] flex-1">
-          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الرابط</span>
+          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.slug')}</span>
           <input
             type="text"
             dir="ltr"
@@ -125,13 +127,13 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
 
         <button type="submit" disabled={busy} className="admin-btn" data-test-id="tag-create">
           {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-          إضافة
+          {t('common.add')}
         </button>
       </form>
 
       {name && !slug && (
         <p className="text-xs text-[var(--admin-warning)]">
-          الاسم بالعربية لا يُنتج رابطاً تلقائياً — اكتب الرابط بالإنجليزية.
+          {t('tags.nameHint')}
         </p>
       )}
 
@@ -143,7 +145,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
 
       {rows.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد وسوم بعد.
+          {t('tags.empty')}
         </p>
       ) : (
         <ul className="admin-card divide-y divide-[var(--admin-line)] p-0">
@@ -155,19 +157,19 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
                     className="admin-input flex-1"
                     value={draft.name}
                     onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                    aria-label="الاسم"
+                    aria-label={t('common.name')}
                   />
                   <input
                     className="admin-input flex-1 text-start"
                     dir="ltr"
                     value={draft.slug}
                     onChange={(e) => setDraft((d) => ({ ...d, slug: e.target.value }))}
-                    aria-label="الرابط"
+                    aria-label={t('common.slug')}
                   />
-                  <button type="button" onClick={() => void save(row.id)} aria-label="حفظ" className="rounded p-2 text-[var(--admin-success)] hover:bg-white/5">
+                  <button type="button" onClick={() => void save(row.id)} aria-label={t('common.save')} className="rounded p-2 text-[var(--admin-success)] hover:bg-white/5">
                     <Check size={16} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => setEditing(null)} aria-label="إلغاء" className="rounded p-2 hover:bg-white/5">
+                  <button type="button" onClick={() => setEditing(null)} aria-label={t('common.cancel')} className="rounded p-2 hover:bg-white/5">
                     <X size={16} aria-hidden="true" />
                   </button>
                 </>
@@ -186,7 +188,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
                       setEditing(row.id);
                       setDraft({ name: row.name, slug: row.slug });
                     }}
-                    aria-label={`تعديل ${row.name}`}
+                    aria-label={t('common.editItem', { name: row.name })}
                     className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
                   >
                     <Pencil size={16} aria-hidden="true" />
@@ -194,7 +196,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
                   <button
                     type="button"
                     onClick={() => void remove(row)}
-                    aria-label={`حذف ${row.name}`}
+                    aria-label={t('common.deleteItem', { name: row.name })}
                     className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
                     data-test-id={`tag-delete-${row.id}`}
                   >

@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MediaField } from './media-field';
 import { slugify } from '@/lib/taxonomy-schema';
+import { useT } from './i18n-provider';
 
 export interface BrandRow {
   id: string;
@@ -29,6 +30,7 @@ const emptyDraft = (): Draft => ({
 });
 
 export function BrandsManager({ initial }: { initial: BrandRow[] }) {
+  const t = useT();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,21 +54,21 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
       );
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setCreating(false);
       setEditingId(null);
       setDraft(emptyDraft());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (row: BrandRow) => {
-    if (!window.confirm(`سيُحذف «${row.name}» نهائياً. متابعة؟`)) return;
+    if (!window.confirm(t('brands.deleteConfirm', { name: row.name }))) return;
     setError(null);
     const res = await fetch(`/api/commerce/brands/${row.id}`, {
       method: 'DELETE',
@@ -74,7 +76,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
-      setError(data?.error?.message ?? 'تعذّر الحذف');
+      setError(data?.error?.message ?? t('common.deleteFailed'));
       return;
     }
     setRows((p) => p.filter((r) => r.id !== row.id));
@@ -96,21 +98,21 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
           data-test-id="brand-new"
         >
           <Plus size={16} aria-hidden="true" />
-          علامة جديدة
+          {t('brands.new')}
         </button>
       )}
 
       {editorOpen && (
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? 'تعديل العلامة' : 'علامة جديدة'}</h2>
+            <h2 className="font-medium">{editingId ? t('brands.edit') : t('brands.new')}</h2>
             <button
               type="button"
               onClick={() => {
                 setCreating(false);
                 setEditingId(null);
               }}
-              aria-label="إغلاق"
+              aria-label={t('common.close')}
               className="rounded p-1.5 hover:bg-white/5"
             >
               <X size={16} aria-hidden="true" />
@@ -119,7 +121,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الاسم</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.name')}</span>
               <input
                 type="text"
                 className="admin-input"
@@ -134,7 +136,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الرابط (slug)</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.slugField')}</span>
               <input
                 type="text"
                 dir="ltr"
@@ -148,7 +150,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
 
             <div className="sm:col-span-2">
               <MediaField
-                label="الشعار"
+                label={t('brands.logo')}
                 value={draft.logoUrl ?? ''}
                 onChange={(logoUrl) => setDraft((d) => ({ ...d, logoUrl: logoUrl || null }))}
                 testId="brand-logo"
@@ -156,7 +158,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
             </div>
 
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الترتيب</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.order')}</span>
               <input
                 type="number"
                 dir="ltr"
@@ -173,7 +175,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
                 onChange={(e) => setDraft((d) => ({ ...d, isActive: e.target.checked }))}
                 data-test-id="brand-active"
               />
-              مفعّلة
+              {t('common.enabledF')}
             </label>
           </div>
 
@@ -185,14 +187,14 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
 
           <button type="button" onClick={() => void submit()} disabled={busy} className="admin-btn" data-test-id="brand-save">
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
 
       {rows.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد علامات تجارية بعد.
+          {t('brands.empty')}
         </p>
       ) : (
         <ul className="admin-card divide-y divide-[var(--admin-line)] p-0">
@@ -219,14 +221,14 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
               <span
                 className="rounded-full bg-[var(--admin-accent-muted)] px-2 py-0.5 text-[11px] text-[var(--admin-accent-soft)]"
                 dir="ltr"
-                title="عدد المنتجات"
+                title={t('brands.productCount')}
               >
                 {row.productCount}
               </span>
 
               {!row.isActive && (
                 <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-[var(--admin-text-muted)]">
-                  معطّلة
+                  {t('common.disabledF')}
                 </span>
               )}
 
@@ -241,7 +243,7 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
                   setCreating(false);
                   setError(null);
                 }}
-                aria-label={`تعديل ${row.name}`}
+                aria-label={t('common.editItem', { name: row.name })}
                 className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
               >
                 <Pencil size={16} aria-hidden="true" />
@@ -251,8 +253,8 @@ export function BrandsManager({ initial }: { initial: BrandRow[] }) {
                 type="button"
                 onClick={() => void remove(row)}
                 disabled={row.productCount > 0}
-                title={row.productCount > 0 ? 'توجد منتجات مرتبطة بهذه العلامة' : 'حذف'}
-                aria-label={`حذف ${row.name}`}
+                title={row.productCount > 0 ? t('brands.hasProducts') : t('common.delete')}
+                aria-label={t('common.deleteItem', { name: row.name })}
                 className={cn(
                   'rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10',
                   row.productCount > 0 && 'opacity-30'

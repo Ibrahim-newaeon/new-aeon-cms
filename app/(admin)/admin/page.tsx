@@ -7,10 +7,13 @@ import { db } from '@/lib/db';
 import { content, contentI18n, mediaAssets, formSubmissions } from '@/lib/db/schema';
 import { count, eq, and, desc } from 'drizzle-orm';
 import { getSettings } from '@/lib/db/queries';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function AdminDashboard() {
+  const t = createTranslator(await getAdminLocale());
   const [settings, totals, published, drafts, media, unreadForms] = await Promise.all([
     getSettings(),
     db.select({ count: count() }).from(content),
@@ -26,29 +29,29 @@ export default async function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">
-          مرحباً بك في لوحة {siteName}
+          {t('dashboard.welcome', { site: siteName })}
         </h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          تحكم بكل شيء من مكان واحد — الصفحات، المقالات، والوسائط.
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="إجمالي المحتوى"
+          title={t('dashboard.totalContent')}
           value={totals[0]?.count ?? 0}
           icon="file-text"
           href={`${ADMIN_PATH}/content/pages`}
         />
         <StatCard
-          title="منشور"
+          title={t('dashboard.published')}
           value={published[0]?.count ?? 0}
           icon="check-circle"
           href={`${ADMIN_PATH}/content/pages`}
         />
-        <StatCard title="مسودة" value={drafts[0]?.count ?? 0} icon="edit" />
+        <StatCard title={t('dashboard.draft')} value={drafts[0]?.count ?? 0} icon="edit" />
         <StatCard
-          title="الوسائط"
+          title={t('dashboard.media')}
           value={media[0]?.count ?? 0}
           icon="image"
           href={`${ADMIN_PATH}/media`}
@@ -63,32 +66,32 @@ export default async function AdminDashboard() {
         <div className="admin-card">
           <h2 className="mb-3 flex items-center gap-2 font-medium">
             <AlertTriangle size={16} aria-hidden="true" className="text-[var(--admin-accent)]" />
-            الرسائل غير المقروءة
+            {t('dashboard.unread')}
           </h2>
           {(unreadForms[0]?.count ?? 0) === 0 ? (
-            <p className="text-sm text-[var(--admin-text-muted)]">لا توجد رسائل جديدة.</p>
+            <p className="text-sm text-[var(--admin-text-muted)]">{t('dashboard.noUnread')}</p>
           ) : (
             <Link
               href={`${ADMIN_PATH}/forms`}
               className="text-sm text-[var(--admin-accent-soft)] hover:underline"
             >
-              لديك <span dir="ltr">{unreadForms[0]?.count}</span> رسالة غير مقروءة
+              {t('dashboard.unreadCount', { count: unreadForms[0]?.count ?? 0 })}
             </Link>
           )}
         </div>
       </div>
 
       <div className="admin-card">
-        <h2 className="mb-3 font-medium">اختصارات سريعة</h2>
+        <h2 className="mb-3 font-medium">{t('dashboard.shortcuts')}</h2>
         <div className="flex flex-wrap gap-2">
           <Link href={`${ADMIN_PATH}/content/pages/new`} className="admin-btn">
-            إضافة صفحة
+            {t('dashboard.addPage')}
           </Link>
           <Link href={`${ADMIN_PATH}/navigation`} className="admin-btn-ghost">
-            تعديل الواجهة الرئيسية
+            {t('dashboard.editFront')}
           </Link>
           <Link href={`${ADMIN_PATH}/settings`} className="admin-btn-ghost">
-            إعدادات الموقع
+            {t('dashboard.siteSettings')}
           </Link>
         </div>
       </div>
@@ -96,13 +99,16 @@ export default async function AdminDashboard() {
   );
 }
 
-const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
-  published: 'منشور',
-  draft: 'مسودة',
-  archived: 'مؤرشف',
-};
-
 async function RecentContent() {
+  const t = createTranslator(await getAdminLocale());
+
+  // Inside the component so it can reach the translator.
+  const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
+    published: t('status.published'),
+    draft: t('status.draft'),
+    archived: t('status.archived'),
+  };
+
   const recent = await db
     .select({ content, i18n: contentI18n })
     .from(content)
@@ -115,11 +121,11 @@ async function RecentContent() {
 
   return (
     <div className="admin-card" data-test-id="recent-content">
-      <h2 className="mb-3 font-medium">آخر المحتوى</h2>
+      <h2 className="mb-3 font-medium">{t('dashboard.recent')}</h2>
 
       {recent.length === 0 ? (
         <p className="py-6 text-center text-sm text-[var(--admin-text-muted)]">
-          لا يوجد محتوى بعد
+          {t('dashboard.noContent')}
         </p>
       ) : (
         <div className="space-y-2">
