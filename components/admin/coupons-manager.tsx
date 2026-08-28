@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Pencil, X, Loader2, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toMajorUnits, toMinorUnits, formatPrice } from '@/lib/money';
+import { useT, useAdminI18n } from './i18n-provider';
+import type { Translator } from '@/lib/admin-i18n';
 
 export interface CouponRow {
   id: string;
@@ -48,13 +50,18 @@ function fromLocalInput(value: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-/** Why a coupon is not currently redeemable, or null when it is. */
-function dormantReason(row: CouponRow): string | null {
-  if (!row.isActive) return 'معطّل';
+/**
+ * Why a coupon is not currently redeemable, or null when it is.
+ *
+ * Takes the translator rather than calling the hook: this is a plain module
+ * function, and a hook cannot be called outside a component.
+ */
+function dormantReason(row: CouponRow, t: Translator): string | null {
+  if (!row.isActive) return t('common.disabled');
   const now = Date.now();
-  if (row.startsAt && new Date(row.startsAt).getTime() > now) return 'لم يبدأ بعد';
-  if (row.endsAt && new Date(row.endsAt).getTime() < now) return 'منتهي';
-  if (row.usageLimit !== null && row.usedCount >= row.usageLimit) return 'استُنفد';
+  if (row.startsAt && new Date(row.startsAt).getTime() > now) return t('coupon.notStarted');
+  if (row.endsAt && new Date(row.endsAt).getTime() < now) return t('coupon.expired');
+  if (row.usageLimit !== null && row.usedCount >= row.usageLimit) return t('coupon.exhausted');
   return null;
 }
 
@@ -65,6 +72,8 @@ export function CouponsManager({
   initial: CouponRow[];
   currency: string;
 }) {
+  const t = useT();
+  const { locale } = useAdminI18n();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -88,21 +97,21 @@ export function CouponsManager({
       );
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setCreating(false);
       setEditingId(null);
       setDraft(emptyDraft());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (row: CouponRow) => {
-    if (!window.confirm(`سيُحذف الكود «${row.code}» نهائياً. متابعة؟`)) return;
+    if (!window.confirm(t('coupon.deleteConfirm', { code: row.code }))) return;
     setError(null);
     const res = await fetch(`/api/commerce/coupons/${row.id}`, {
       method: 'DELETE',
@@ -112,7 +121,7 @@ export function CouponsManager({
     if (!res.ok || !data?.success) {
       // A redeemed coupon is deactivated rather than deleted, so refresh to
       // show the new state alongside the explanation.
-      setError(data?.error?.message ?? 'تعذّر الحذف');
+      setError(data?.error?.message ?? t('common.deleteFailed'));
       router.refresh();
       return;
     }
@@ -135,21 +144,21 @@ export function CouponsManager({
           data-test-id="coupon-new"
         >
           <Plus size={16} aria-hidden="true" />
-          كود خصم جديد
+          {t('coupon.new')}
         </button>
       )}
 
       {editorOpen && (
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? 'تعديل الكود' : 'كود خصم جديد'}</h2>
+            <h2 className="font-medium">{editingId ? t('coupon.edit') : t('coupon.new')}</h2>
             <button
               type="button"
               onClick={() => {
                 setCreating(false);
                 setEditingId(null);
               }}
-              aria-label="إغلاق"
+              aria-label={t('common.close')}
               className="rounded p-1.5 hover:bg-white/5"
             >
               <X size={16} aria-hidden="true" />
@@ -158,7 +167,7 @@ export function CouponsManager({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الكود</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('coupon.code')}</span>
               <input
                 type="text"
                 dir="ltr"
@@ -173,7 +182,7 @@ export function CouponsManager({
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">نوع الخصم</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('coupon.type')}</span>
               <select
                 className="admin-input"
                 value={draft.type}
@@ -185,14 +194,14 @@ export function CouponsManager({
                 }}
                 data-test-id="coupon-type"
               >
-                <option value="percent">نسبة مئوية (٪)</option>
-                <option value="fixed">مبلغ ثابت ({currency})</option>
+                <option value="percent">{t('coupon.percent')}</option>
+                <option value="fixed">{t('coupon.fixed', { currency })}</option>
               </select>
             </label>
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                {draft.type === 'percent' ? 'النسبة (٪)' : `القيمة (${currency})`}
+                {draft.type === 'percent' ? t('coupon.percentValue') : t('coupon.fixedValue', { currency })}
               </span>
               <input
                 type="number"
@@ -217,7 +226,7 @@ export function CouponsManager({
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                الحد الأدنى للطلب ({currency})
+                {t('coupon.minSubtotal', { currency })}
               </span>
               <input
                 type="number"
@@ -238,7 +247,7 @@ export function CouponsManager({
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                حد الاستخدام
+                {t('coupon.usageLimit')}
               </span>
               <input
                 type="number"
@@ -253,7 +262,7 @@ export function CouponsManager({
                     usageLimit: e.target.value === '' ? null : Number(e.target.value) || 1,
                   }))
                 }
-                placeholder="بلا حد"
+                placeholder={t('coupon.noLimit')}
                 data-test-id="coupon-usage-limit"
               />
             </label>
@@ -265,12 +274,12 @@ export function CouponsManager({
                 onChange={(e) => setDraft((d) => ({ ...d, isActive: e.target.checked }))}
                 data-test-id="coupon-active"
               />
-              مفعّل
+              {t('common.enabled')}
             </label>
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                يبدأ في
+                {t('coupon.startsAt')}
               </span>
               <input
                 type="datetime-local"
@@ -284,7 +293,7 @@ export function CouponsManager({
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                ينتهي في
+                {t('coupon.endsAt')}
               </span>
               <input
                 type="datetime-local"
@@ -311,19 +320,19 @@ export function CouponsManager({
             data-test-id="coupon-save"
           >
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
 
       {rows.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد أكواد خصم بعد.
+          {t('coupon.empty')}
         </p>
       ) : (
         <ul className="admin-card divide-y divide-[var(--admin-line)] p-0">
           {rows.map((row) => {
-            const dormant = dormantReason(row);
+            const dormant = dormantReason(row, t);
             return (
               <li
                 key={row.id}
@@ -341,12 +350,12 @@ export function CouponsManager({
                 <span className="text-sm" dir="ltr">
                   {row.type === 'percent'
                     ? `${row.value}%`
-                    : formatPrice(row.value, currency, 'ar')}
+                    : formatPrice(row.value, currency, locale)}
                 </span>
 
                 {row.minSubtotal > 0 && (
                   <span className="text-xs text-[var(--admin-text-muted)]">
-                    فوق <span dir="ltr">{formatPrice(row.minSubtotal, currency, 'ar')}</span>
+                    {t('coupon.over')} <span dir="ltr">{formatPrice(row.minSubtotal, currency, locale)}</span>
                   </span>
                 )}
 
@@ -354,7 +363,7 @@ export function CouponsManager({
                 <span
                   className="rounded-full bg-[var(--admin-accent-muted)] px-2 py-0.5 text-[11px] text-[var(--admin-accent-soft)]"
                   dir="ltr"
-                  title="مرات الاستخدام"
+                  title={t('coupon.timesUsed')}
                 >
                   {row.usedCount}
                   {row.usageLimit !== null ? ` / ${row.usageLimit}` : ''}
@@ -381,7 +390,7 @@ export function CouponsManager({
                     setCreating(false);
                     setError(null);
                   }}
-                  aria-label={`تعديل ${row.code}`}
+                  aria-label={t('common.editItem', { name: row.code })}
                   className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
                 >
                   <Pencil size={16} aria-hidden="true" />
@@ -391,8 +400,8 @@ export function CouponsManager({
                   type="button"
                   onClick={() => void remove(row)}
                   disabled={row.usedCount > 0}
-                  title={row.usedCount > 0 ? 'الكود مُستخدم في طلبات سابقة' : 'حذف'}
-                  aria-label={`حذف ${row.code}`}
+                  title={row.usedCount > 0 ? t('coupon.inUse') : t('common.delete')}
+                  aria-label={t('common.deleteItem', { name: row.code })}
                   className={cn(
                     'rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10',
                     row.usedCount > 0 && 'opacity-30'

@@ -7,6 +7,7 @@ import { Plus, Trash2, Pencil, X, Loader2, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GOVERNORATES } from '@/lib/commerce/phone';
 import { toMajorUnits, toMinorUnits, formatPrice } from '@/lib/money';
+import { useT, useAdminI18n } from './i18n-provider';
 
 export interface ShippingZoneRow {
   id: string;
@@ -41,6 +42,8 @@ export function ShippingZonesManager({
   initial: ShippingZoneRow[];
   currency: string;
 }) {
+  const t = useT();
+  const { locale } = useAdminI18n();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -72,21 +75,21 @@ export function ShippingZonesManager({
       );
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setCreating(false);
       setEditingId(null);
       setDraft(emptyDraft());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (row: ShippingZoneRow) => {
-    if (!window.confirm(`ستُحذف منطقة «${row.name}» نهائياً. متابعة؟`)) return;
+    if (!window.confirm(t('zone.deleteConfirm', { name: row.name }))) return;
     setError(null);
     const res = await fetch(`/api/commerce/shipping-zones/${row.id}`, {
       method: 'DELETE',
@@ -94,7 +97,7 @@ export function ShippingZonesManager({
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
-      setError(data?.error?.message ?? 'تعذّر الحذف');
+      setError(data?.error?.message ?? t('common.deleteFailed'));
       return;
     }
     setRows((p) => p.filter((r) => r.id !== row.id));
@@ -119,8 +122,7 @@ export function ShippingZonesManager({
           gap here is the difference between a deliberate policy and lost orders. */}
       {uncovered.length > 0 && (
         <p className="admin-card border-amber-500/30 bg-amber-500/5 text-sm text-amber-300">
-          لا توصيل حالياً إلى: {uncovered.map((g) => g.ar).join('، ')} — الطلبات من هذه المحافظات
-          سترفض عند إتمام الشراء.
+          {t('zone.uncovered', { list: uncovered.map((g) => (locale === 'ar' ? g.ar : g.en)).join('، ') })}
         </p>
       )}
 
@@ -136,21 +138,21 @@ export function ShippingZonesManager({
           data-test-id="zone-new"
         >
           <Plus size={16} aria-hidden="true" />
-          منطقة شحن جديدة
+          {t('zone.new')}
         </button>
       )}
 
       {editorOpen && (
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? 'تعديل المنطقة' : 'منطقة شحن جديدة'}</h2>
+            <h2 className="font-medium">{editingId ? t('zone.edit') : t('zone.new')}</h2>
             <button
               type="button"
               onClick={() => {
                 setCreating(false);
                 setEditingId(null);
               }}
-              aria-label="إغلاق"
+              aria-label={t('common.close')}
               className="rounded p-1.5 hover:bg-white/5"
             >
               <X size={16} aria-hidden="true" />
@@ -158,20 +160,20 @@ export function ShippingZonesManager({
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">اسم المنطقة</span>
+            <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('zone.name')}</span>
             <input
               type="text"
               className="admin-input"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-              placeholder="مثال: عمّان الكبرى"
+              placeholder={t('zone.namePlaceholder')}
               data-test-id="zone-name"
             />
           </label>
 
           <fieldset>
             <legend className="mb-2 text-xs text-[var(--admin-text-secondary)]">
-              المحافظات المشمولة
+              {t('zone.governorates')}
             </legend>
             <div className="flex flex-wrap gap-2">
               {GOVERNORATES.map((g) => {
@@ -184,7 +186,7 @@ export function ShippingZonesManager({
                     role="checkbox"
                     aria-checked={on}
                     disabled={Boolean(takenBy) && !on}
-                    title={takenBy ? `مشمولة في منطقة «${takenBy}»` : undefined}
+                    title={takenBy ? t('zone.takenBy', { name: takenBy }) : undefined}
                     onClick={() => toggleGovernorate(g.value)}
                     data-test-id={`zone-gov-${g.value}`}
                     className={cn(
@@ -205,7 +207,7 @@ export function ShippingZonesManager({
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                قيمة الشحن ({currency})
+                {t('zone.flatRate', { currency })}
               </span>
               <input
                 type="number"
@@ -226,7 +228,7 @@ export function ShippingZonesManager({
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                شحن مجاني فوق ({currency})
+                {t('zone.freeOver', { currency })}
               </span>
               <input
                 type="number"
@@ -246,14 +248,14 @@ export function ShippingZonesManager({
                         : toMinorUnits(Number(e.target.value) || 0, currency),
                   }))
                 }
-                placeholder="اتركه فارغاً"
+                placeholder={t('zone.leaveEmpty')}
                 data-test-id="zone-free-over"
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
-                مدة التوصيل (أيام)
+                {t('zone.deliveryDays')}
               </span>
               <input
                 type="number"
@@ -266,7 +268,7 @@ export function ShippingZonesManager({
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">الترتيب</span>
+              <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('common.order')}</span>
               <input
                 type="number"
                 dir="ltr"
@@ -283,7 +285,7 @@ export function ShippingZonesManager({
                 onChange={(e) => setDraft((d) => ({ ...d, isActive: e.target.checked }))}
                 data-test-id="zone-active"
               />
-              مفعّلة
+              {t('common.enabledF')}
             </label>
           </div>
 
@@ -301,14 +303,14 @@ export function ShippingZonesManager({
             data-test-id="zone-save"
           >
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
 
       {rows.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد مناطق شحن بعد. بدون منطقة واحدة على الأقل، لن يتمكّن أحد من إتمام طلب.
+          {t('zone.empty')}
         </p>
       ) : (
         <ul className="admin-card divide-y divide-[var(--admin-line)] p-0">
@@ -330,7 +332,7 @@ export function ShippingZonesManager({
               </div>
 
               <span className="text-sm" dir="ltr">
-                {formatPrice(row.flatRate, currency, 'ar')}
+                {formatPrice(row.flatRate, currency, locale)}
               </span>
 
               <span className="text-xs text-[var(--admin-text-muted)]">
@@ -338,14 +340,14 @@ export function ShippingZonesManager({
                   '—'
                 ) : (
                   <>
-                    مجاني فوق <span dir="ltr">{formatPrice(row.freeOver, currency, 'ar')}</span>
+                    {t('zone.freeOverLabel')} <span dir="ltr">{formatPrice(row.freeOver, currency, locale)}</span>
                   </>
                 )}
               </span>
 
               {!row.isActive && (
                 <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-[var(--admin-text-muted)]">
-                  معطّلة
+                  {t('common.disabledF')}
                 </span>
               )}
 
@@ -360,7 +362,7 @@ export function ShippingZonesManager({
                   setCreating(false);
                   setError(null);
                 }}
-                aria-label={`تعديل ${row.name}`}
+                aria-label={t('common.editItem', { name: row.name })}
                 className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"
               >
                 <Pencil size={16} aria-hidden="true" />
@@ -370,8 +372,8 @@ export function ShippingZonesManager({
                 type="button"
                 onClick={() => void remove(row)}
                 disabled={row.orderCount > 0}
-                title={row.orderCount > 0 ? 'توجد طلبات شُحنت بهذه المنطقة' : 'حذف'}
-                aria-label={`حذف ${row.name}`}
+                title={row.orderCount > 0 ? t('zone.hasOrders') : t('common.delete')}
+                aria-label={t('common.deleteItem', { name: row.name })}
                 className={cn(
                   'rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10',
                   row.orderCount > 0 && 'opacity-30'

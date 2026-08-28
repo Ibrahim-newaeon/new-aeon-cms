@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navLocations, type NavLocation } from '@/lib/navigation-schema';
+import { useT } from './i18n-provider';
+import type { MessageKey, Translator } from '@/lib/admin-i18n';
 
 export interface NavRow {
   id: string;
@@ -33,11 +35,11 @@ export interface NavRow {
 
 type Draft = Omit<NavRow, 'id'>;
 
-const LOCATION_LABEL: Record<NavLocation, string> = {
-  header: 'القائمة العلوية',
-  footer: 'التذييل',
-  sidebar: 'القائمة الجانبية',
-  mobile: 'قائمة الجوال',
+const LOCATION_KEY: Record<NavLocation, MessageKey> = {
+  header: 'nav.locationHeader',
+  footer: 'nav.locationFooter',
+  sidebar: 'nav.locationSidebar',
+  mobile: 'nav.locationMobile',
 };
 
 const emptyDraft = (location: NavLocation): Draft => ({
@@ -53,6 +55,7 @@ const emptyDraft = (location: NavLocation): Draft => ({
 });
 
 export function NavigationManager({ initial }: { initial: NavRow[] }) {
+  const t = useT();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [location, setLocation] = useState<NavLocation>('header');
@@ -99,20 +102,20 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? 'تعذّر الحفظ');
+        throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
       setCreating(false);
       setEditingId(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const remove = async (row: NavRow) => {
-    if (!window.confirm('سيُحذف العنصر. العناصر الفرعية ستُنقل إلى المستوى الأعلى. متابعة؟')) return;
+    if (!window.confirm(t('nav.deleteConfirm'))) return;
     const res = await fetch(`/api/navigation/${row.id}`, {
       method: 'DELETE',
       credentials: 'same-origin',
@@ -155,7 +158,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
 
   return (
     <div className="space-y-5" data-test-id="navigation-manager">
-      <div role="tablist" aria-label="مواقع القوائم" className="flex flex-wrap gap-1 border-b border-[var(--admin-line)]">
+      <div role="tablist" aria-label={t('nav.locations')} className="flex flex-wrap gap-1 border-b border-[var(--admin-line)]">
         {navLocations.map((loc) => (
           <button
             key={loc}
@@ -175,7 +178,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
                 : 'border-transparent text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]'
             )}
           >
-            {LOCATION_LABEL[loc]}
+            {t(LOCATION_KEY[loc])}
             <span className="ms-2 text-xs text-[var(--admin-text-muted)]" dir="ltr">
               {rows.filter((r) => r.location === loc).length}
             </span>
@@ -195,21 +198,21 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
           data-test-id="nav-new"
         >
           <Plus size={16} aria-hidden="true" />
-          عنصر جديد
+          {t('nav.newItem')}
         </button>
       )}
 
       {editorOpen && (
         <div className="admin-card space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">{editingId ? 'تعديل العنصر' : 'عنصر جديد'}</h2>
+            <h2 className="font-medium">{editingId ? t('nav.editItem') : t('nav.newItem')}</h2>
             <button
               type="button"
               onClick={() => {
                 setCreating(false);
                 setEditingId(null);
               }}
-              aria-label="إغلاق"
+              aria-label={t('common.close')}
               className="rounded p-1.5 hover:bg-white/5"
             >
               <X size={16} aria-hidden="true" />
@@ -217,7 +220,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="الاسم المرجعي" hint="يُستخدم إذا لم تُضف ترجمة للغة ما.">
+            <Field label={t('nav.refLabel')} hint={t('nav.refHint')}>
               <input
                 className="admin-input"
                 value={draft.label}
@@ -226,7 +229,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
               />
             </Field>
 
-            <Field label="الرابط" hint="مسار داخلي مثل /ar/about أو رابط خارجي.">
+            <Field label={t('nav.url')} hint={t('nav.urlHint')}>
               <input
                 className="admin-input text-start"
                 dir="ltr"
@@ -237,7 +240,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
               />
             </Field>
 
-            <Field label="النص (عربي)">
+            <Field label={t('nav.textAr')}>
               <input
                 className="admin-input"
                 value={draft.labelAr}
@@ -256,14 +259,14 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
               />
             </Field>
 
-            <Field label="العنصر الأب">
+            <Field label={t('nav.parent')}>
               <select
                 className="admin-input"
                 value={draft.parentId ?? ''}
                 onChange={(e) => setDraft((d) => ({ ...d, parentId: e.target.value || null }))}
                 data-test-id="nav-parent"
               >
-                <option value="">— بدون —</option>
+                <option value="">{t('common.none')}</option>
                 {inLocation
                   .filter((r) => r.id !== editingId && !r.parentId)
                   .map((r) => (
@@ -274,7 +277,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
               </select>
             </Field>
 
-            <Field label="الموقع">
+            <Field label={t('nav.location')}>
               <select
                 className="admin-input"
                 value={draft.location}
@@ -282,7 +285,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
               >
                 {navLocations.map((loc) => (
                   <option key={loc} value={loc}>
-                    {LOCATION_LABEL[loc]}
+                    {t(LOCATION_KEY[loc])}
                   </option>
                 ))}
               </select>
@@ -297,7 +300,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
                 onChange={(e) => setDraft((d) => ({ ...d, isActive: e.target.checked }))}
                 data-test-id="nav-active"
               />
-              مفعّل
+              {t('common.enabled')}
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -305,7 +308,7 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
                 checked={draft.openInNew}
                 onChange={(e) => setDraft((d) => ({ ...d, openInNew: e.target.checked }))}
               />
-              فتح في نافذة جديدة
+              {t('nav.openInNew')}
             </label>
           </div>
 
@@ -317,14 +320,14 @@ export function NavigationManager({ initial }: { initial: NavRow[] }) {
 
           <button type="button" onClick={() => void submit()} disabled={busy} className="admin-btn" data-test-id="nav-save">
             {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            حفظ
+            {t('common.save')}
           </button>
         </div>
       )}
 
       {ordered.length === 0 ? (
         <p className="admin-card py-12 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد عناصر في {LOCATION_LABEL[location]}.
+          {t('nav.emptyIn', { location: t(LOCATION_KEY[location]) })}
         </p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -362,6 +365,7 @@ function NavItem({
   onEdit: () => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.id,
   });
@@ -381,7 +385,7 @@ function NavItem({
         type="button"
         {...attributes}
         {...listeners}
-        aria-label={`إعادة ترتيب ${row.label}`}
+        aria-label={t('nav.reorder', { name: row.label })}
         className="cursor-grab touch-none rounded p-1 text-[var(--admin-text-muted)] hover:bg-white/5 active:cursor-grabbing"
       >
         <GripVertical size={16} aria-hidden="true" />
@@ -399,16 +403,16 @@ function NavItem({
 
       {row.openInNew && <ExternalLink size={13} aria-hidden="true" className="text-[var(--admin-text-muted)]" />}
       {!row.isActive && (
-        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-[var(--admin-text-muted)]">معطّل</span>
+        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-[var(--admin-text-muted)]">{t('common.disabled')}</span>
       )}
 
-      <button type="button" onClick={onEdit} aria-label={`تعديل ${row.label}`} className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5">
+      <button type="button" onClick={onEdit} aria-label={t('common.editItem', { name: row.label })} className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5">
         <Pencil size={16} aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={onRemove}
-        aria-label={`حذف ${row.label}`}
+        aria-label={t('common.deleteItem', { name: row.label })}
         className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
         data-test-id={`nav-delete-${row.id}`}
       >
