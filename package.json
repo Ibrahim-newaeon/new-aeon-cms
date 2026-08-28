@@ -12,7 +12,10 @@
     "db:push": "drizzle-kit push --force",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
-    "media:migrate": "tsx --env-file=.env scripts/migrate-media-to-s3.ts"
+    "media:migrate": "tsx --env-file=.env scripts/migrate-media-to-s3.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
@@ -53,12 +56,14 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/sanitize-html": "^2.13.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.0",
     "drizzle-kit": "^0.31.10",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "postcss": "$postcss",
