@@ -5,8 +5,10 @@ import { orders, orderItems, settings as settingsTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { sendMail, storeRecipient } from './send';
 import { orderConfirmation, orderAlert, type OrderMailData } from './templates/order';
+import { orderStatusChanged } from './templates/order-status';
 import { formAlert } from './templates/form';
 import type { MailLocale } from './render';
+import type { OrderStatus } from '@/lib/commerce/order-status';
 
 /**
  * High-level "something happened, tell someone" helpers.
@@ -111,6 +113,50 @@ export async function notifyOrderPlaced(
   }
 
   return result;
+}
+
+/**
+ * Tells the customer their order moved to a new status.
+ *
+ * Called after the transition transaction has committed, and — like every other
+ * notifier here — cannot fail its caller. An admin marking twenty orders
+ * shipped must not get a 500 because a mail server was briefly unreachable.
+ */
+export async function notifyOrderStatusChanged(input: {
+  orderId: string;
+  status: OrderStatus;
+  note?: string | null;
+  locale?: MailLocale;
+}): Promise<'sent' | 'skipped' | 'failed'> {
+  try {
+    const [order] = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+    if (!order) return 'failed';
+
+    // No email means a phone-only COD customer — the common case here, not an
+    // error worth logging.
+    if (!order.email) return 'skipped';
+
+    const sent = await sendMail({
+      to: order.email,
+      ...orderStatusChanged({
+        orderNumber: order.orderNumber,
+        // `orders` has no locale column, so the store default stands in. See
+        // the C0 spec — the column was flagged rather than added.
+        locale: input.locale ?? 'ar',
+        currency: order.currency || 'JOD',
+        storeName: await storeName(),
+        customerName: order.customerName,
+        status: input.status,
+        total: order.total,
+        note: input.note,
+      }),
+    });
+
+    return sent.ok ? 'sent' : 'failed';
+  } catch (error) {
+    console.error('[mail] status notification failed:', error);
+    return 'failed';
+  }
 }
 
 /** Contact / newsletter submission alert to the store. */
