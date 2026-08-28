@@ -33,7 +33,12 @@ const emptyDraft = (): Draft => ({
   sortOrder: 0,
 });
 
-const labelOf = (value: string) => GOVERNORATES.find((g) => g.value === value)?.ar ?? value;
+// Takes the locale rather than always reading the Arabic label: this list is
+// rendered inside an admin panel that may be in English.
+const labelOf = (value: string, locale: 'ar' | 'en') =>
+  (locale === 'ar'
+    ? GOVERNORATES.find((g) => g.value === value)?.ar
+    : GOVERNORATES.find((g) => g.value === value)?.en) ?? value;
 
 export function ShippingZonesManager({
   initial,
@@ -122,7 +127,7 @@ export function ShippingZonesManager({
           gap here is the difference between a deliberate policy and lost orders. */}
       {uncovered.length > 0 && (
         <p className="admin-card border-amber-500/30 bg-amber-500/5 text-sm text-amber-300">
-          {t('zone.uncovered', { list: uncovered.map((g) => (locale === 'ar' ? g.ar : g.en)).join('، ') })}
+          {t('zone.uncovered', { list: uncovered.map((g) => (locale === 'ar' ? g.ar : g.en)).join(t('common.listSeparator')) })}
         </p>
       )}
 
@@ -327,7 +332,7 @@ export function ShippingZonesManager({
               <div className="min-w-[10rem] flex-1">
                 <p className="text-sm font-medium">{row.name}</p>
                 <p className="text-xs text-[var(--admin-text-muted)]">
-                  {row.governorates.map(labelOf).join('، ')}
+                  {row.governorates.map((g) => labelOf(g, locale)).join(t('common.listSeparator'))}
                 </p>
               </div>
 

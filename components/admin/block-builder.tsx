@@ -20,6 +20,7 @@ import {
   type BlockType,
 } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
+import { useT } from './i18n-provider';
 
 interface BlockBuilderProps {
   blocks: ContentBlock[];
@@ -30,6 +31,7 @@ let keyCounter = 0;
 const nextKey = () => `blk-${(keyCounter += 1)}`;
 
 export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
+  const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -133,7 +135,7 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
     <div className="space-y-4" data-test-id="block-builder">
       {blocks.length === 0 && (
         <p className="rounded-lg border border-dashed border-[var(--admin-line)] p-8 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد أقسام بعد. ابدأ بإضافة قسم.
+          {t('blocks.empty')}
         </p>
       )}
 
@@ -172,21 +174,21 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
           data-test-id="block-add"
         >
           <Plus size={18} aria-hidden="true" />
-          إضافة قسم
+          {t('blocks.add')}
         </button>
 
         {showAddMenu && (
           <div
             role="menu"
-            aria-label="أنواع الأقسام"
+            aria-label={t('blocks.types')}
             className="absolute z-50 mt-2 w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-elevated)] shadow-xl max-h-80 overflow-y-auto admin-scroll"
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--admin-line)]">
-              <span className="text-xs text-[var(--admin-text-muted)]">اختر نوع القسم</span>
+              <span className="text-xs text-[var(--admin-text-muted)]">{t('blocks.chooseType')}</span>
               <button
                 type="button"
                 onClick={() => setShowAddMenu(false)}
-                aria-label="إغلاق"
+                aria-label={t('common.close')}
                 className="rounded p-1 hover:bg-white/5"
               >
                 <X size={14} aria-hidden="true" />
@@ -209,7 +211,7 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
                     {/* Honest about which pickers lead to a real editor. */}
                     {!editable && (
                       <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-400">
-                        قريباً
+                        {t('blocks.soon')}
                       </span>
                     )}
                   </button>
@@ -246,6 +248,7 @@ function BlockItem({
   onRemove: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
+  const t = useT();
   return (
     <li className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)]">
       <div className="flex items-center gap-2 p-3 border-b border-[var(--admin-line)]">
@@ -266,7 +269,7 @@ function BlockItem({
           type="button"
           onClick={() => onMove(-1)}
           disabled={index === 0}
-          aria-label={`تحريك القسم ${index + 1} لأعلى`}
+          aria-label={t('blocks.moveUp', { n: index + 1 })}
           data-test-id={`block-up-${index}`}
           className="rounded p-1.5 hover:bg-white/5 disabled:opacity-30"
         >
@@ -277,7 +280,7 @@ function BlockItem({
           type="button"
           onClick={() => onMove(1)}
           disabled={index === total - 1}
-          aria-label={`تحريك القسم ${index + 1} لأسفل`}
+          aria-label={t('blocks.moveDown', { n: index + 1 })}
           data-test-id={`block-down-${index}`}
           className="rounded p-1.5 hover:bg-white/5 disabled:opacity-30"
         >
@@ -289,7 +292,7 @@ function BlockItem({
           onClick={onToggle}
           aria-expanded={isExpanded}
           aria-controls={domId}
-          aria-label={isExpanded ? 'طي القسم' : 'توسيع القسم'}
+          aria-label={isExpanded ? t('blocks.collapse') : t('blocks.expand')}
           data-test-id={`block-toggle-${index}`}
           className="rounded p-1.5 hover:bg-white/5"
         >
@@ -303,7 +306,7 @@ function BlockItem({
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`حذف القسم ${index + 1}`}
+          aria-label={t('blocks.deleteSection', { n: index + 1 })}
           data-test-id={`block-remove-${index}`}
           className="rounded p-1.5 text-red-400 hover:bg-red-500/10"
         >
@@ -319,16 +322,16 @@ function BlockItem({
             <NestedBlocksEditor
               entries={block.items}
               labelKey="title"
-              labelText="عنوان العنصر"
-              addLabel="إضافة عنصر"
+              labelText={t('blocks.itemTitle')}
+              addLabel={t('blocks.addItem')}
               onChange={(items) => onUpdate({ ...block, items })}
             />
           ) : block.type === 'tabs' ? (
             <NestedBlocksEditor
               entries={block.items}
               labelKey="label"
-              labelText="اسم التبويب"
-              addLabel="إضافة تبويب"
+              labelText={t('blocks.tabName')}
+              addLabel={t('blocks.addTab')}
               onChange={(items) => onUpdate({ ...block, items })}
             />
           ) : (
@@ -361,6 +364,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
   addLabel: string;
   onChange: (entries: Array<{ content: ContentBlock[] } & Record<K, string>>) => void;
 }) {
+  const t = useT();
   const update = (
     index: number,
     patch: Partial<{ content: ContentBlock[] } & Record<K, string>>
@@ -393,7 +397,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
             <button
               type="button"
               onClick={() => onChange(entries.filter((_, i) => i !== index))}
-              aria-label={`حذف ${index + 1}`}
+              aria-label={t('blocks.deleteN', { n: index + 1 })}
               className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
             >
               <Trash2 size={16} aria-hidden="true" />

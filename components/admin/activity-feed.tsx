@@ -5,7 +5,8 @@ import { createTranslator, type MessageKey } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export async function ActivityFeed() {
-  const t = createTranslator(await getAdminLocale());
+  const locale = await getAdminLocale();
+  const t = createTranslator(locale);
 
   const activities = await db.select({
     id: auditLog.id,
@@ -52,7 +53,7 @@ export async function ActivityFeed() {
                   {actionLabel(activity.action)}
                 </p>
                 <p className="text-xs text-[var(--admin-text-muted)]">
-                  {activity.createdAt ? new Date(activity.createdAt).toLocaleDateString('ar-SA') : ''}
+                  {activity.createdAt ? new Date(activity.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-GB') : ''}
                 </p>
               </div>
             </div>

@@ -2,16 +2,17 @@
 import { db } from '@/lib/db';
 import { formSubmissions } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
-import { createTranslator } from '@/lib/admin-i18n';
+import { createTranslator, type MessageKey } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
 
-const TYPE_LABEL: Record<'contact' | 'newsletter', string> = {
-  contact: 'رسالة تواصل',
-  newsletter: 'اشتراك بالنشرة',
+const TYPE_KEY: Record<'contact' | 'newsletter', MessageKey> = {
+  contact: 'forms.typeContact',
+  newsletter: 'forms.typeNewsletter',
 };
 
 export default async function FormsPage() {
-  const t = createTranslator(await getAdminLocale());
+  const locale = await getAdminLocale();
+  const t = createTranslator(locale);
   const rows = await db
     .select()
     .from(formSubmissions)
@@ -41,10 +42,10 @@ export default async function FormsPage() {
             >
               <div className="min-w-0 space-y-1">
                 <p className="text-sm font-medium">
-                  {TYPE_LABEL[row.type]}
+                  {t(TYPE_KEY[row.type])}
                   {!row.isRead && (
                     <span className="ms-2 rounded-full bg-[var(--admin-accent-muted)] px-2 py-0.5 text-[10px] text-[var(--admin-accent-soft)]">
-                      جديد
+                      {t('forms.new')}
                     </span>
                   )}
                 </p>
@@ -58,7 +59,7 @@ export default async function FormsPage() {
                 </dl>
               </div>
               <time className="shrink-0 text-xs text-[var(--admin-text-muted)]" dir="ltr">
-                {row.createdAt ? new Date(row.createdAt).toLocaleString('ar-SA') : '—'}
+                {row.createdAt ? new Date(row.createdAt).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—'}
               </time>
             </div>
           ))}

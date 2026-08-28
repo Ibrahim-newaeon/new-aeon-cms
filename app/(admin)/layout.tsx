@@ -9,7 +9,7 @@ import { verifyAccessToken } from '@/lib/auth/session';
 import { AdminShell } from '@/components/admin/shell';
 import { getSettings } from '@/lib/db/queries';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
-import { dirFor } from '@/lib/admin-i18n';
+import { dirFor, createTranslator } from '@/lib/admin-i18n';
 import { AdminI18nProvider } from '@/components/admin/i18n-provider';
 import { SessionKeeper } from '@/components/admin/session-keeper';
 import '../globals.css';
@@ -19,11 +19,17 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
-export const metadata: Metadata = {
-  title: 'لوحة التحكم',
-  // The admin panel must never be indexed.
-  robots: { index: false, follow: false },
-};
+// generateMetadata rather than a static object: the title has to follow the
+// admin locale cookie, which a module-level constant cannot read.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = createTranslator(await getAdminLocale());
+
+  return {
+    title: t('brand.panelTitle'),
+    // The admin panel must never be indexed.
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();

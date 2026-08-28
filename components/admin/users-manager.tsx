@@ -5,8 +5,23 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Loader2, KeyRound, Pencil, UserX, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { userRoles, ROLE_LABEL, ROLE_DESCRIPTION, type UserRole } from '@/lib/user-schema';
-import { useT } from './i18n-provider';
+import { userRoles, type UserRole } from '@/lib/user-schema';
+import { useT, useAdminI18n } from './i18n-provider';
+import type { MessageKey } from '@/lib/admin-i18n';
+
+// The role labels in lib/user-schema.ts are Arabic-only literals used by API
+// error messages too, so the admin UI maps to catalogue keys instead of
+// importing them.
+const ROLE_KEY: Record<UserRole, MessageKey> = {
+  admin: 'role.admin',
+  editor: 'role.editor',
+  author: 'role.author',
+};
+const ROLE_DESC_KEY: Record<UserRole, MessageKey> = {
+  admin: 'role.adminDesc',
+  editor: 'role.editorDesc',
+  author: 'role.authorDesc',
+};
 
 export interface UserRow {
   id: string;
@@ -20,6 +35,7 @@ export interface UserRow {
 
 export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; currentUserId: string }) {
   const t = useT();
+  const { locale } = useAdminI18n();
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [mode, setMode] = useState<'idle' | 'create' | 'edit' | 'password'>('idle');
@@ -160,7 +176,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 />
               </Field>
 
-              <Field label={t('users.role')} hint={ROLE_DESCRIPTION[form.role]}>
+              <Field label={t('users.role')} hint={t(ROLE_DESC_KEY[form.role])}>
                 <select
                   className="admin-input"
                   value={form.role}
@@ -169,7 +185,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 >
                   {userRoles.map((r) => (
                     <option key={r} value={r}>
-                      {ROLE_LABEL[r]}
+                      {t(ROLE_KEY[r])}
                     </option>
                   ))}
                 </select>
@@ -243,7 +259,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
                 </p>
               </div>
 
-              <span className="text-sm text-[var(--admin-text-secondary)]">{ROLE_LABEL[row.role]}</span>
+              <span className="text-sm text-[var(--admin-text-secondary)]">{t(ROLE_KEY[row.role])}</span>
 
               <span
                 className={cn(
@@ -257,7 +273,7 @@ export function UsersManager({ initial, currentUserId }: { initial: UserRow[]; c
               </span>
 
               <span className="w-28 text-xs text-[var(--admin-text-muted)]" dir="ltr">
-                {row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleDateString('ar-SA') : '—'}
+                {row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—'}
               </span>
 
               <button

@@ -9,6 +9,7 @@ import {
 } from './blocks/grid-editors';
 import { BLOCK_LABELS, isSafeUrl } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
+import { useT } from './i18n-provider';
 
 interface BlockEditorProps {
   block: ContentBlock;
@@ -20,11 +21,12 @@ interface BlockEditorProps {
  * TipTap bundle is not pulled into this module.
  */
 export function BlockEditor({ block, onChange }: BlockEditorProps) {
+  const t = useT();
   switch (block.type) {
     case 'heading':
       return (
         <div className="space-y-3">
-          <Field label="المستوى" htmlFor="heading-level">
+          <Field label={t('be.level')} htmlFor="heading-level">
             <select
               id="heading-level"
               className="admin-input"
@@ -41,7 +43,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             </select>
           </Field>
 
-          <Field label="النص" htmlFor="heading-text">
+          <Field label={t('be.text')} htmlFor="heading-text">
             <input
               id="heading-text"
               type="text"
@@ -52,7 +54,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             />
           </Field>
 
-          <Field label="معرّف الرابط (anchor)" htmlFor="heading-anchor">
+          <Field label={t('be.anchor')} htmlFor="heading-anchor">
             <input
               id="heading-anchor"
               type="text"
@@ -69,7 +71,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'paragraph':
       return (
         <div className="space-y-3">
-          <Field label="النص" htmlFor="para-text">
+          <Field label={t('be.text')} htmlFor="para-text">
             <textarea
               id="para-text"
               rows={4}
@@ -80,7 +82,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             />
           </Field>
 
-          <Field label="المحاذاة" htmlFor="para-align">
+          <Field label={t('be.align')} htmlFor="para-align">
             <select
               id="para-align"
               className="admin-input"
@@ -95,10 +97,10 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             >
               {/* 'left'/'right' are the union's values but render as logical
                   start/end, so the labels describe reading order, not sides. */}
-              <option value="left">بداية السطر</option>
-              <option value="right">نهاية السطر</option>
-              <option value="center">وسط</option>
-              <option value="justify">ضبط</option>
+              <option value="left">{t('be.alignStart')}</option>
+              <option value="right">{t('be.alignEnd')}</option>
+              <option value="center">{t('be.alignCenter')}</option>
+              <option value="justify">{t('be.alignJustify')}</option>
             </select>
           </Field>
         </div>
@@ -108,12 +110,12 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
       return (
         <div className="space-y-3">
           <MediaField
-            label="رابط الصورة"
+            label={t('be.imageUrl')}
             value={block.src}
             onChange={(src) => onChange({ ...block, src })}
             testId="image-src"
           />
-          <Field label="نص بديل (alt)" htmlFor="image-alt">
+          <Field label={t('be.alt')} htmlFor="image-alt">
             <input
               id="image-alt"
               type="text"
@@ -123,10 +125,10 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               data-test-id="image-alt"
             />
             <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
-              اتركه فارغاً فقط إذا كانت الصورة زخرفية.
+              {t('be.altHint')}
             </p>
           </Field>
-          <Field label="العرض" htmlFor="image-layout">
+          <Field label={t('be.width')} htmlFor="image-layout">
             <select
               id="image-layout"
               className="admin-input"
@@ -135,9 +137,9 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                 onChange({ ...block, layout: e.target.value as typeof block.layout })
               }
             >
-              <option value="normal">عادي</option>
-              <option value="wide">عريض</option>
-              <option value="full">كامل</option>
+              <option value="normal">{t('be.widthNormal')}</option>
+              <option value="wide">{t('be.widthWide')}</option>
+              <option value="full">{t('be.widthFull')}</option>
             </select>
           </Field>
         </div>
@@ -146,7 +148,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'quote':
       return (
         <div className="space-y-3">
-          <Field label="الاقتباس" htmlFor="quote-text">
+          <Field label={t('be.quote')} htmlFor="quote-text">
             <textarea
               id="quote-text"
               rows={3}
@@ -156,7 +158,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               data-test-id="quote-text"
             />
           </Field>
-          <Field label="القائل" htmlFor="quote-author">
+          <Field label={t('be.quoteAuthor')} htmlFor="quote-author">
             <input
               id="quote-author"
               type="text"
@@ -165,7 +167,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               onChange={(e) => onChange({ ...block, author: e.target.value || undefined })}
             />
           </Field>
-          <Field label="النمط" htmlFor="quote-style">
+          <Field label={t('be.style')} htmlFor="quote-style">
             <select
               id="quote-style"
               className="admin-input"
@@ -174,8 +176,8 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                 onChange({ ...block, style: e.target.value as typeof block.style })
               }
             >
-              <option value="bordered">بإطار جانبي</option>
-              <option value="pull">اقتباس بارز</option>
+              <option value="bordered">{t('be.quoteBordered')}</option>
+              <option value="pull">{t('be.quotePull')}</option>
             </select>
           </Field>
         </div>
@@ -184,7 +186,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'button':
       return (
         <div className="space-y-3">
-          <Field label="النص" htmlFor="btn-text">
+          <Field label={t('be.text')} htmlFor="btn-text">
             <input
               id="btn-text"
               type="text"
@@ -195,13 +197,13 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             />
           </Field>
           <UrlField
-            label="الرابط"
+            label={t('be.url')}
             value={block.url}
             onChange={(url) => onChange({ ...block, url })}
             testId="button-url"
           />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="النمط" htmlFor="btn-variant">
+            <Field label={t('be.style')} htmlFor="btn-variant">
               <select
                 id="btn-variant"
                 className="admin-input"
@@ -210,13 +212,13 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                   onChange({ ...block, variant: e.target.value as typeof block.variant })
                 }
               >
-                <option value="primary">أساسي</option>
-                <option value="secondary">ثانوي</option>
-                <option value="outline">محدّد</option>
-                <option value="ghost">شفاف</option>
+                <option value="primary">{t('be.variantPrimary')}</option>
+                <option value="secondary">{t('be.variantSecondary')}</option>
+                <option value="outline">{t('be.variantOutline')}</option>
+                <option value="ghost">{t('be.variantGhost')}</option>
               </select>
             </Field>
-            <Field label="الحجم" htmlFor="btn-size">
+            <Field label={t('be.size')} htmlFor="btn-size">
               <select
                 id="btn-size"
                 className="admin-input"
@@ -225,9 +227,9 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                   onChange({ ...block, size: e.target.value as typeof block.size })
                 }
               >
-                <option value="sm">صغير</option>
-                <option value="md">متوسط</option>
-                <option value="lg">كبير</option>
+                <option value="sm">{t('be.sizeSm')}</option>
+                <option value="md">{t('be.sizeMd')}</option>
+                <option value="lg">{t('be.sizeLg')}</option>
               </select>
             </Field>
           </div>
@@ -236,7 +238,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
 
     case 'divider':
       return (
-        <Field label="النمط" htmlFor="divider-style">
+        <Field label={t('be.style')} htmlFor="divider-style">
           <select
             id="divider-style"
             className="admin-input"
@@ -246,18 +248,18 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             }
             data-test-id="divider-style"
           >
-            <option value="line">خط</option>
-            <option value="space">مسافة</option>
-            <option value="dots">نقاط</option>
+            <option value="line">{t('be.dividerLine')}</option>
+            <option value="space">{t('be.dividerSpace')}</option>
+            <option value="dots">{t('be.dividerDots')}</option>
             {/* 'stars' is in the union but was missing from the picker. */}
-            <option value="stars">نجوم</option>
+            <option value="stars">{t('be.dividerStars')}</option>
           </select>
         </Field>
       );
 
     case 'spacer':
       return (
-        <Field label="الارتفاع (rem)" htmlFor="spacer-height">
+        <Field label={t('be.spacerHeight')} htmlFor="spacer-height">
           <input
             id="spacer-height"
             type="number"
@@ -286,7 +288,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             data-test-id="html-content"
           />
           <p className="mt-1 text-xs text-[var(--admin-warning)]">
-            يُنقّى المحتوى قبل العرض: الوسوم والسمات غير المسموح بها تُحذف.
+            {t('be.htmlSanitised')}
           </p>
         </Field>
       );
@@ -294,26 +296,26 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'cta':
       return (
         <div className="space-y-3">
-          <Field label="العنوان" htmlFor="cta-title">
+          <Field label={t('be.title')} htmlFor="cta-title">
             <input id="cta-title" type="text" className="admin-input" value={block.title}
               onChange={(e) => onChange({ ...block, title: e.target.value })} data-test-id="cta-title" />
           </Field>
-          <Field label="النص" htmlFor="cta-text">
+          <Field label={t('be.text')} htmlFor="cta-text">
             <textarea id="cta-text" rows={2} className="admin-input resize-y" value={block.text}
               onChange={(e) => onChange({ ...block, text: e.target.value })} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <MiniField label="نص الزر" value={block.button.text}
+            <MiniField label={t('be.buttonText')} value={block.button.text}
               onChange={(v) => onChange({ ...block, button: { ...block.button, text: v } })} />
-            <MiniField label="رابط الزر" ltr value={block.button.url}
+            <MiniField label={t('be.buttonUrl')} ltr value={block.button.url}
               onChange={(v) => onChange({ ...block, button: { ...block.button, url: v } })} />
           </div>
-          <MediaField label="صورة الخلفية" value={block.backgroundImage ?? ''}
+          <MediaField label={t('be.backgroundImage')} value={block.backgroundImage ?? ''}
             onChange={(v) => onChange({ ...block, backgroundImage: v || undefined })} testId="cta-bg" />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={block.overlay ?? false}
               onChange={(e) => onChange({ ...block, overlay: e.target.checked })} />
-            طبقة تعتيم فوق الصورة
+            {t('be.overlay')}
           </label>
         </div>
       );
@@ -321,23 +323,23 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'feature-grid':
       return (
         <div className="space-y-3">
-          <Field label="عدد الأعمدة" htmlFor="fg-cols">
+          <Field label={t('be.columnCount')} htmlFor="fg-cols">
             <select id="fg-cols" className="admin-input" value={block.columns}
               onChange={(e) => onChange({ ...block, columns: Number(e.target.value) as 2 | 3 | 4 })}>
               <option value={2}>2</option><option value={3}>3</option><option value={4}>4</option>
             </select>
           </Field>
           <ItemsEditor
-            items={block.items} testId="feature-grid" addLabel="إضافة ميزة"
-            emptyLabel="لا توجد مميزات بعد"
+            items={block.items} testId="feature-grid" addLabel={t('be.addFeature')}
+            emptyLabel={t('be.noFeatures')}
             createItem={() => ({ title: '', description: '' })}
             onChange={(items) => onChange({ ...block, items })}
             renderItem={(item, update) => (
               <div className="space-y-2">
-                <MiniField label="أيقونة (اختياري)" value={item.icon ?? ''}
+                <MiniField label={t('be.iconOptional')} value={item.icon ?? ''}
                   onChange={(v) => update({ icon: v || undefined })} placeholder="★" />
-                <MiniField label="العنوان" value={item.title} onChange={(v) => update({ title: v })} />
-                <MiniField label="الوصف" value={item.description}
+                <MiniField label={t('be.title')} value={item.title} onChange={(v) => update({ title: v })} />
+                <MiniField label={t('be.description')} value={item.description}
                   onChange={(v) => update({ description: v })} />
               </div>
             )}
@@ -348,17 +350,17 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'stats':
       return (
         <ItemsEditor
-          items={block.items} testId="stats" addLabel="إضافة إحصائية"
-          emptyLabel="لا توجد إحصائيات بعد"
+          items={block.items} testId="stats" addLabel={t('be.addStat')}
+          emptyLabel={t('be.noStats')}
           createItem={() => ({ value: '', label: '' })}
           onChange={(items) => onChange({ ...block, items })}
           renderItem={(item, update) => (
             <div className="grid gap-2 sm:grid-cols-2">
-              <MiniField label="القيمة" ltr value={item.value} onChange={(v) => update({ value: v })} />
-              <MiniField label="التسمية" value={item.label} onChange={(v) => update({ label: v })} />
-              <MiniField label="بادئة" ltr value={item.prefix ?? ''}
+              <MiniField label={t('be.value')} ltr value={item.value} onChange={(v) => update({ value: v })} />
+              <MiniField label={t('be.label')} value={item.label} onChange={(v) => update({ label: v })} />
+              <MiniField label={t('be.prefix')} ltr value={item.prefix ?? ''}
                 onChange={(v) => update({ prefix: v || undefined })} />
-              <MiniField label="لاحقة" ltr value={item.suffix ?? ''}
+              <MiniField label={t('be.suffix')} ltr value={item.suffix ?? ''}
                 onChange={(v) => update({ suffix: v || undefined })} />
             </div>
           )}
@@ -368,22 +370,22 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'gallery':
       return (
         <div className="space-y-3">
-          <Field label="التخطيط" htmlFor="gal-layout">
+          <Field label={t('be.layout')} htmlFor="gal-layout">
             <select id="gal-layout" className="admin-input" value={block.layout}
               onChange={(e) => onChange({ ...block, layout: e.target.value as typeof block.layout })}>
-              <option value="grid">شبكة</option><option value="masonry">متداخل</option>
-              <option value="carousel">شريط</option><option value="slideshow">عرض شرائح</option>
+              <option value="grid">{t('be.layoutGrid')}</option><option value="masonry">{t('be.layoutMasonry')}</option>
+              <option value="carousel">{t('be.layoutCarousel')}</option><option value="slideshow">{t('be.layoutSlideshow')}</option>
             </select>
           </Field>
           <ItemsEditor
-            items={block.images} testId="gallery" addLabel="إضافة صورة"
-            emptyLabel="لا توجد صور بعد"
+            items={block.images} testId="gallery" addLabel={t('be.addImage')}
+            emptyLabel={t('be.noImages')}
             createItem={() => ({ src: '', alt: '' })}
             onChange={(images) => onChange({ ...block, images })}
             renderItem={(img, update) => (
               <div className="space-y-2">
-                <MiniField label="الرابط" ltr value={img.src} onChange={(v) => update({ src: v })} />
-                <MiniField label="نص بديل" value={img.alt} onChange={(v) => update({ alt: v })} />
+                <MiniField label={t('be.url')} ltr value={img.src} onChange={(v) => update({ src: v })} />
+                <MiniField label={t('be.altShort')} value={img.alt} onChange={(v) => update({ alt: v })} />
               </div>
             )}
           />
@@ -393,16 +395,16 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'video':
       return (
         <div className="space-y-3">
-          <Field label="المصدر" htmlFor="vid-provider">
+          <Field label={t('be.source')} htmlFor="vid-provider">
             <select id="vid-provider" className="admin-input" value={block.provider}
               onChange={(e) => onChange({ ...block, provider: e.target.value as typeof block.provider })}>
               <option value="youtube">YouTube</option><option value="vimeo">Vimeo</option>
-              <option value="self">ملف مستضاف</option>
+              <option value="self">{t('be.selfHosted')}</option>
             </select>
           </Field>
-          <UrlField label="رابط الفيديو" value={block.url}
+          <UrlField label={t('be.videoUrl')} value={block.url}
             onChange={(url) => onChange({ ...block, url })} testId="video-url" />
-          <MediaField label="صورة الغلاف" value={block.poster ?? ''}
+          <MediaField label={t('be.poster')} value={block.poster ?? ''}
             onChange={(v) => onChange({ ...block, poster: v || undefined })} testId="video-poster" />
         </div>
       );
@@ -410,17 +412,17 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'embed':
       return (
         <div className="space-y-3">
-          <Field label="المنصة" htmlFor="emb-provider">
+          <Field label={t('be.platform')} htmlFor="emb-provider">
             <select id="emb-provider" className="admin-input" value={block.provider}
               onChange={(e) => onChange({ ...block, provider: e.target.value as typeof block.provider })}>
               <option value="instagram">Instagram</option><option value="twitter">Twitter</option>
               <option value="tiktok">TikTok</option><option value="facebook">Facebook</option>
             </select>
           </Field>
-          <UrlField label="رابط المنشور" value={block.url}
+          <UrlField label={t('be.postUrl')} value={block.url}
             onChange={(url) => onChange({ ...block, url })} testId="embed-url" />
           <p className="text-xs text-[var(--admin-text-muted)]">
-            يُعرض كبطاقة رابط؛ سياسة الأمان (CSP) تمنع سكربتات المنصات الخارجية.
+            {t('be.embedNote')}
           </p>
         </div>
       );
@@ -428,16 +430,16 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'team':
       return (
         <ItemsEditor
-          items={block.members} testId="team" addLabel="إضافة عضو"
-          emptyLabel="لا يوجد أعضاء بعد"
+          items={block.members} testId="team" addLabel={t('be.addMember')}
+          emptyLabel={t('be.noMembers')}
           createItem={() => ({ name: '', role: '' })}
           onChange={(members) => onChange({ ...block, members })}
           renderItem={(m, update) => (
             <div className="space-y-2">
-              <MiniField label="الاسم" value={m.name} onChange={(v) => update({ name: v })} />
-              <MiniField label="المسمى" value={m.role} onChange={(v) => update({ role: v })} />
-              <MiniField label="نبذة" value={m.bio ?? ''} onChange={(v) => update({ bio: v || undefined })} />
-              <MiniField label="الصورة" ltr value={m.photo ?? ''}
+              <MiniField label={t('be.fieldName')} value={m.name} onChange={(v) => update({ name: v })} />
+              <MiniField label={t('be.memberRole')} value={m.role} onChange={(v) => update({ role: v })} />
+              <MiniField label={t('be.bio')} value={m.bio ?? ''} onChange={(v) => update({ bio: v || undefined })} />
+              <MiniField label={t('be.photo')} ltr value={m.photo ?? ''}
                 onChange={(v) => update({ photo: v || undefined })} />
             </div>
           )}
@@ -447,15 +449,15 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'timeline':
       return (
         <ItemsEditor
-          items={block.items} testId="timeline" addLabel="إضافة حدث"
-          emptyLabel="لا توجد أحداث بعد"
+          items={block.items} testId="timeline" addLabel={t('be.addEvent')}
+          emptyLabel={t('be.noEvents')}
           createItem={() => ({ date: '', title: '', description: '' })}
           onChange={(items) => onChange({ ...block, items })}
           renderItem={(item, update) => (
             <div className="space-y-2">
-              <MiniField label="التاريخ" ltr value={item.date} onChange={(v) => update({ date: v })} />
-              <MiniField label="العنوان" value={item.title} onChange={(v) => update({ title: v })} />
-              <MiniField label="الوصف" value={item.description}
+              <MiniField label={t('be.date')} ltr value={item.date} onChange={(v) => update({ date: v })} />
+              <MiniField label={t('be.title')} value={item.title} onChange={(v) => update({ title: v })} />
+              <MiniField label={t('be.description')} value={item.description}
                 onChange={(v) => update({ description: v })} />
             </div>
           )}
@@ -466,16 +468,16 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
       return (
         <div className="space-y-3">
           <ChipSelect
-            label="المنصات"
+            label={t('be.platforms')}
             options={['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok'] as const}
             selected={block.platforms}
             onChange={(platforms) => onChange({ ...block, platforms })}
           />
-          <Field label="الشكل" htmlFor="soc-style">
+          <Field label={t('be.shape')} htmlFor="soc-style">
             <select id="soc-style" className="admin-input" value={block.style}
               onChange={(e) => onChange({ ...block, style: e.target.value as typeof block.style })}>
-              <option value="icons">أيقونات</option><option value="buttons">أزرار</option>
-              <option value="floating">عائم</option>
+              <option value="icons">{t('be.shapeIcons')}</option><option value="buttons">{t('be.shapeButtons')}</option>
+              <option value="floating">{t('be.shapeFloating')}</option>
             </select>
           </Field>
         </div>
@@ -484,15 +486,15 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'recent-posts':
       return (
         <div className="space-y-3">
-          <MiniField label="العنوان" value={block.title} onChange={(v) => onChange({ ...block, title: v })} />
+          <MiniField label={t('be.title')} value={block.title} onChange={(v) => onChange({ ...block, title: v })} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <MiniField label="العدد" type="number" ltr value={block.count}
+            <MiniField label={t('be.count')} type="number" ltr value={block.count}
               onChange={(v) => onChange({ ...block, count: Math.max(1, Math.min(12, Number(v) || 1)) })} />
-            <Field label="التخطيط" htmlFor="rp-layout">
+            <Field label={t('be.layout')} htmlFor="rp-layout">
               <select id="rp-layout" className="admin-input" value={block.layout}
                 onChange={(e) => onChange({ ...block, layout: e.target.value as typeof block.layout })}>
-                <option value="grid">شبكة</option><option value="list">قائمة</option>
-                <option value="carousel">شريط</option>
+                <option value="grid">{t('be.layoutGrid')}</option><option value="list">{t('be.layoutList')}</option>
+                <option value="carousel">{t('be.layoutCarousel')}</option>
               </select>
             </Field>
           </div>
@@ -502,13 +504,13 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'map':
       return (
         <div className="grid gap-3 sm:grid-cols-2">
-          <MiniField label="خط العرض" type="number" ltr value={block.location.lat}
+          <MiniField label={t('be.lat')} type="number" ltr value={block.location.lat}
             onChange={(v) => onChange({ ...block, location: { ...block.location, lat: Number(v) || 0 } })} />
-          <MiniField label="خط الطول" type="number" ltr value={block.location.lng}
+          <MiniField label={t('be.lng')} type="number" ltr value={block.location.lng}
             onChange={(v) => onChange({ ...block, location: { ...block.location, lng: Number(v) || 0 } })} />
-          <MiniField label="التقريب" type="number" ltr value={block.zoom ?? 13}
+          <MiniField label={t('be.zoom')} type="number" ltr value={block.zoom ?? 13}
             onChange={(v) => onChange({ ...block, zoom: Number(v) || 13 })} />
-          <MiniField label="اسم الموقع" value={block.marker ?? ''}
+          <MiniField label={t('be.markerName')} value={block.marker ?? ''}
             onChange={(v) => onChange({ ...block, marker: v || undefined })} />
         </div>
       );
@@ -516,13 +518,13 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     case 'newsletter':
       return (
         <div className="space-y-3">
-          <MiniField label="العنوان" value={block.title} onChange={(v) => onChange({ ...block, title: v })} />
-          <MiniField label="الوصف" value={block.description ?? ''}
+          <MiniField label={t('be.title')} value={block.title} onChange={(v) => onChange({ ...block, title: v })} />
+          <MiniField label={t('be.description')} value={block.description ?? ''}
             onChange={(v) => onChange({ ...block, description: v || undefined })} />
-          <MiniField label="نص الزر" value={block.buttonText ?? ''}
+          <MiniField label={t('be.buttonText')} value={block.buttonText ?? ''}
             onChange={(v) => onChange({ ...block, buttonText: v || undefined })} />
           <p className="text-xs text-[var(--admin-warning)]">
-            يتطلب نقطة استقبال للاشتراكات — غير مُنفّذة بعد.
+            {t('be.newsletterTodo')}
           </p>
         </div>
       );
@@ -531,16 +533,16 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
       return (
         <div className="space-y-3">
           <ChipSelect
-            label="الحقول"
+            label={t('be.fields')}
             options={['name', 'email', 'phone', 'subject', 'message'] as const}
             selected={block.fields}
             onChange={(fields) => onChange({ ...block, fields })}
-            labels={{ name: 'الاسم', email: 'البريد', phone: 'الهاتف', subject: 'الموضوع', message: 'الرسالة' }}
+            labels={{ name: t('be.fieldName'), email: t('be.fieldEmail'), phone: t('be.fieldPhone'), subject: t('be.fieldSubject'), message: t('be.fieldMessage') }}
           />
-          <MiniField label="نص زر الإرسال" value={block.submitLabel ?? ''}
+          <MiniField label={t('be.submitLabel')} value={block.submitLabel ?? ''}
             onChange={(v) => onChange({ ...block, submitLabel: v || undefined })} />
           <p className="text-xs text-[var(--admin-warning)]">
-            يتطلب نقطة استقبال للرسائل — غير مُنفّذة بعد.
+            {t('be.contactTodo')}
           </p>
         </div>
       );
@@ -575,7 +577,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     default:
       return (
         <p className="text-sm text-[var(--admin-text-muted)]">
-          محرر «{BLOCK_LABELS[block.type]}» قيد التطوير. يمكن حفظ القسم بقيمه الافتراضية.
+          {t('be.editorTodo', { name: BLOCK_LABELS[block.type] })}
         </p>
       );
   }
@@ -612,6 +614,7 @@ function UrlField({
   onChange: (value: string) => void;
   testId: string;
 }) {
+  const t = useT();
   const invalid = value.length > 0 && !isSafeUrl(value);
   return (
     <div>
@@ -625,13 +628,13 @@ function UrlField({
         className="admin-input text-start"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="https://… أو /uploads/…"
+        placeholder={t('be.urlPlaceholder')}
         aria-invalid={invalid}
         data-test-id={testId}
       />
       {invalid && (
         <p role="alert" className="mt-1 text-xs text-[var(--admin-danger)]">
-          رابط غير صالح. استخدم http/https أو مساراً يبدأ بـ /
+          {t('be.invalidUrl')}
         </p>
       )}
     </div>

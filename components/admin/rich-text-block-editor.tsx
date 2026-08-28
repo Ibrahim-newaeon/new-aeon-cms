@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { isSafeUrl } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
+import { useT } from './i18n-provider';
 
 type RichTextBlock = Extract<ContentBlock, { type: 'rich-text' }>;
 
@@ -22,6 +23,7 @@ interface RichTextBlockEditorProps {
 }
 
 export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProps) {
+  const t = useT();
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -32,7 +34,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         // javascript: link too.
         protocols: ['http', 'https', 'mailto', 'tel'],
       }),
-      Placeholder.configure({ placeholder: 'ابدأ الكتابة هنا…' }),
+      Placeholder.configure({ placeholder: t('editor.placeholder') }),
     ],
     content: block.content,
     // Required under React 19 / App Router: without it TipTap renders during
@@ -56,7 +58,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
     const url = window.prompt(message);
     if (url === null) return;
     if (!isSafeUrl(url)) {
-      window.alert('رابط غير صالح. استخدم http/https أو مساراً يبدأ بـ /');
+      window.alert(t('editor.invalidUrl'));
       return;
     }
     apply(url.trim());
@@ -66,13 +68,13 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
     <div className="border border-[var(--admin-line)] rounded-lg overflow-hidden">
       <div
         role="toolbar"
-        aria-label="أدوات التنسيق"
+        aria-label={t('editor.toolbar')}
         className="flex items-center gap-1 p-2 border-b border-[var(--admin-line)] bg-[var(--admin-elevated)] flex-wrap"
       >
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
-          label="عريض"
+          label={t('editor.bold')}
           testId="rt-bold"
         >
           <Bold size={16} aria-hidden="true" />
@@ -81,7 +83,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
-          label="مائل"
+          label={t('editor.italic')}
           testId="rt-italic"
         >
           <Italic size={16} aria-hidden="true" />
@@ -92,7 +94,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
-          label="قائمة نقطية"
+          label={t('editor.bulletList')}
           testId="rt-bullet"
         >
           <List size={16} aria-hidden="true" />
@@ -101,7 +103,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
-          label="قائمة مرقمة"
+          label={t('editor.orderedList')}
           testId="rt-ordered"
         >
           <ListOrdered size={16} aria-hidden="true" />
@@ -110,7 +112,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive('blockquote')}
-          label="اقتباس"
+          label={t('editor.quote')}
           testId="rt-quote"
         >
           <Quote size={16} aria-hidden="true" />
@@ -120,11 +122,11 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
 
         <ToolbarButton
           onClick={() =>
-            promptForUrl('رابط الصورة:', (url) =>
+            promptForUrl(t('editor.imageUrl'), (url) =>
               editor.chain().focus().setImage({ src: url }).run()
             )
           }
-          label="إدراج صورة"
+          label={t('editor.insertImage')}
           testId="rt-image"
         >
           <ImageIcon size={16} aria-hidden="true" />
@@ -132,12 +134,12 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
 
         <ToolbarButton
           onClick={() =>
-            promptForUrl('الرابط:', (url) =>
+            promptForUrl(t('editor.linkUrl'), (url) =>
               editor.chain().focus().setLink({ href: url }).run()
             )
           }
           isActive={editor.isActive('link')}
-          label="إدراج رابط"
+          label={t('editor.insertLink')}
           testId="rt-link"
         >
           <LinkIcon size={16} aria-hidden="true" />
@@ -148,7 +150,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
-          label="تراجع"
+          label={t('editor.undo')}
           testId="rt-undo"
         >
           <Undo size={16} aria-hidden="true" />
@@ -157,7 +159,7 @@ export function RichTextBlockEditor({ block, onChange }: RichTextBlockEditorProp
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
-          label="إعادة"
+          label={t('editor.redo')}
           testId="rt-redo"
         >
           <Redo size={16} aria-hidden="true" />

@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/admin/data-table';
-import { useT } from './i18n-provider';
+import { useT, useAdminI18n } from './i18n-provider';
 
 /**
  * Shared list table for every content type. Pages and Posts differ only in
@@ -28,6 +28,7 @@ const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
 export function ContentTable({ rows, basePath }: { rows: ContentRow[]; basePath: string }) {
   const router = useRouter();
   const t = useT();
+  const { locale } = useAdminI18n();
 
   // Built inside the component rather than at module scope: it needs the
   // translator, and a hook cannot be called at module level.
@@ -65,7 +66,7 @@ export function ContentTable({ rows, basePath }: { rows: ContentRow[]; basePath:
           key: 'createdAt',
           header: t('common.createdAt'),
           render: (row) =>
-            row.createdAt ? new Date(row.createdAt).toLocaleDateString('ar-SA') : '—',
+            row.createdAt ? new Date(row.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—',
         },
       ]}
     />

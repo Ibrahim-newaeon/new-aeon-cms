@@ -15,11 +15,13 @@ import {
   type ProductTranslationDraft,
   type VariantDraft,
 } from '@/lib/commerce/product-draft';
+import { useT } from './i18n-provider';
+import type { MessageKey } from '@/lib/admin-i18n';
 
 export type { ProductFormValue, ProductTranslationDraft, VariantDraft };
 
 const LOCALES: ReadonlyArray<'ar' | 'en'> = ['ar', 'en'];
-const LOCALE_LABEL: Record<'ar' | 'en', string> = { ar: 'العربية', en: 'English' };
+const LOCALE_KEY: Record<'ar' | 'en', MessageKey> = { ar: 'form.localeAr', en: 'form.localeEn' };
 
 interface Props {
   mode: 'create' | 'edit';
@@ -34,6 +36,7 @@ interface Props {
 export function ProductForm({
   mode, productId, initial, adminPath, currency, brands, categories,
 }: Props) {
+  const t = useT();
   const router = useRouter();
   const [value, setValue] = useState<ProductFormValue>(initial);
   const [locale, setLocale] = useState<'ar' | 'en'>('ar');
@@ -116,7 +119,7 @@ export function ProductForm({
 
     const translations = value.translations.filter((t) => t.name.trim().length > 0);
     if (translations.length === 0) {
-      setError('أدخل اسم المنتج للغة واحدة على الأقل.');
+      setError(t('product.nameRequired'));
       setSaving(false);
       return;
     }
@@ -149,14 +152,14 @@ export function ProductForm({
       if (!res.ok || !data?.success) {
         const issue = data?.error?.issues?.[0];
         throw new Error(
-          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? 'تعذّر الحفظ'
+          issue ? `${issue.path?.join('.') ?? ''}: ${issue.message}` : data?.error?.message ?? t('common.saveFailed')
         );
       }
 
       router.push(`${adminPath}/commerce/products`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر الحفظ');
+      setError(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -166,11 +169,11 @@ export function ProductForm({
     <form onSubmit={handleSubmit} method="post" className="space-y-6" data-test-id="product-form">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">
-          {mode === 'create' ? 'منتج جديد' : 'تعديل المنتج'}
+          {mode === 'create' ? t('product.new') : t('product.edit')}
         </h1>
         <button type="submit" disabled={saving} className="admin-btn disabled:opacity-50" data-test-id="product-save">
           {saving ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Save size={16} aria-hidden="true" />}
-          {saving ? 'جارٍ الحفظ…' : 'حفظ'}
+          {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
 
@@ -182,20 +185,20 @@ export function ProductForm({
 
       {/* Details */}
       <div className="admin-card grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="الرابط (slug)">
+        <Field label={t('common.slugField')}>
           <input type="text" dir="ltr" required className="admin-input text-start"
             value={value.slug} onChange={(e) => setValue((p) => ({ ...p, slug: e.target.value }))}
             placeholder="product-slug" data-test-id="product-slug" />
         </Field>
 
-        <Field label={`السعر (${currency})`}>
+        <Field label={t('product.price', { currency })}>
           <input type="number" dir="ltr" step={step} min={0} required className="admin-input text-start"
             value={toMajorUnits(value.basePrice, currency)}
             onChange={(e) => setValue((p) => ({ ...p, basePrice: toMinorUnits(Number(e.target.value) || 0, currency) }))}
             data-test-id="product-price" />
         </Field>
 
-        <Field label="السعر قبل الخصم">
+        <Field label={t('product.compareAt')}>
           <input type="number" dir="ltr" step={step} min={0} className="admin-input text-start"
             value={value.compareAtPrice === null ? '' : toMajorUnits(value.compareAtPrice, currency)}
             onChange={(e) => setValue((p) => ({
@@ -204,18 +207,18 @@ export function ProductForm({
             }))} />
         </Field>
 
-        <Field label="العلامة التجارية">
+        <Field label={t('product.brand')}>
           <select className="admin-input" value={value.brandId ?? ''}
             onChange={(e) => setValue((p) => ({ ...p, brandId: e.target.value || null }))} data-test-id="product-brand">
-            <option value="">— بدون —</option>
+            <option value="">{t('common.none')}</option>
             {brands.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
           </select>
         </Field>
 
-        <Field label="الفئة">
+        <Field label={t('product.category')}>
           <select className="admin-input" value={value.categoryId ?? ''}
             onChange={(e) => setValue((p) => ({ ...p, categoryId: e.target.value || null }))} data-test-id="product-category">
-            <option value="">— بدون —</option>
+            <option value="">{t('common.none')}</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </Field>
@@ -223,12 +226,12 @@ export function ProductForm({
         <label className="flex items-end gap-2 pb-2 text-sm">
           <input type="checkbox" checked={value.isActive}
             onChange={(e) => setValue((p) => ({ ...p, isActive: e.target.checked }))} data-test-id="product-active" />
-          معروض في المتجر
+          {t('product.visibleInShop')}
         </label>
       </div>
 
       {/* Locale tabs */}
-      <div role="tablist" aria-label="اللغات" className="flex gap-1 border-b border-[var(--admin-line)]">
+      <div role="tablist" aria-label={t('form.languages')} className="flex gap-1 border-b border-[var(--admin-line)]">
         {LOCALES.map((l) => {
           const filled = value.translations.some((t) => t.locale === l && t.name.trim());
           return (
@@ -238,7 +241,7 @@ export function ProductForm({
                 locale === l
                   ? 'border-[var(--admin-accent)] text-[var(--admin-accent-soft)]'
                   : 'border-transparent text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]')}>
-              {LOCALE_LABEL[l]}
+              {t(LOCALE_KEY[l])}
               <span className={cn('h-1.5 w-1.5 rounded-full', filled ? 'bg-[var(--admin-success)]' : 'bg-[var(--admin-text-muted)]')} />
             </button>
           );
@@ -246,15 +249,15 @@ export function ProductForm({
       </div>
 
       <div className="admin-card space-y-4">
-        <Field label="اسم المنتج">
+        <Field label={t('product.name')}>
           <input type="text" className="admin-input" value={active.name}
             onChange={(e) => patchTranslation({ name: e.target.value })} data-test-id="product-name" />
         </Field>
-        <Field label="وصف مختصر">
+        <Field label={t('product.shortDescription')}>
           <input type="text" className="admin-input" value={active.shortDesc}
             onChange={(e) => patchTranslation({ shortDesc: e.target.value })} />
         </Field>
-        <Field label="الوصف">
+        <Field label={t('product.description')}>
           <textarea rows={5} className="admin-input resize-y" value={active.description}
             onChange={(e) => patchTranslation({ description: e.target.value })} />
         </Field>
@@ -262,16 +265,16 @@ export function ProductForm({
 
       {/* Images */}
       <div className="admin-card space-y-3">
-        <h2 className="font-medium">الصور</h2>
+        <h2 className="font-medium">{t('product.images')}</h2>
         {value.images.map((img, i) => (
           <div key={i} className="flex items-end gap-2">
             <div className="flex-1">
-              <MediaField label={`صورة ${i + 1}`} value={img.url} testId={`product-image-${i}`}
+              <MediaField label={t('product.imageN', { n: i + 1 })} value={img.url} testId={`product-image-${i}`}
                 onChange={(url) => setValue((p) => ({ ...p, images: p.images.map((x, j) => (j === i ? { ...x, url } : x)) }))} />
             </div>
-            <input type="text" placeholder="نص بديل" className="admin-input mb-1 flex-1" value={img.alt}
+            <input type="text" placeholder={t('product.altText')} className="admin-input mb-1 flex-1" value={img.alt}
               onChange={(e) => setValue((p) => ({ ...p, images: p.images.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)) }))} />
-            <button type="button" aria-label={`حذف صورة ${i + 1}`} className="mb-1 rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
+            <button type="button" aria-label={t('product.deleteImage', { n: i + 1 })} className="mb-1 rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10"
               onClick={() => setValue((p) => ({ ...p, images: p.images.filter((_, j) => j !== i) }))}>
               <Trash2 size={16} aria-hidden="true" />
             </button>
@@ -279,25 +282,25 @@ export function ProductForm({
         ))}
         <button type="button" onClick={() => setValue((p) => ({ ...p, images: [...p.images, { url: '', alt: '' }] }))}
           className="admin-btn-ghost w-full justify-center border border-dashed border-[var(--admin-line)]" data-test-id="product-add-image">
-          <Plus size={14} aria-hidden="true" /> إضافة صورة
+          <Plus size={14} aria-hidden="true" /> {t('product.addImage')}
         </button>
       </div>
 
       {/* Options & variants */}
       <div className="admin-card space-y-4">
         <div>
-          <h2 className="font-medium">الخيارات والمتغيّرات</h2>
+          <h2 className="font-medium">{t('product.optionsTitle')}</h2>
           <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
-            عرّف محاور الاختلاف (مثل «الحجم» و«اللون»)، ثم أضف متغيّراً لكل تركيبة. المنتج بلا متغيّرات يُباع بالسعر الأساسي.
+            {t('product.optionsHint')}
           </p>
         </div>
 
         <div className="space-y-2">
           {value.options.map((option, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input type="text" placeholder="اسم الخيار" className="admin-input" value={option.name}
+              <input type="text" placeholder={t('product.optionName')} className="admin-input" value={option.name}
                 onChange={(e) => renameOption(i, e.target.value)} data-test-id={`product-option-${i}`} />
-              <button type="button" aria-label={`حذف الخيار ${i + 1}`} onClick={() => removeOption(i)}
+              <button type="button" aria-label={t('product.deleteOption', { n: i + 1 })} onClick={() => removeOption(i)}
                 className="rounded p-2 text-[var(--admin-danger)] hover:bg-red-500/10">
                 <Trash2 size={16} aria-hidden="true" />
               </button>
@@ -307,7 +310,7 @@ export function ProductForm({
             <button type="button" data-test-id="product-add-option"
               onClick={() => setValue((p) => ({ ...p, options: [...p.options, { name: '', position: p.options.length }] }))}
               className="admin-btn-ghost w-full justify-center border border-dashed border-[var(--admin-line)]">
-              <Plus size={14} aria-hidden="true" /> إضافة خيار
+              <Plus size={14} aria-hidden="true" /> {t('product.addOption')}
             </button>
           )}
         </div>
@@ -317,10 +320,10 @@ export function ProductForm({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--admin-line)] text-start text-xs text-[var(--admin-text-muted)]">
-                  {value.options.map((o, i) => <th key={i} className="p-2 text-start">{o.name || `خيار ${i + 1}`}</th>)}
+                  {value.options.map((o, i) => <th key={i} className="p-2 text-start">{o.name || t('product.optionN', { n: i + 1 })}</th>)}
                   <th className="p-2 text-start">SKU</th>
-                  <th className="p-2 text-start">السعر</th>
-                  <th className="p-2 text-start">المخزون</th>
+                  <th className="p-2 text-start">{t('products.colPrice')}</th>
+                  <th className="p-2 text-start">{t('product.colStock')}</th>
                   <th className="p-2" />
                 </tr>
               </thead>
@@ -330,26 +333,26 @@ export function ProductForm({
                     {value.options.map((o, j) => (
                       <td key={j} className="p-1">
                         <input type="text" className="admin-input py-1.5 text-xs" value={variant.optionValues[o.name] ?? ''}
-                          aria-label={`${o.name} للمتغيّر ${i + 1}`}
+                          aria-label={t('product.optionForVariant', { option: o.name, n: i + 1 })}
                           onChange={(e) => patchVariant(i, { optionValues: { ...variant.optionValues, [o.name]: e.target.value } })} />
                       </td>
                     ))}
                     <td className="p-1">
                       <input type="text" dir="ltr" className="admin-input py-1.5 text-xs text-start" value={variant.sku}
-                        aria-label={`SKU للمتغيّر ${i + 1}`} onChange={(e) => patchVariant(i, { sku: e.target.value })} />
+                        aria-label={t('product.skuForVariant', { n: i + 1 })} onChange={(e) => patchVariant(i, { sku: e.target.value })} />
                     </td>
                     <td className="p-1">
                       <input type="number" dir="ltr" step={step} min={0} className="admin-input py-1.5 text-xs text-start"
-                        aria-label={`سعر المتغيّر ${i + 1}`} value={toMajorUnits(variant.price, currency)}
+                        aria-label={t('product.priceForVariant', { n: i + 1 })} value={toMajorUnits(variant.price, currency)}
                         onChange={(e) => patchVariant(i, { price: toMinorUnits(Number(e.target.value) || 0, currency) })} />
                     </td>
                     <td className="p-1">
                       <input type="number" dir="ltr" min={0} className="admin-input py-1.5 text-xs text-start"
-                        aria-label={`مخزون المتغيّر ${i + 1}`} value={variant.stock}
+                        aria-label={t('product.stockForVariant', { n: i + 1 })} value={variant.stock}
                         onChange={(e) => patchVariant(i, { stock: Number(e.target.value) || 0 })} />
                     </td>
                     <td className="p-1">
-                      <button type="button" aria-label={`حذف المتغيّر ${i + 1}`}
+                      <button type="button" aria-label={t('product.deleteVariant', { n: i + 1 })}
                         onClick={() => setValue((p) => ({ ...p, variants: p.variants.filter((_, j) => j !== i) }))}
                         className="rounded p-1.5 text-[var(--admin-danger)] hover:bg-red-500/10">
                         <Trash2 size={14} aria-hidden="true" />
@@ -366,7 +369,7 @@ export function ProductForm({
           className="admin-btn-ghost w-full justify-center border border-dashed border-[var(--admin-line)] disabled:opacity-40"
           data-test-id="product-add-variant">
           <Plus size={14} aria-hidden="true" />
-          {value.options.length === 0 ? 'أضف خياراً أولاً' : 'إضافة متغيّر'}
+          {value.options.length === 0 ? t('product.addOptionFirst') : t('product.addVariant')}
         </button>
       </div>
     </form>

@@ -59,7 +59,7 @@ export function MediaField({
           type="text"
           dir="ltr"
           className="admin-input text-start"
-          placeholder="/uploads/… أو https://…"
+          placeholder={t('common.urlPlaceholder')}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           data-test-id={testId}

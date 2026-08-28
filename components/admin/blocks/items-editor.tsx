@@ -2,6 +2,7 @@
 'use client';
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { useT } from '../i18n-provider';
 
 /**
  * Shared add/remove/reorder shell for blocks whose payload is an array of
@@ -33,6 +34,7 @@ export function ItemsEditor<T>({
   testId: string;
   max?: number;
 }) {
+  const t = useT();
   const update = (index: number, patch: Partial<T>) =>
     onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
 
@@ -72,20 +74,20 @@ export function ItemsEditor<T>({
               </span>
               <div className="flex items-center gap-1">
                 <IconBtn
-                  label={`تحريك ${index + 1} لأعلى`}
+                  label={t('blocks.moveUpN', { n: index + 1 })}
                   disabled={index === 0}
                   onClick={() => move(index, -1)}
                 >
                   <ChevronUp size={14} aria-hidden="true" />
                 </IconBtn>
                 <IconBtn
-                  label={`تحريك ${index + 1} لأسفل`}
+                  label={t('blocks.moveDownN', { n: index + 1 })}
                   disabled={index === items.length - 1}
                   onClick={() => move(index, 1)}
                 >
                   <ChevronDown size={14} aria-hidden="true" />
                 </IconBtn>
-                <IconBtn label={`حذف ${index + 1}`} danger onClick={() => remove(index)}>
+                <IconBtn label={t('blocks.deleteN', { n: index + 1 })} danger onClick={() => remove(index)}>
                   <Trash2 size={14} aria-hidden="true" />
                 </IconBtn>
               </div>

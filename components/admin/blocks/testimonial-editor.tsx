@@ -11,6 +11,7 @@ import {
   type TestimonialBlockInput,
   type TestimonialItemInput,
 } from '@/lib/blocks/testimonial';
+import { useT } from '../i18n-provider';
 
 interface TestimonialEditorProps {
   value: TestimonialBlockInput;
@@ -21,6 +22,7 @@ interface TestimonialEditorProps {
 type FieldErrors = Record<string, string>;
 
 export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
+  const t = useT();
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const commit = (next: TestimonialBlockInput) => {
@@ -66,15 +68,15 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
   return (
     <div className="admin-card space-y-4" data-test-id="testimonial-editor">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium text-[var(--admin-text)]">آراء العملاء</h3>
+        <h3 className="text-sm font-medium text-[var(--admin-text)]">{t('testimonial.title')}</h3>
 
         <label className="flex items-center gap-2 text-xs text-[var(--admin-text-secondary)]">
-          <span>الأعمدة</span>
+          <span>{t('testimonial.columns')}</span>
           <select
             className="admin-input w-auto py-1.5"
             value={value.columns}
             onChange={(e) => commit({ ...value, columns: Number(e.target.value) as 1 | 2 | 3 })}
-            aria-label="عدد الأعمدة"
+            aria-label={t('testimonial.columnCount')}
             data-test-id="testimonial-columns"
           >
             <option value={1}>1</option>
@@ -99,12 +101,12 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-[var(--admin-text-muted)]">
-                رأي <span dir="ltr">{index + 1}</span>
+                {t('testimonial.itemN')} <span dir="ltr">{index + 1}</span>
               </span>
 
               <div className="flex items-center gap-1">
                 <IconButton
-                  label={`تحريك الرأي ${index + 1} لأعلى`}
+                  label={t('testimonial.moveUp', { n: index + 1 })}
                   disabled={index === 0}
                   onClick={() => moveItem(index, -1)}
                   testId={`testimonial-move-up-${index}`}
@@ -112,7 +114,7 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
                   <ChevronUp size={16} />
                 </IconButton>
                 <IconButton
-                  label={`تحريك الرأي ${index + 1} لأسفل`}
+                  label={t('testimonial.moveDown', { n: index + 1 })}
                   disabled={index === value.items.length - 1}
                   onClick={() => moveItem(index, 1)}
                   testId={`testimonial-move-down-${index}`}
@@ -120,7 +122,7 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
                   <ChevronDown size={16} />
                 </IconButton>
                 <IconButton
-                  label={`حذف الرأي ${index + 1}`}
+                  label={t('testimonial.delete', { n: index + 1 })}
                   onClick={() => removeItem(index)}
                   danger
                   testId={`testimonial-remove-${index}`}
@@ -130,19 +132,19 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
               </div>
             </div>
 
-            <Field label="الاقتباس" error={errors[`items.${index}.quote`]} required>
+            <Field label={t('testimonial.quote')} error={errors[`items.${index}.quote`]} required>
               <textarea
                 rows={3}
                 className="admin-input resize-y"
                 value={item.quote}
                 onChange={(e) => updateItem(index, { quote: e.target.value })}
-                placeholder="ما الذي قاله العميل؟"
+                placeholder={t('testimonial.quotePlaceholder')}
                 data-test-id={`testimonial-quote-${index}`}
               />
             </Field>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="الاسم" error={errors[`items.${index}.author`]} required>
+              <Field label={t('testimonial.author')} error={errors[`items.${index}.author`]} required>
                 <input
                   type="text"
                   className="admin-input"
@@ -152,7 +154,7 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
                 />
               </Field>
 
-              <Field label="المسمى الوظيفي" error={errors[`items.${index}.role`]}>
+              <Field label={t('testimonial.role')} error={errors[`items.${index}.role`]}>
                 <input
                   type="text"
                   className="admin-input"
@@ -164,13 +166,13 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
             </div>
 
             <MediaField
-              label="الصورة الشخصية"
+              label={t('testimonial.avatar')}
               value={item.avatar ?? ''}
               onChange={(v) => updateItem(index, { avatar: v || undefined })}
               testId={`testimonial-avatar-${index}`}
             />
 
-            <Field label="التقييم" error={errors[`items.${index}.rating`]}>
+            <Field label={t('testimonial.rating')} error={errors[`items.${index}.rating`]}>
               <RatingInput
                 index={index}
                 value={item.rating}
@@ -188,7 +190,7 @@ export function TestimonialEditor({ value, onChange }: TestimonialEditorProps) {
         data-test-id="testimonial-add-item"
       >
         <Plus size={16} />
-        إضافة رأي
+        {t('testimonial.add')}
       </button>
     </div>
   );
@@ -230,6 +232,7 @@ function RatingInput({
   value?: number;
   onChange: (rating: number | undefined) => void;
 }) {
+  const t = useT();
   return (
     <div dir="ltr" className="flex items-center gap-1" data-test-id={`testimonial-rating-${index}`}>
       {[1, 2, 3, 4, 5].map((star) => (
@@ -238,7 +241,7 @@ function RatingInput({
           type="button"
           // Clicking the active star clears the rating (it is optional).
           onClick={() => onChange(value === star ? undefined : star)}
-          aria-label={`تقييم ${star} من 5`}
+          aria-label={t('testimonial.ratingStar', { star })}
           aria-pressed={value !== undefined && star <= value}
           className="rounded p-1 transition-colors hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
         >

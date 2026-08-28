@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/admin/data-table';
-import { useT } from './i18n-provider';
+import { useT, useAdminI18n } from './i18n-provider';
 
 /**
  * Column definitions carry `render` callbacks — functions. A Server Component
@@ -29,6 +29,7 @@ const STATUS_CLASS: Record<'draft' | 'published' | 'archived', string> = {
 export function PagesTable({ rows, adminPath }: { rows: PageRow[]; adminPath: string }) {
   const router = useRouter();
   const t = useT();
+  const { locale } = useAdminI18n();
 
   // Built inside the component rather than at module scope: it needs the
   // translator, and a hook cannot be called at module level.
@@ -67,7 +68,7 @@ export function PagesTable({ rows, adminPath }: { rows: PageRow[]; adminPath: st
           header: t('common.createdAt'),
           // Formatted client-side so server and client agree on timezone.
           render: (row) =>
-            row.createdAt ? new Date(row.createdAt).toLocaleDateString('ar-SA') : '—',
+            row.createdAt ? new Date(row.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—',
         },
       ]}
     />
