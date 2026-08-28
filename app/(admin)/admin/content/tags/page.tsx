@@ -3,8 +3,11 @@ import { db } from '@/lib/db';
 import { tags, contentTags } from '@/lib/db/schema';
 import { asc, count, eq } from 'drizzle-orm';
 import { TagsManager, type TagRow } from '@/components/admin/tags-manager';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export default async function TagsPage() {
+  const t = createTranslator(await getAdminLocale());
   // Usage count comes from the join table so the delete confirmation can say
   // how much content a tag is attached to before removing it.
   const rows = await db
@@ -29,9 +32,9 @@ export default async function TagsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">الوسوم</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('tags.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          الوسوم المرتبطة بالمحتوى. الرقم يوضّح عدد العناصر المرتبطة بكل وسم.
+          {t('tags.subtitle')}
         </p>
       </div>
 

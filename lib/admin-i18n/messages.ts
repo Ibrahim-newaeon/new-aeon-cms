@@ -103,12 +103,55 @@ export const ar = {
   'settings.commerceToggle': 'تفعيل وحدة المتجر',
   'settings.commerceHint': 'يُظهر أقسام المنتجات والطلبات والكوبونات في القائمة الجانبية.',
   'settings.commerceWarning':
-    'أقسام المتجر تظهر في القائمة، لكنها ما زالت قيد التطوير — لا يوجد كتالوج أو سلة أو طلبات بعد.',
+    'يفعّل الكتالوج والسلة وإتمام الطلب وإدارة الطلبات على الموقع العام.',
   'settings.currency': 'العملة',
   'settings.currencyHint': 'رمز ISO من ثلاثة أحرف، مثل JOD أو SAR.',
   'settings.trackingHint':
     'تُحقن هذه الأكواد في الواجهة العامة تلقائياً بعد الحفظ — في وضع الإنتاج فقط.',
   'settings.adminOnly': 'هذه الصفحة متاحة لمدير النظام فقط.',
+
+  'posts.title': 'المقالات',
+  'posts.subtitle': 'إدارة مقالات المدونة',
+  'posts.new': 'مقال جديد',
+
+  'tags.title': 'الوسوم',
+  'tags.subtitle': 'الوسوم المرتبطة بالمحتوى. الرقم يوضّح عدد العناصر المرتبطة بكل وسم.',
+
+  'categories.title': 'الفئات',
+  'categories.subtitle': 'تنظيم المحتوى في تصنيفات، بمستوى واحد من التفريع.',
+
+  'media.title': 'مكتبة الصور',
+  'media.subtitle': 'الصور والملفات المرفوعة — اسحب وأفلت للرفع.',
+
+  'navigation.title': 'القوائم والواجهة',
+  'navigation.subtitle': 'عناصر التنقل في الموقع العام — اسحب لإعادة الترتيب.',
+
+  'users.title': 'الأدمن والصلاحيات',
+  'users.subtitle': 'حسابات المشرفين وأدوارهم. الحسابات تُعطَّل ولا تُحذف، للحفاظ على نسبة المحتوى لكاتبه.',
+  'users.adminOnly': 'هذه الصفحة متاحة لمدير النظام فقط.',
+
+  'forms.title': 'الرسائل والنماذج',
+  'forms.subtitle': 'كل ما أُرسل عبر نماذج التواصل والنشرة البريدية.',
+  'forms.empty': 'لا توجد رسائل بعد.',
+  'forms.new': 'جديد',
+  'forms.typeContact': 'رسالة تواصل',
+  'forms.typeNewsletter': 'اشتراك بالنشرة',
+
+  'orders.title': 'الطلبات',
+  'orders.subtitle': 'الطلبات لا تُحذف. الإلغاء هو الطريقة الصحيحة لإيقاف طلب، ويعيد الكمية إلى المخزون ويحتفظ بسجل التغييرات.',
+
+  'coupons.title': 'أكواد الخصم',
+  'coupons.subtitle': 'الخصم يُحتسب على المجموع الفرعي فقط، ولا يُخفّض قيمة الشحن ولا ينزل بالإجمالي تحت الصفر.',
+
+  'brands.title': 'العلامات التجارية',
+  'brands.subtitle': 'العلامات المتاحة للاختيار عند إنشاء المنتجات. الرقم يوضّح عدد المنتجات المرتبطة.',
+
+  'shipping.title': 'مناطق الشحن',
+  'shipping.subtitle': 'كل محافظة تنتمي إلى منطقة واحدة مفعّلة على الأكثر. المحافظات غير المشمولة تُرفض عند إتمام الطلب.',
+
+  'products.title': 'المنتجات',
+  'products.subtitle': 'كتالوج المنتجات ومتغيّراتها.',
+  'products.new': 'منتج جديد',
 
   'auth.login': 'تسجيل الدخول',
   'auth.subtitle': 'أدخل بيانات حسابك للمتابعة',
@@ -216,12 +259,55 @@ export const en: Partial<Record<MessageKey, string>> = {
   'settings.commerceToggle': 'Enable commerce module',
   'settings.commerceHint': 'Shows Products, Orders and Coupons in the sidebar.',
   'settings.commerceWarning':
-    'Commerce sections appear in the menu but are not built yet — no catalogue, cart or orders.',
+    'Enables the catalogue, cart, checkout and order management on the public site.',
   'settings.currency': 'Currency',
   'settings.currencyHint': 'Three-letter ISO code, e.g. JOD or SAR.',
   'settings.trackingHint':
     'These codes are injected into the public site automatically after saving — in production only.',
   'settings.adminOnly': 'This page is available to administrators only.',
+
+  'posts.title': 'Posts',
+  'posts.subtitle': 'Manage blog posts',
+  'posts.new': 'New post',
+
+  'tags.title': 'Tags',
+  'tags.subtitle': 'Tags attached to content. The number shows how many items use each tag.',
+
+  'categories.title': 'Categories',
+  'categories.subtitle': 'Organise content into categories, one level of nesting.',
+
+  'media.title': 'Media library',
+  'media.subtitle': 'Uploaded images and files — drag and drop to upload.',
+
+  'navigation.title': 'Menus & front page',
+  'navigation.subtitle': 'Navigation items for the public site — drag to reorder.',
+
+  'users.title': 'Admins & permissions',
+  'users.subtitle': 'Admin accounts and their roles. Accounts are deactivated rather than deleted, so content keeps its author.',
+  'users.adminOnly': 'This page is available to administrators only.',
+
+  'forms.title': 'Messages & forms',
+  'forms.subtitle': 'Everything submitted through the contact and newsletter forms.',
+  'forms.empty': 'No messages yet.',
+  'forms.new': 'New',
+  'forms.typeContact': 'Contact message',
+  'forms.typeNewsletter': 'Newsletter signup',
+
+  'orders.title': 'Orders',
+  'orders.subtitle': 'Orders are never deleted. Cancelling is the correct way to stop one: it returns the stock and keeps the history.',
+
+  'coupons.title': 'Coupons',
+  'coupons.subtitle': 'A discount applies to the subtotal only. It never reduces shipping and never takes the total below zero.',
+
+  'brands.title': 'Brands',
+  'brands.subtitle': 'Brands available when creating a product. The number shows how many products use each one.',
+
+  'shipping.title': 'Shipping zones',
+  'shipping.subtitle': 'Each governorate belongs to at most one active zone. Governorates not covered are rejected at checkout.',
+
+  'products.title': 'Products',
+  'products.subtitle': 'The product catalogue and its variants.',
+  'products.new': 'New product',
 
   'auth.login': 'Sign in',
   'auth.subtitle': 'Enter your account details to continue',

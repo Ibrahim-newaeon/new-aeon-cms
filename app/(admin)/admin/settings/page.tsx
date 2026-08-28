@@ -5,10 +5,13 @@ import { verifyAccessToken } from '@/lib/auth/session';
 import { getSettings } from '@/lib/db/queries';
 import { SettingsForm } from '@/components/admin/settings-form';
 import type { SettingsInput, SocialPlatform } from '@/lib/settings-schema';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function SettingsPage() {
+  const t = createTranslator(await getAdminLocale());
   // The API guard is admin-only; mirror that here so editors are not shown a
   // form whose every save would 403.
   const cookieStore = await cookies();
@@ -26,7 +29,7 @@ export default async function SettingsPage() {
     return (
       <div className="admin-card py-16 text-center">
         <p className="text-sm text-[var(--admin-text-secondary)]">
-          هذه الصفحة متاحة لمدير النظام فقط.
+          {t('settings.adminOnly')}
         </p>
       </div>
     );

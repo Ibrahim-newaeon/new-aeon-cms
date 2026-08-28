@@ -6,6 +6,8 @@ import { getSettings } from '@/lib/db/queries';
 import { listOrders } from '@/lib/commerce/orders';
 import { isOrderStatus } from '@/lib/commerce/order-status';
 import { OrdersTable, type OrderRow } from '@/components/admin/orders-table';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
@@ -16,6 +18,7 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
+  const t = createTranslator(await getAdminLocale());
   const params = await searchParams;
 
   // An unknown ?status= is dropped rather than passed to the query — the column
@@ -59,9 +62,9 @@ export default async function OrdersPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">الطلبات</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('orders.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          الطلبات لا تُحذف. الإلغاء هو الطريقة الصحيحة لإيقاف طلب، ويعيد الكمية إلى المخزون ويحتفظ بسجل التغييرات.
+          {t('orders.subtitle')}
         </p>
       </div>
 

@@ -3,8 +3,11 @@ import { db } from '@/lib/db';
 import { mediaAssets } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 import { MediaLibrary, type MediaAsset } from '@/components/admin/media-library';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export default async function MediaPage() {
+  const t = createTranslator(await getAdminLocale());
   const rows = await db
     .select()
     .from(mediaAssets)
@@ -29,9 +32,9 @@ export default async function MediaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">مكتبة الصور</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('media.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          الصور والملفات المرفوعة — اسحب وأفلت للرفع.
+          {t('media.subtitle')}
         </p>
       </div>
 

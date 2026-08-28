@@ -4,8 +4,11 @@ import { navigation, navigationI18n } from '@/lib/db/schema';
 import { asc } from 'drizzle-orm';
 import { NavigationManager, type NavRow } from '@/components/admin/navigation-manager';
 import type { NavLocation } from '@/lib/navigation-schema';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export default async function NavigationPage() {
+  const t = createTranslator(await getAdminLocale());
   const items = await db.select().from(navigation).orderBy(asc(navigation.order));
   const labels = await db.select().from(navigationI18n);
 
@@ -26,9 +29,9 @@ export default async function NavigationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">القوائم والواجهة</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('navigation.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          عناصر التنقل في الموقع العام — اسحب لإعادة الترتيب.
+          {t('navigation.subtitle')}
         </p>
       </div>
 

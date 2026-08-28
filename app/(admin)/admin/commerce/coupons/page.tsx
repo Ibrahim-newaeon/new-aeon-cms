@@ -4,8 +4,11 @@ import { coupons } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 import { getSettings } from '@/lib/db/queries';
 import { CouponsManager, type CouponRow } from '@/components/admin/coupons-manager';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export default async function CouponsPage() {
+  const t = createTranslator(await getAdminLocale());
   const [rows, settings] = await Promise.all([
     db.select().from(coupons).orderBy(desc(coupons.createdAt)),
     getSettings(),
@@ -28,9 +31,9 @@ export default async function CouponsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">أكواد الخصم</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('coupons.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          الخصم يُحتسب على المجموع الفرعي فقط، ولا يُخفّض قيمة الشحن ولا ينزل بالإجمالي تحت الصفر.
+          {t('coupons.subtitle')}
         </p>
       </div>
 

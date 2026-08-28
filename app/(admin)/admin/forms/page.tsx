@@ -2,6 +2,8 @@
 import { db } from '@/lib/db';
 import { formSubmissions } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const TYPE_LABEL: Record<'contact' | 'newsletter', string> = {
   contact: 'رسالة تواصل',
@@ -9,6 +11,7 @@ const TYPE_LABEL: Record<'contact' | 'newsletter', string> = {
 };
 
 export default async function FormsPage() {
+  const t = createTranslator(await getAdminLocale());
   const rows = await db
     .select()
     .from(formSubmissions)
@@ -18,15 +21,15 @@ export default async function FormsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">الرسائل والنماذج</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('forms.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          كل ما أُرسل عبر نماذج التواصل والنشرة البريدية.
+          {t('forms.subtitle')}
         </p>
       </div>
 
       {rows.length === 0 ? (
         <div className="admin-card py-16 text-center text-sm text-[var(--admin-text-muted)]">
-          لا توجد رسائل بعد.
+          {t('forms.empty')}
         </div>
       ) : (
         <div className="space-y-2">

@@ -7,10 +7,13 @@ import { asc } from 'drizzle-orm';
 import { verifyAccessToken } from '@/lib/auth/session';
 import { UsersManager, type UserRow } from '@/components/admin/users-manager';
 import type { UserRole } from '@/lib/user-schema';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function UsersPage() {
+  const t = createTranslator(await getAdminLocale());
   // Mirror the API guard: the endpoints are admin-only, so an editor should not
   // be shown a screen where every action would 403.
   const store = await cookies();
@@ -29,7 +32,7 @@ export default async function UsersPage() {
     return (
       <div className="admin-card py-16 text-center">
         <p className="text-sm text-[var(--admin-text-secondary)]">
-          هذه الصفحة متاحة لمدير النظام فقط.
+          {t('users.adminOnly')}
         </p>
       </div>
     );
@@ -62,9 +65,9 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">الأدمن والصلاحيات</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('users.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          حسابات المشرفين وأدوارهم. الحسابات تُعطَّل ولا تُحذف، للحفاظ على نسبة المحتوى لكاتبه.
+          {t('users.subtitle')}
         </p>
       </div>
 

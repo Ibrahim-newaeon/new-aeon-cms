@@ -7,8 +7,11 @@ import {
   ShippingZonesManager,
   type ShippingZoneRow,
 } from '@/components/admin/shipping-zones-manager';
+import { createTranslator } from '@/lib/admin-i18n';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 export default async function ShippingPage() {
+  const t = createTranslator(await getAdminLocale());
   // The order count drives the disabled delete button, so the 409 from the API
   // is predictable rather than something the user discovers by clicking.
   const [rows, settings] = await Promise.all([
@@ -55,10 +58,9 @@ export default async function ShippingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--admin-text)]">مناطق الشحن</h1>
+        <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('shipping.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          كل محافظة تنتمي إلى منطقة واحدة مفعّلة على الأكثر. المحافظات غير المشمولة تُرفض عند إتمام
-          الطلب.
+          {t('shipping.subtitle')}
         </p>
       </div>
 
