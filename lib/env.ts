@@ -117,8 +117,34 @@ const withStorageRules = envSchema.superRefine((cfg, ctx) => {
   }
 });
 
+/**
+ * Treats an empty or whitespace-only variable as absent.
+ *
+ * Zod sees `S3_PUBLIC_URL=""` as *present and invalid*, not missing, so an
+ * optional field set to an empty string fails validation and takes the process
+ * down. Every real deployment mechanism produces empty strings routinely —
+ * `${VAR:-}` in docker compose, an unfilled field in a hosting dashboard, a
+ * Dockerfile `ARG VAR=""` — and none of them mean "invalid". They mean unset.
+ *
+ * Found the hard way: a compose file passing an unset S3_PUBLIC_URL through
+ * refused to boot with "S3_PUBLIC_URL: Invalid url".
+ */
+function withoutBlanks(source: NodeJS.ProcessEnv): Record<string, string | undefined> {
+  // A plain record, not NodeJS.ProcessEnv: that type declares NODE_ENV as
+  // always present, which an object built up key by key cannot satisfy. Zod
+  // only needs something indexable.
+  const cleaned: Record<string, string | undefined> = {};
+
+  for (const [key, value] of Object.entries(source)) {
+    if (typeof value === 'string' && value.trim() === '') continue;
+    cleaned[key] = value;
+  }
+
+  return cleaned;
+}
+
 function parseEnv() {
-  const parsed = withStorageRules.safeParse(process.env);
+  const parsed = withStorageRules.safeParse(withoutBlanks(process.env));
 
   if (!parsed.success) {
     const details = parsed.error.issues
