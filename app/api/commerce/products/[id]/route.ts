@@ -2,11 +2,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { products, productI18n } from '@/lib/db/schema';
+import { products, productI18n, productVariants } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { productSchema } from '@/lib/commerce-schema';
 import { writeProductStructure, slugTaken } from '@/lib/commerce/products';
+import { notifyRestocked } from '@/lib/commerce/stock-alerts';
 
 const WRITERS = ['admin', 'editor'] as const;
 
@@ -17,6 +18,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const data = productSchema.parse(await request.json());
+
+    // Snapshot the stock BEFORE the write. An admin editing a variant is the
+    // second place stock can rise, and comparing before/after is the only way
+    // to know which variants actually crossed from zero.
+    const stockBefore = await db
+      .select({ id: productVariants.id, sku: productVariants.sku, stock: productVariants.stock })
+      .from(productVariants)
+      .where(eq(productVariants.productId, id));
 
     const existing = await db.select({ id: products.id }).from(products).where(eq(products.id, id)).limit(1);
     if (!existing[0]) {
@@ -68,6 +77,22 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     await writeProductStructure(id, data);
+
+    // Anyone waiting on a variant that just came back gets told. Keyed on SKU
+    // rather than id because writeProductStructure may replace variant rows.
+    const stockAfter = await db
+      .select({ id: productVariants.id, sku: productVariants.sku, stock: productVariants.stock })
+      .from(productVariants)
+      .where(eq(productVariants.productId, id));
+
+    const wasEmpty = new Set(
+      stockBefore.filter((v) => (v.stock ?? 0) <= 0).map((v) => v.sku)
+    );
+    const restocked = stockAfter
+      .filter((v) => wasEmpty.has(v.sku) && (v.stock ?? 0) > 0)
+      .map((v) => v.id);
+
+    if (restocked.length > 0) await notifyRestocked(restocked);
 
     return NextResponse.json({ success: true, data: { id } });
   } catch (error) {

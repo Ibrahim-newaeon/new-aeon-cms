@@ -85,7 +85,14 @@ export async function getOrderDetail(id: string) {
 }
 
 export type TransitionResult =
-  | { ok: true; from: OrderStatus; to: OrderStatus; stockRestored: boolean }
+  | {
+      ok: true;
+      from: OrderStatus;
+      to: OrderStatus;
+      stockRestored: boolean;
+      /** Variants whose stock rose, so back-in-stock alerts can be sent. */
+      restockedVariantIds: string[];
+    }
   | { ok: false; code: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'RACED'; from?: OrderStatus };
 
 /**
@@ -135,6 +142,8 @@ export async function transitionOrder(input: {
     }
 
     const shouldRestore = restoresStock(to);
+    const restockedVariantIds: string[] = [];
+
     if (shouldRestore) {
       const lines = await tx
         .select({ variantId: orderItems.variantId, qty: orderItems.qty })
@@ -149,6 +158,8 @@ export async function transitionOrder(input: {
           .update(productVariants)
           .set({ stock: sql`${productVariants.stock} + ${line.qty}` })
           .where(eq(productVariants.id, line.variantId));
+
+        restockedVariantIds.push(line.variantId);
       }
     }
 
@@ -160,7 +171,7 @@ export async function transitionOrder(input: {
       changedBy: changedBy ?? null,
     });
 
-    return { ok: true as const, from, to, stockRestored: shouldRestore };
+    return { ok: true as const, from, to, stockRestored: shouldRestore, restockedVariantIds };
   });
 }
 

@@ -10,6 +10,7 @@ import {
   notifiesCustomer,
 } from '@/lib/commerce/order-status';
 import { notifyOrderStatusChanged } from '@/lib/email/notify';
+import { notifyRestocked } from '@/lib/commerce/stock-alerts';
 
 export const runtime = 'nodejs';
 
@@ -93,6 +94,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // mail server was briefly down.
     if (notifiesCustomer(result.to)) {
       await notifyOrderStatusChanged({ orderId: id, status: result.to, note: body.note });
+    }
+
+    // Cancelling or refunding is one of the two places stock RISES, so it is
+    // where anyone waiting on those variants gets told. Outside the
+    // transaction and unable to throw — a mail failure must not undo a
+    // cancellation.
+    if (result.restockedVariantIds.length > 0) {
+      await notifyRestocked(result.restockedVariantIds);
     }
 
     return NextResponse.json({

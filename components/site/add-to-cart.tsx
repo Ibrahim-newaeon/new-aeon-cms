@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShoppingBag, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StockAlert } from './stock-alert';
 
 export interface SelectableVariant {
   id: string;
@@ -129,7 +130,12 @@ export function AddToCart({
         <p className="text-sm text-gray-500">{copy.unavailable}</p>
       )}
       {matched && matched.stock <= 0 && (
-        <p className="text-sm text-red-600">{copy.outOfStock}</p>
+        <div className="space-y-3">
+          <p className="text-sm text-red-600">{copy.outOfStock}</p>
+          {/* Keyed on the variant so switching selection resets the form
+              rather than carrying a submitted state to a different SKU. */}
+          <StockAlert key={matched.id} variantId={matched.id} locale={locale} />
+        </div>
       )}
       {state === 'error' && <p role="alert" className="text-sm text-red-600">{copy.failed}</p>}
 
