@@ -1,7 +1,7 @@
 // app/api/commerce/cart/route.ts
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { readCartCookie, writeCartCookie, addLine, setLineQty } from '@/lib/commerce/cart';
+import { readCartCookie, writeCartCookie, addLine, setLineQty, addBundleLines } from '@/lib/commerce/cart';
 import { commerceEnabled } from '@/lib/commerce/guard';
 
 export const runtime = 'nodejs';
@@ -10,6 +10,7 @@ const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('add'), variantId: z.string().uuid(), qty: z.number().int().min(1).max(99) }),
   z.object({ action: z.literal('set'), variantId: z.string().uuid(), qty: z.number().int().min(0).max(99) }),
   z.object({ action: z.literal('clear') }),
+  z.object({ action: z.literal('add-bundle'), bundleId: z.string().uuid() }),
 ]);
 
 function sameOrigin(request: Request): boolean {
@@ -37,6 +38,22 @@ export async function POST(request: Request) {
     if (body.action === 'clear') {
       await writeCartCookie({ lines: [] });
       return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'add-bundle') {
+      // Expands to ordinary variant lines. Everything downstream — pricing
+      // aside — never learns that bundles exist.
+      const withBundle = await addBundleLines(cart, body.bundleId);
+
+      if (withBundle.lines.length === cart.lines.length) {
+        return NextResponse.json(
+          { success: false, error: { message: 'الحزمة غير متاحة' } },
+          { status: 404 }
+        );
+      }
+
+      await writeCartCookie(withBundle);
+      return NextResponse.json({ success: true, data: { lines: withBundle.lines.length } });
     }
 
     // Quantities are clamped here and re-checked against real stock when the

@@ -1,7 +1,7 @@
 # Clearing the remaining backlog
 
 **Date:** 2026-08-29
-**Status:** In progress
+**Status:** Complete
 **Covers:** the six items left on the build ledger after the hardening run.
 
 Taken in value order, not ledger order. Each ships and is verified on its own.
@@ -112,6 +112,15 @@ total, not a computed discount, so a later price change to a component cannot
 silently alter what a bundle costs. Adding a bundle to the cart adds its
 components as ordinary lines — otherwise every downstream thing (stock
 decrement, order items, fulfilment) needs a second code path.
+
+*Resolved during implementation:* those two requirements conflict. A single
+fixed price cannot be split back across component lines in integers without the
+line totals ceasing to sum to the order total — visible on the order screen and
+wrong to anyone reconciling it. The saving is therefore applied as an
+order-level DISCOUNT, the mechanism coupons already use and `orders.discount`
+already stores. Lines keep their real component prices, every figure stays
+exact, and stock/order items/fulfilment genuinely never learn that bundles
+exist. A bundle priced above its parts yields a zero saving, never a surcharge.
 
 **Stock alerts.** `stock_alerts` — a shopper leaves an email against an
 out-of-stock variant and is notified when it returns. The notification fires

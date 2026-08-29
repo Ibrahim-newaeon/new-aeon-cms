@@ -15,6 +15,7 @@ const COPY = {
     empty: 'سلتك فارغة.',
     browse: 'تصفّح المتجر',
     subtotal: 'المجموع الفرعي',
+    bundleSaving: 'توفير الحزم',
     shippingNote: 'تُحتسب أجرة التوصيل في الخطوة التالية.',
     checkout: 'إتمام الطلب',
     remove: 'إزالة',
@@ -32,6 +33,7 @@ const COPY = {
     empty: 'Your cart is empty.',
     browse: 'Browse the shop',
     subtotal: 'Subtotal',
+    bundleSaving: 'Bundle saving',
     shippingNote: 'Delivery is calculated at the next step.',
     checkout: 'Checkout',
     remove: 'Remove',
@@ -166,6 +168,16 @@ export function CartViewClient({
             {formatPrice(cart.subtotal, currency, locale)}
           </span>
         </div>
+        {cart.bundleDiscount > 0 && (
+          <div
+            className="mt-2 flex justify-between text-sm text-green-700"
+            data-test-id="cart-bundle-saving"
+          >
+            <span>{copy.bundleSaving}</span>
+            <span dir="ltr">− {formatPrice(cart.bundleDiscount, currency, locale)}</span>
+          </div>
+        )}
+
         <p className="mt-2 text-xs text-gray-500">{copy.shippingNote}</p>
 
         {cart.hasUnavailable && (

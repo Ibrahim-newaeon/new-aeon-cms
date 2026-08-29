@@ -133,7 +133,12 @@ export async function placeOrder(
     discount = applyCoupon(view.subtotal, { type: couponRow.type, value: couponRow.value });
   }
 
-  const discounted = view.subtotal - discount;
+  // The bundle saving and any coupon are both discounts on the subtotal, and
+  // together they can never take it below zero. Combining them here rather than
+  // rewriting line prices is what keeps order items, stock and fulfilment
+  // unaware that bundles exist at all.
+  const totalDiscount = Math.min(view.subtotal, discount + view.bundleDiscount);
+  const discounted = view.subtotal - totalDiscount;
   // free_over compares against the DISCOUNTED subtotal, so a coupon cannot
   // accidentally unlock free shipping the store did not intend.
   const shipping = zone.freeOver !== null && discounted >= zone.freeOver ? 0 : zone.flatRate;
@@ -203,7 +208,7 @@ export async function placeOrder(
         shippingZoneId: zone.id,
         subtotal: view.subtotal,
         shipping,
-        discount,
+        discount: totalDiscount,
         total,
         customerName: address.name,
         phone,

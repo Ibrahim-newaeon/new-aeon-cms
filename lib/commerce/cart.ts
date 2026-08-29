@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { products, productI18n, productImages, productVariants, productOptions, variantOptionValues } from '@/lib/db/schema';
+import { products, productI18n, productImages, productVariants, productOptions, variantOptionValues, productBundles, bundleItems } from '@/lib/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 
 export const CART_COOKIE = 'cart';
@@ -27,6 +27,12 @@ const cartCookieSchema = z.object({
       z.object({
         variantId: z.string().uuid(),
         qty: z.number().int().min(1).max(MAX_QTY),
+        /**
+         * Set when this line came from a bundle. Still an ordinary variant
+         * line — stock, order items and fulfilment never learn that bundles
+         * exist. Only pricing groups on it.
+         */
+        bundleId: z.string().uuid().optional(),
       })
     )
     .max(MAX_LINES),
@@ -37,6 +43,9 @@ export type CartCookie = z.infer<typeof cartCookieSchema>;
 export interface CartLine {
   variantId: string;
   qty: number;
+  /** Present when the line came from a bundle. */
+  bundleId?: string;
+  bundleName?: string;
   /** Present only when the variant still exists and is sellable. */
   available: boolean;
   reason?: 'missing' | 'inactive' | 'out_of_stock' | 'insufficient_stock';
@@ -55,6 +64,18 @@ export interface CartView {
   subtotal: number;
   itemCount: number;
   hasUnavailable: boolean;
+  /**
+   * What the bundles in this cart save against buying their parts separately.
+   *
+   * Expressed as a discount rather than by rewriting each line's price. A
+   * bundle has ONE fixed price and its components have their own; splitting
+   * that price back across lines cannot be done in integers without the line
+   * totals ceasing to sum to the order total. Routing it through the discount
+   * the schema already has keeps every figure exact and every downstream path
+   * — stock, order items, fulfilment — completely unaware of bundles.
+   */
+  bundleDiscount: number;
+  bundles: { id: string; name: string; saving: number }[];
 }
 
 async function encode(cart: CartCookie): Promise<string> {
@@ -105,7 +126,14 @@ export async function clearCart(): Promise<void> {
  */
 export async function priceCart(cart: CartCookie, locale: 'ar' | 'en'): Promise<CartView> {
   if (cart.lines.length === 0) {
-    return { lines: [], subtotal: 0, itemCount: 0, hasUnavailable: false };
+    return {
+      lines: [],
+      subtotal: 0,
+      itemCount: 0,
+      hasUnavailable: false,
+      bundleDiscount: 0,
+      bundles: [],
+    };
   }
 
   const ids = cart.lines.map((l) => l.variantId);
@@ -200,29 +228,118 @@ export async function priceCart(cart: CartCookie, locale: 'ar' | 'en'): Promise<
     return { ...base, available: true, lineTotal: row.price * line.qty };
   });
 
+  // Carry the bundle marker through so the cart can group and label lines.
+  for (let i = 0; i < lines.length; i++) {
+    const bundleId = cart.lines[i]?.bundleId;
+    if (bundleId) lines[i]!.bundleId = bundleId;
+  }
+
+  const { bundleDiscount, bundles } = await priceBundles(lines);
+
   return {
     lines,
     subtotal: lines.reduce((sum, l) => sum + l.lineTotal, 0),
     itemCount: lines.filter((l) => l.available).reduce((n, l) => n + l.qty, 0),
     hasUnavailable: lines.some((l) => !l.available),
+    bundleDiscount,
+    bundles,
   };
 }
 
+/**
+ * What each bundle in the cart saves against its parts.
+ *
+ * A bundle only counts when EVERY one of its lines is available: a partly
+ * out-of-stock bundle is not the thing that was priced, and charging the bundle
+ * price for fewer items would be wrong in the customer's favour one way and the
+ * shop's the other.
+ */
+async function priceBundles(
+  lines: CartLine[]
+): Promise<{ bundleDiscount: number; bundles: { id: string; name: string; saving: number }[] }> {
+  const ids = [...new Set(lines.map((l) => l.bundleId).filter(Boolean))] as string[];
+  if (ids.length === 0) return { bundleDiscount: 0, bundles: [] };
+
+  const rows = await db
+    .select({ id: productBundles.id, name: productBundles.name, price: productBundles.price, isActive: productBundles.isActive })
+    .from(productBundles)
+    .where(inArray(productBundles.id, ids));
+
+  const result: { id: string; name: string; saving: number }[] = [];
+  let total = 0;
+
+  for (const bundle of rows) {
+    if (!bundle.isActive) continue;
+
+    const group = lines.filter((l) => l.bundleId === bundle.id);
+    if (group.length === 0 || group.some((l) => !l.available)) continue;
+
+    for (const line of group) line.bundleName = bundle.name;
+
+    const parts = group.reduce((sum, l) => sum + l.lineTotal, 0);
+    // Never negative: a bundle priced above its parts is a pricing mistake, not
+    // a surcharge to collect.
+    const saving = Math.max(0, parts - bundle.price);
+    if (saving === 0) continue;
+
+    result.push({ id: bundle.id, name: bundle.name, saving });
+    total += saving;
+  }
+
+  return { bundleDiscount: total, bundles: result };
+}
+
+/**
+ * Adds every component of a bundle as ordinary variant lines.
+ *
+ * Expanding here rather than storing a bundle as its own line type is what
+ * keeps stock decrement, order items and fulfilment on a single code path.
+ */
+export async function addBundleLines(cart: CartCookie, bundleId: string): Promise<CartCookie> {
+  const items = await db
+    .select({ variantId: bundleItems.variantId, qty: bundleItems.qty })
+    .from(bundleItems)
+    .where(eq(bundleItems.bundleId, bundleId));
+
+  let next = cart;
+  for (const item of items) {
+    next = addLine(next, item.variantId, item.qty, bundleId);
+  }
+
+  return next;
+}
+
 /** Merges a quantity into the cart, clamping and enforcing the line cap. */
-export function addLine(cart: CartCookie, variantId: string, qty: number): CartCookie {
-  const existing = cart.lines.find((l) => l.variantId === variantId);
+export function addLine(
+  cart: CartCookie,
+  variantId: string,
+  qty: number,
+  bundleId?: string
+): CartCookie {
+  // A bundle line is kept separate from a loose line of the same variant:
+  // merging them would silently absorb the loose one into the bundle price.
+  const existing = cart.lines.find(
+    (l) => l.variantId === variantId && l.bundleId === bundleId
+  );
 
   if (existing) {
     return {
       lines: cart.lines.map((l) =>
-        l.variantId === variantId ? { ...l, qty: Math.min(MAX_QTY, l.qty + qty) } : l
+        l.variantId === variantId && l.bundleId === bundleId
+          ? { ...l, qty: Math.min(MAX_QTY, l.qty + qty) }
+          : l
       ),
     };
   }
 
   if (cart.lines.length >= MAX_LINES) return cart;
 
-  return { lines: [...cart.lines, { variantId, qty: Math.min(MAX_QTY, Math.max(1, qty)) }] };
+  return {
+    lines: [
+      ...cart.lines,
+      { variantId, qty: Math.min(MAX_QTY, Math.max(1, qty)), ...(bundleId ? { bundleId } : {}) },
+    ],
+  };
 }
 
 export function setLineQty(cart: CartCookie, variantId: string, qty: number): CartCookie {
