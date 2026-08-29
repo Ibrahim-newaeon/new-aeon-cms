@@ -611,6 +611,15 @@ export const ar = {
   'dashboard.vsPrevious': 'مقارنة بالثلاثين يوماً السابقة',
   'dashboard.newThisPeriod': 'خلال آخر ٣٠ يوماً',
 
+  'folders.title': 'المجلدات',
+  'folders.all': 'كل الملفات',
+  'folders.root': '(بلا مجلد)',
+  'folders.add': 'مجلد جديد',
+  'folders.addChild': 'مجلد فرعي',
+  'folders.namePrompt': 'اسم المجلد',
+  'folders.moveTo': 'نقل {name} إلى مجلد',
+  'folders.deleteConfirm': 'سيُحذف المجلد فقط. الملفات الـ{count} بداخله ستنتقل إلى «كل الملفات» ولن تُحذف. متابعة؟',
+
   'forms.tabs': 'نوع الإرسال',
   'forms.export': 'تصدير CSV',
   'forms.showArchived': 'عرض المؤرشفة',
@@ -1254,6 +1263,15 @@ export const en: Partial<Record<MessageKey, string>> = {
 
   'dashboard.vsPrevious': 'vs the previous 30 days',
   'dashboard.newThisPeriod': 'in the last 30 days',
+
+  'folders.title': 'Folders',
+  'folders.all': 'All files',
+  'folders.root': '(no folder)',
+  'folders.add': 'New folder',
+  'folders.addChild': 'Subfolder',
+  'folders.namePrompt': 'Folder name',
+  'folders.moveTo': 'Move {name} to a folder',
+  'folders.deleteConfirm': 'Only the folder is deleted. The {count} file(s) inside move to “All files” and are kept. Continue?',
 
   'forms.tabs': 'Submission type',
   'forms.export': 'Export CSV',

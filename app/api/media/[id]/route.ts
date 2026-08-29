@@ -9,7 +9,11 @@ import { deleteStored } from '@/lib/media/storage';
 
 export const runtime = 'nodejs';
 
-const patchSchema = z.object({ altText: z.string().trim().max(255) });
+const patchSchema = z.object({
+  altText: z.string().trim().max(255).optional(),
+  /** null moves the asset back to the root. */
+  folderId: z.string().uuid().nullable().optional(),
+});
 
 /** Alt text is edited in place from the library grid. */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -18,12 +22,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   try {
     const { id } = await params;
-    const { altText } = patchSchema.parse(await request.json());
+    const body = patchSchema.parse(await request.json());
 
-    await db
-      .update(mediaAssets)
-      .set({ altText: altText || null })
-      .where(eq(mediaAssets.id, id));
+    // Built field by field so an update that only moves the asset does not
+    // blank its alt text, and vice versa.
+    const patch: Partial<typeof mediaAssets.$inferInsert> = {};
+    if (body.altText !== undefined) patch.altText = body.altText || null;
+    if (body.folderId !== undefined) patch.folderId = body.folderId;
+
+    if (Object.keys(patch).length > 0) {
+      await db.update(mediaAssets).set(patch).where(eq(mediaAssets.id, id));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

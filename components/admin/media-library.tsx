@@ -18,6 +18,7 @@ export interface MediaAsset {
   width: number | null;
   height: number | null;
   altText: string | null;
+  folderId: string | null;
   createdAt: string | null;
 }
 
@@ -38,6 +39,8 @@ interface MediaLibraryProps {
   showingUnused?: boolean;
   /** Bulk cleanup is admin-only. */
   canCleanup?: boolean;
+  /** Folders available to move an asset into. Empty hides the control. */
+  folders?: { id: string; path: string }[];
 }
 
 export function MediaLibrary({
@@ -47,6 +50,7 @@ export function MediaLibrary({
   unusedCount,
   showingUnused = false,
   canCleanup = false,
+  folders = [],
 }: MediaLibraryProps) {
   const t = useT();
   const router = useRouter();
@@ -68,6 +72,18 @@ export function MediaLibrary({
    * a snapshot, and an editor in another tab can drop one of these images into
    * a page between it rendering and this click.
    */
+  /** Moves one asset into a folder, or back to the root. */
+  const moveAsset = async (id: string, folderId: string | null) => {
+    await fetch(`/api/media/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ folderId }),
+    });
+    setAssets((prev) => prev.map((a) => (a.id === id ? { ...a, folderId } : a)));
+    router.refresh();
+  };
+
   const cleanUp = async () => {
     const ids = assets.map((a) => a.id);
     if (ids.length === 0) return;
@@ -318,6 +334,23 @@ export function MediaLibrary({
                       className="admin-input py-1.5 text-xs"
                       aria-label={t('media.altFor', { name: asset.originalName })}
                     />
+
+                    {folders.length > 0 && (
+                      <select
+                        defaultValue={asset.folderId ?? ''}
+                        onChange={(e) => void moveAsset(asset.id, e.target.value || null)}
+                        aria-label={t('folders.moveTo', { name: asset.originalName })}
+                        data-test-id={`asset-folder-${asset.id}`}
+                        className="admin-input py-1.5 text-xs"
+                      >
+                        <option value="">{t('folders.root')}</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.path}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
                     <div className="flex items-center gap-1">
                       <button

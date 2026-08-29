@@ -199,16 +199,16 @@ export const contentCategories = pgTable('content_categories', {
 // ─── MEDIA ──────────────────────────────────────────────
 
 /**
- * NOT IMPLEMENTED. Nothing reads or writes this table.
+ * Media folders — organisation only, never a way to lose a file.
  *
- * The table, its self-reference and `mediaAssets.folderId` all exist, but the
- * media library is a flat grid: there is no folder CRUD, no tree UI and no way
- * to move an asset into one. Both this table and every `folder_id` are empty.
+ * One level of nesting, matching categories. `path` is a denormalised
+ * breadcrumb rebuilt on every write rather than patched: with two levels it is
+ * cheap, and a path that disagrees with `parent_id` is the classic way this
+ * kind of column rots.
  *
- * Left in place rather than dropped because the intent is clear and the columns
- * cost nothing, but the comment is here so nobody reads `folderId` and assumes
- * folders work. Implementing them is a feature — folder CRUD, a tree, a move
- * action and grid filtering — not a gap to be quietly patched.
+ * Deleting a folder moves its assets to the root and promotes its children —
+ * deliberately NOT a cascade, which would turn "tidy up my folders" into a way
+ * to destroy uploads.
  */
 export const mediaFolders = pgTable('media_folders', {
   id: uuid('id').primaryKey().defaultRandom(),
