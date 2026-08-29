@@ -177,6 +177,18 @@ export const contentCategories = pgTable('content_categories', {
 
 // ─── MEDIA ──────────────────────────────────────────────
 
+/**
+ * NOT IMPLEMENTED. Nothing reads or writes this table.
+ *
+ * The table, its self-reference and `mediaAssets.folderId` all exist, but the
+ * media library is a flat grid: there is no folder CRUD, no tree UI and no way
+ * to move an asset into one. Both this table and every `folder_id` are empty.
+ *
+ * Left in place rather than dropped because the intent is clear and the columns
+ * cost nothing, but the comment is here so nobody reads `folderId` and assumes
+ * folders work. Implementing them is a feature — folder CRUD, a tree, a move
+ * action and grid filtering — not a gap to be quietly patched.
+ */
 export const mediaFolders = pgTable('media_folders', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
