@@ -1,8 +1,9 @@
 // app/(auth)/admin/login/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useT } from '@/components/admin/i18n-provider';
 
@@ -11,7 +12,7 @@ import { useT } from '@/components/admin/i18n-provider';
 // customised.
 const ADMIN_PATH = process.env.NEXT_PUBLIC_ADMIN_PATH || '/admin';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +20,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const t = useT();
+  // Set by the reset page after a successful change.
+  const justReset = useSearchParams().get('reset') === '1';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,6 +85,12 @@ export default function LoginPage() {
           className="space-y-4"
           data-test-id="login-form"
         >
+          {justReset && !error && (
+            <div role="status" className="rounded-md bg-green-500/10 p-3 text-sm text-green-400">
+              {t('auth.resetDone')}
+            </div>
+          )}
+
           {error && (
             <div role="alert" className="p-3 rounded-md bg-red-500/10 text-red-400 text-sm">
               {error}
@@ -153,8 +162,26 @@ export default function LoginPage() {
               t('auth.login')
             )}
           </button>
+
+          <Link
+            href={`${ADMIN_PATH}/forgot`}
+            className="block pt-2 text-center text-sm text-[var(--admin-text-muted)] hover:text-[var(--admin-text)]"
+            data-test-id="login-forgot"
+          >
+            {t('auth.forgotLink')}
+          </Link>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams requires a Suspense boundary; without one the whole route
+  // opts out of static rendering and `next build` fails.
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--admin-bg)]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

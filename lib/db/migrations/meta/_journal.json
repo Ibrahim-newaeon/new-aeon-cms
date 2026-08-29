@@ -64,6 +64,13 @@
       "when": 1787981130151,
       "tag": "0008_light_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788018875787,
+      "tag": "0009_petite_wildside",
+      "breakpoints": true
     }
   ]
 }

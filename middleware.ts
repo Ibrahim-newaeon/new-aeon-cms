@@ -86,7 +86,15 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/')) return next();
 
   if (pathname.startsWith(ADMIN_PATH)) {
-    if (pathname === `${ADMIN_PATH}/login`) return next();
+    // The screens someone locked out has to be able to reach. `forgot` and
+    // `reset` are the whole point of self-service recovery: guarding them
+    // bounces the user to the login page they cannot get past.
+    const UNAUTHENTICATED_ADMIN_ROUTES = [
+      `${ADMIN_PATH}/login`,
+      `${ADMIN_PATH}/forgot`,
+      `${ADMIN_PATH}/reset`,
+    ];
+    if (UNAUTHENTICATED_ADMIN_ROUTES.includes(pathname)) return next();
 
     const accessToken = request.cookies.get('access_token')?.value;
     const refreshToken = request.cookies.get('refresh_token')?.value;

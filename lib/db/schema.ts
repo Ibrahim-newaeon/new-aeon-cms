@@ -56,6 +56,27 @@ export const refreshTokens = pgTable('refresh_tokens', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+/**
+ * Self-service password reset.
+ *
+ * Stores a HASH of the token, never the token. A leaked database dump must not
+ * be a set of working reset links — the same reasoning that applies to
+ * users.password_hash, and the reason `token_hash` is unique rather than the
+ * token being looked up directly.
+ */
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar('token_hash', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  /** Set when redeemed. Single-use is enforced on this, not on deletion. */
+  usedAt: timestamp('used_at'),
+  requestedIp: varchar('requested_ip', { length: 45 }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  userIdx: index('password_reset_tokens_user_idx').on(table.userId),
+}));
+
 // ─── CONTENT TYPES ─────────────────────────────────────────
 
 export const contentTypes = pgTable('content_types', {
