@@ -27,6 +27,18 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No volume: rate-limit counters are short-lived by design and losing them
+    # on restart is harmless. Do not reuse this instance for anything durable.
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   app:
     build:
       context: ..
@@ -40,6 +52,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
@@ -48,6 +62,10 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET (min 32 chars, different)}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       ADMIN_PATH: ${ADMIN_PATH:-/admin}
+
+      # Shared rate-limit counters. Without it each app instance limits
+      # independently, which silently weakens the login brute-force guard.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
 
       # Storage. Leave as `local` only for a throwaway run: the container
       # filesystem is ephemeral, so uploads do not survive a redeploy.

@@ -15,7 +15,8 @@
     "media:migrate": "tsx --env-file=.env scripts/migrate-media-to-s3.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "verify:ratelimit": "tsx --env-file=.env scripts/verify-rate-limit.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
@@ -33,6 +34,7 @@
     "clsx": "^2.1.0",
     "drizzle-orm": "^0.45.2",
     "eslint-config-next": "^15.5.24",
+    "ioredis": "^6.0.0",
     "jose": "^5.9.0",
     "lucide-react": "^0.468.0",
     "next": "^15.5.24",
