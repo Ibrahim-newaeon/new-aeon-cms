@@ -137,8 +137,25 @@ export const contentI18n = pgTable('content_i18n', {
 export const tags = pgTable('tags', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
+  /**
+   * Reference name, not a display name.
+   *
+   * Same arrangement as `navigation.label`: translations live in tag_i18n and
+   * this is what renders when a locale has none, so a tag can never appear as a
+   * blank chip. Tags were previously (slug, name) only, which meant one
+   * language's wording showed on both locales of a bilingual site.
+   */
   name: varchar('name', { length: 255 }).notNull(),
 });
+
+export const tagI18n = pgTable('tag_i18n', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tagId: uuid('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+  locale: localeEnum('locale').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+}, (table) => ({
+  tagLocaleIdx: uniqueIndex('tag_i18n_tag_locale_idx').on(table.tagId, table.locale),
+}));
 
 export const contentTags = pgTable('content_tags', {
   contentId: uuid('content_id').notNull().references(() => content.id, { onDelete: 'cascade' }),
@@ -471,6 +488,11 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
 
 export const tagsRelations = relations(tags, ({ many }) => ({
   content: many(contentTags),
+  i18n: many(tagI18n),
+}));
+
+export const tagI18nRelations = relations(tagI18n, ({ one }) => ({
+  tag: one(tags, { fields: [tagI18n.tagId], references: [tags.id] }),
 }));
 
 export const mediaFoldersRelations = relations(mediaFolders, ({ one, many }) => ({

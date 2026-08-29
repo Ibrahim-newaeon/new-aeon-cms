@@ -28,7 +28,31 @@ export const categorySchema = z.object({
 
 export const tagSchema = z.object({
   slug: slugSchema,
+  /**
+   * Reference name. Rendered when a locale has no translation, so it is still
+   * required — a tag must never show as a blank chip.
+   */
   name: z.string().trim().min(1, 'الاسم مطلوب').max(255),
+  /**
+   * Optional, unlike categories', which require at least one. A tag already has
+   * a usable `name`, so demanding a translation would break every existing
+   * single-name tag on its next save.
+   */
+  translations: z
+    .array(
+      z.object({
+        locale: z.enum(['ar', 'en']),
+        /**
+         * Deliberately allows an empty string, unlike every other name field
+         * here: blank is how an editor REMOVES a translation, after which the
+         * locale falls back to the reference name above. With min(1) the
+         * removal path in setTagTranslations was unreachable and a wrong
+         * translation could never be taken back.
+         */
+        name: z.string().trim().max(255),
+      })
+    )
+    .optional(),
 });
 
 export type CategoryInput = z.infer<typeof categorySchema>;

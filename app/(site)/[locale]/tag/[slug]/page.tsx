@@ -10,8 +10,9 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const tag = await getTagBySlug(slug);
+  const { locale, slug } = await params;
+  const typed = locales.includes(locale as Locale) ? (locale as Locale) : undefined;
+  const tag = await getTagBySlug(slug, typed);
   return { title: tag?.name ?? slug };
 }
 
@@ -20,7 +21,7 @@ export default async function TagArchive({ params }: Props) {
   if (!locales.includes(locale as Locale)) notFound();
   const typedLocale = locale as Locale;
 
-  const tag = await getTagBySlug(slug);
+  const tag = await getTagBySlug(slug, typedLocale);
   if (!tag) notFound();
 
   const entries = await listByTag(tag.id, typedLocale);
@@ -30,7 +31,6 @@ export default async function TagArchive({ params }: Props) {
     <div className="mx-auto max-w-6xl px-4 py-16">
       <header className="mb-8">
         <p className="text-sm text-gray-500">{typedLocale === 'ar' ? 'وسم' : 'Tag'}</p>
-        {/* tags has no i18n table, so the name renders the same in both locales. */}
         <h1 className="text-3xl font-bold text-gray-900">{tag.name}</h1>
       </header>
       <ArchiveList entries={entries} locale={typedLocale} emptyMessage={empty} />

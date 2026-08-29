@@ -1,6 +1,6 @@
 // app/(admin)/admin/content/tags/page.tsx
 import { db } from '@/lib/db';
-import { tags, contentTags } from '@/lib/db/schema';
+import { tags, contentTags, tagI18n } from '@/lib/db/schema';
 import { asc, count, eq } from 'drizzle-orm';
 import { TagsManager, type TagRow } from '@/components/admin/tags-manager';
 import { createTranslator } from '@/lib/admin-i18n';
@@ -22,10 +22,16 @@ export default async function TagsPage() {
     .groupBy(tags.id, tags.slug, tags.name)
     .orderBy(asc(tags.name));
 
+  // Both locales flattened onto one row so the manager can edit them side by
+  // side, the same shape the categories screen uses.
+  const translations = await db.select().from(tagI18n);
+
   const initial: TagRow[] = rows.map((r) => ({
     id: r.id,
     slug: r.slug,
     name: r.name,
+    nameAr: translations.find((x) => x.tagId === r.id && x.locale === 'ar')?.name ?? '',
+    nameEn: translations.find((x) => x.tagId === r.id && x.locale === 'en')?.name ?? '',
     usageCount: Number(r.usageCount),
   }));
 

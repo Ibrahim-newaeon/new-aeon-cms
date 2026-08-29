@@ -597,6 +597,10 @@ export const ar = {
   'role.editorDesc': 'إنشاء وتعديل وحذف كل المحتوى والوسائط.',
   'role.authorDesc': 'إنشاء وتعديل المحتوى دون حذفه أو تغيير الإعدادات.',
 
+  'tags.nameAr': 'الاسم (عربي)',
+  'tags.nameEn': 'الاسم (إنجليزي)',
+  'tags.referenceName': 'الاسم المرجعي',
+
   'auth.login': 'تسجيل الدخول',
   'auth.subtitle': 'أدخل بيانات حسابك للمتابعة',
   'auth.email': 'البريد الإلكتروني',
@@ -1196,6 +1200,10 @@ export const en: Partial<Record<MessageKey, string>> = {
   'role.adminDesc': 'Full access, including settings and user management.',
   'role.editorDesc': 'Create, edit and delete all content and media.',
   'role.authorDesc': 'Create and edit content, but not delete it or change settings.',
+
+  'tags.nameAr': 'Name (Arabic)',
+  'tags.nameEn': 'Name (English)',
+  'tags.referenceName': 'Reference name',
 
   'auth.login': 'Sign in',
   'auth.subtitle': 'Enter your account details to continue',

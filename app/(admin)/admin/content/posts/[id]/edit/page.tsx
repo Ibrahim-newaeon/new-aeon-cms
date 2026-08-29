@@ -7,6 +7,7 @@ import { asContentBlocks } from '@/lib/blocks/content-schema';
 import {
   listTaxonomyOptions, getTypeTaxonomyFlags, getContentTaxonomy,
 } from '@/lib/content/taxonomy';
+import { getAdminLocale } from '@/lib/admin-i18n/server';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 const LOCALES = ['ar', 'en'] as const;
@@ -18,7 +19,7 @@ export default async function EditPost({ params }: { params: Promise<{ id: strin
   if (!record) notFound();
 
   const [options, flags, assigned] = await Promise.all([
-    listTaxonomyOptions('ar'),
+    listTaxonomyOptions(await getAdminLocale()),
     getTypeTaxonomyFlags('post'),
     getContentTaxonomy(record.content.id),
   ]);

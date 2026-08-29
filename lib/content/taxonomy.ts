@@ -37,7 +37,7 @@ export async function setContentTaxonomy(
 
 /** Options for the pickers in the content form. */
 export async function listTaxonomyOptions(locale: 'ar' | 'en') {
-  const { categories, categoryI18n, tags } = await import('@/lib/db/schema');
+  const { categories, categoryI18n, tags, tagI18n } = await import('@/lib/db/schema');
   const { and, asc, eq } = await import('drizzle-orm');
 
   const [categoryRows, tagRows] = await Promise.all([
@@ -56,7 +56,13 @@ export async function listTaxonomyOptions(locale: 'ar' | 'en') {
       // Deactivated categories stay assignable to nothing new.
       .where(eq(categories.isActive, true))
       .orderBy(asc(categories.sortOrder)),
-    db.select({ id: tags.id, slug: tags.slug, name: tags.name }).from(tags).orderBy(asc(tags.name)),
+    // leftJoin, not inner: a tag with no translation for this locale must still
+    // be assignable, falling back to its reference name below.
+    db
+      .select({ id: tags.id, slug: tags.slug, name: tags.name, localised: tagI18n.name })
+      .from(tags)
+      .leftJoin(tagI18n, and(eq(tagI18n.tagId, tags.id), eq(tagI18n.locale, locale)))
+      .orderBy(asc(tags.name)),
   ]);
 
   return {
@@ -65,7 +71,7 @@ export async function listTaxonomyOptions(locale: 'ar' | 'en') {
       label: c.name ?? c.slug,
       isChild: Boolean(c.parentId),
     })),
-    tags: tagRows.map((t) => ({ id: t.id, label: t.name })),
+    tags: tagRows.map((t) => ({ id: t.id, label: t.localised ?? t.name })),
   };
 }
 

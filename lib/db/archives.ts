@@ -2,7 +2,7 @@
 import { db } from './index';
 import {
   content, contentI18n, contentTypes, contentCategories, contentTags,
-  categories, categoryI18n, tags,
+  categories, categoryI18n, tags, tagI18n,
 } from './schema';
 import { and, desc, eq } from 'drizzle-orm';
 
@@ -87,9 +87,33 @@ export async function listByCategory(
     .limit(limit);
 }
 
-export async function getTagBySlug(slug: string) {
-  const rows = await db.select().from(tags).where(eq(tags.slug, slug)).limit(1);
-  return rows[0] ?? null;
+/**
+ * A tag with its name resolved for `locale`.
+ *
+ * leftJoin with a fallback to `tags.name`, matching how navigation resolves its
+ * labels: a tag with no translation for this locale renders its reference name
+ * rather than disappearing or showing blank.
+ */
+export async function getTagBySlug(slug: string, locale?: 'ar' | 'en') {
+  const rows = await db
+    .select({
+      id: tags.id,
+      slug: tags.slug,
+      name: tags.name,
+      localised: tagI18n.name,
+    })
+    .from(tags)
+    .leftJoin(
+      tagI18n,
+      and(eq(tagI18n.tagId, tags.id), eq(tagI18n.locale, locale ?? 'ar'))
+    )
+    .where(eq(tags.slug, slug))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+
+  return { id: row.id, slug: row.slug, name: row.localised ?? row.name };
 }
 
 export async function listByTag(

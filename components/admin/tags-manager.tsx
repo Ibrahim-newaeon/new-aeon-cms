@@ -10,9 +10,22 @@ import { useT } from './i18n-provider';
 export interface TagRow {
   id: string;
   slug: string;
+  /** Reference name — shown when a locale has no translation. */
   name: string;
+  nameAr: string;
+  nameEn: string;
   usageCount: number;
 }
+
+/**
+ * The translations the API expects. A blank name deletes that locale's row, so
+ * clearing a field is how an editor removes a translation and falls back to the
+ * reference name.
+ */
+const translationsOf = (nameAr: string, nameEn: string) => [
+  { locale: 'ar' as const, name: nameAr },
+  { locale: 'en' as const, name: nameEn },
+];
 
 /**
  * Tags are two fields, so they are edited in place. Sending the author to a
@@ -23,12 +36,16 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [name, setName] = useState('');
+  const [nameAr, setNameAr] = useState('');
+  const [nameEn, setNameEn] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ name: string; slug: string }>({ name: '', slug: '' });
+  const [draft, setDraft] = useState<{ name: string; slug: string; nameAr: string; nameEn: string }>(
+    { name: '', slug: '', nameAr: '', nameEn: '' }
+  );
 
   const onNameChange = (v: string) => {
     setName(v);
@@ -45,14 +62,16 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ name, slug }),
+        body: JSON.stringify({ name, slug, translations: translationsOf(nameAr, nameEn) }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
         throw new Error(data?.error?.issues?.[0]?.message ?? data?.error?.message ?? t('common.saveFailed'));
       }
-      setRows((p) => [{ ...(data.data as TagRow), usageCount: 0 }, ...p]);
+      setRows((p) => [{ ...(data.data as TagRow), nameAr, nameEn, usageCount: 0 }, ...p]);
       setName('');
+      setNameAr('');
+      setNameEn('');
       setSlug('');
       setSlugTouched(false);
       router.refresh();
@@ -68,7 +87,11 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify(draft),
+      body: JSON.stringify({
+        name: draft.name,
+        slug: draft.slug,
+        translations: translationsOf(draft.nameAr, draft.nameEn),
+      }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.success) {
@@ -125,6 +148,29 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
           />
         </label>
 
+        <label className="min-w-[150px] flex-1">
+          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('tags.nameAr')}</span>
+          <input
+            type="text"
+            className="admin-input"
+            value={nameAr}
+            onChange={(e) => setNameAr(e.target.value)}
+            data-test-id="tag-name-ar"
+          />
+        </label>
+
+        <label className="min-w-[150px] flex-1">
+          <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{t('tags.nameEn')}</span>
+          <input
+            type="text"
+            dir="ltr"
+            className="admin-input text-start"
+            value={nameEn}
+            onChange={(e) => setNameEn(e.target.value)}
+            data-test-id="tag-name-en"
+          />
+        </label>
+
         <button type="submit" disabled={busy} className="admin-btn" data-test-id="tag-create">
           {busy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
           {t('common.add')}
@@ -166,6 +212,21 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
                     onChange={(e) => setDraft((d) => ({ ...d, slug: e.target.value }))}
                     aria-label={t('common.slug')}
                   />
+                  <input
+                    className="admin-input flex-1"
+                    value={draft.nameAr}
+                    onChange={(e) => setDraft((d) => ({ ...d, nameAr: e.target.value }))}
+                    aria-label={t('tags.nameAr')}
+                    placeholder={t('tags.nameAr')}
+                  />
+                  <input
+                    className="admin-input flex-1 text-start"
+                    dir="ltr"
+                    value={draft.nameEn}
+                    onChange={(e) => setDraft((d) => ({ ...d, nameEn: e.target.value }))}
+                    aria-label={t('tags.nameEn')}
+                    placeholder={t('tags.nameEn')}
+                  />
                   <button type="button" onClick={() => void save(row.id)} aria-label={t('common.save')} className="rounded p-2 text-[var(--admin-success)] hover:bg-white/5">
                     <Check size={16} aria-hidden="true" />
                   </button>
@@ -186,7 +247,7 @@ export function TagsManager({ initial }: { initial: TagRow[] }) {
                     type="button"
                     onClick={() => {
                       setEditing(row.id);
-                      setDraft({ name: row.name, slug: row.slug });
+                      setDraft({ name: row.name, slug: row.slug, nameAr: row.nameAr, nameEn: row.nameEn });
                     }}
                     aria-label={t('common.editItem', { name: row.name })}
                     className="rounded p-2 text-[var(--admin-text-secondary)] hover:bg-white/5"

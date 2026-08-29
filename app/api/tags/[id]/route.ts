@@ -6,6 +6,7 @@ import { tags, contentTags } from '@/lib/db/schema';
 import { and, eq, ne } from 'drizzle-orm';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { tagSchema } from '@/lib/taxonomy-schema';
+import { setTagTranslations } from '@/lib/content/tag-i18n';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiAuth(request, ['admin', 'editor', 'author']);
@@ -28,7 +29,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       );
     }
 
-    await db.update(tags).set(data).where(eq(tags.id, id));
+    const { translations, ...tagRow } = data;
+
+    await db.update(tags).set(tagRow).where(eq(tags.id, id));
+    await setTagTranslations(id, translations);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -54,6 +59,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     // contentTags cascades on tagId, so the join rows go with it. Deleting a
     // tag detaches it from content rather than deleting that content.
+    // tag_i18n has ON DELETE CASCADE, so its rows go automatically.
     await db.delete(contentTags).where(eq(contentTags.tagId, id));
     await db.delete(tags).where(eq(tags.id, id));
 

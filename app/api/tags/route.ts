@@ -6,12 +6,12 @@ import { tags } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { tagSchema } from '@/lib/taxonomy-schema';
+import { setTagTranslations } from '@/lib/content/tag-i18n';
 
 /**
- * Tags have no i18n table — `tags` is (slug, name) only. That is a real
- * limitation on a bilingual site: a tag reads in one language on both locales.
- * Left as-is rather than inventing a schema change mid-feature; recorded in the
- * build ledger instead.
+ * Tags carry per-locale names in tag_i18n, with `tags.name` as the fallback.
+ * Before that table existed a tag read in one language on both locales of a
+ * bilingual site.
  */
 export async function POST(request: Request) {
   const auth = await requireApiAuth(request, ['admin', 'editor', 'author']);
@@ -33,7 +33,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const [row] = await db.insert(tags).values(data).returning();
+    // `translations` is not a column on `tags`; destructured out so the insert
+    // does not receive it.
+    const { translations, ...tagRow } = data;
+
+    const [row] = await db.insert(tags).values(tagRow).returning();
+    if (row) await setTagTranslations(row.id, translations);
+
     return NextResponse.json({ success: true, data: row });
   } catch (error) {
     if (error instanceof z.ZodError) {
