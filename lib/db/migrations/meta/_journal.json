@@ -71,6 +71,13 @@
       "when": 1788018875787,
       "tag": "0009_petite_wildside",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788019424768,
+      "tag": "0010_superb_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

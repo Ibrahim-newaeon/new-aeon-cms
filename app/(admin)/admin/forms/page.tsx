@@ -1,70 +1,93 @@
 // app/(admin)/admin/forms/page.tsx
+import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { formSubmissions } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
-import { createTranslator, type MessageKey } from '@/lib/admin-i18n';
+import { and, count, desc, eq, isNull, isNotNull } from 'drizzle-orm';
+import { verifyAccessToken } from '@/lib/auth/session';
+import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { FormsManager, type SubmissionRow } from '@/components/admin/forms-manager';
 
-const TYPE_KEY: Record<'contact' | 'newsletter', MessageKey> = {
-  contact: 'forms.typeContact',
-  newsletter: 'forms.typeNewsletter',
-};
+export const dynamic = 'force-dynamic';
 
-export default async function FormsPage() {
+export default async function FormsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string; archived?: string }>;
+}) {
+  const params = await searchParams;
   const locale = await getAdminLocale();
   const t = createTranslator(locale);
-  const rows = await db
-    .select()
-    .from(formSubmissions)
-    .orderBy(desc(formSubmissions.createdAt))
-    .limit(100);
+
+  const type = params.type === 'newsletter' ? 'newsletter' : 'contact';
+  const showArchived = params.archived === '1';
+
+  // Only an admin may delete outright; an editor archives instead.
+  let canDelete = false;
+  try {
+    const token = (await cookies()).get('access_token')?.value;
+    if (token) canDelete = (await verifyAccessToken(token)).role === 'admin';
+  } catch {
+    canDelete = false;
+  }
+
+  // Newsletter signups are a list, never a queue, so the archive filter only
+  // applies to messages.
+  const where =
+    type === 'newsletter'
+      ? eq(formSubmissions.type, 'newsletter')
+      : and(
+          eq(formSubmissions.type, 'contact'),
+          showArchived
+            ? isNotNull(formSubmissions.archivedAt)
+            : isNull(formSubmissions.archivedAt)
+        );
+
+  const [rows, unread] = await Promise.all([
+    db
+      .select()
+      .from(formSubmissions)
+      .where(where)
+      .orderBy(desc(formSubmissions.createdAt))
+      .limit(200),
+    db
+      .select({ value: count() })
+      .from(formSubmissions)
+      .where(
+        and(
+          eq(formSubmissions.type, 'contact'),
+          eq(formSubmissions.isRead, false),
+          isNull(formSubmissions.archivedAt)
+        )
+      ),
+  ]);
+
+  // Dates cross to a Client Component, so they travel as ISO strings.
+  const initial: SubmissionRow[] = rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    payload: r.payload ?? {},
+    pageSlug: r.pageSlug,
+    locale: r.locale,
+    isRead: r.isRead ?? false,
+    archivedAt: r.archivedAt?.toISOString() ?? null,
+    createdAt: r.createdAt?.toISOString() ?? null,
+  }));
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('forms.title')}</h1>
-        <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
-          {t('forms.subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-[var(--admin-text-muted)]">{t('forms.subtitle')}</p>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="admin-card py-16 text-center text-sm text-[var(--admin-text-muted)]">
-          {t('forms.empty')}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {rows.map((row) => (
-            <div
-              key={row.id}
-              className="admin-card flex flex-wrap items-start justify-between gap-4 py-4"
-              data-test-id={`form-row-${row.id}`}
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-medium">
-                  {t(TYPE_KEY[row.type])}
-                  {!row.isRead && (
-                    <span className="ms-2 rounded-full bg-[var(--admin-accent-muted)] px-2 py-0.5 text-[10px] text-[var(--admin-accent-soft)]">
-                      {t('forms.new')}
-                    </span>
-                  )}
-                </p>
-                <dl className="text-xs text-[var(--admin-text-secondary)]">
-                  {Object.entries(row.payload ?? {}).map(([k, v]) => (
-                    <div key={k} className="flex gap-2">
-                      <dt className="text-[var(--admin-text-muted)]">{k}:</dt>
-                      <dd dir="auto" className="truncate">{String(v)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-              <time className="shrink-0 text-xs text-[var(--admin-text-muted)]" dir="ltr">
-                {row.createdAt ? new Date(row.createdAt).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-GB') : '—'}
-              </time>
-            </div>
-          ))}
-        </div>
-      )}
+      <FormsManager
+        rows={initial}
+        type={type}
+        showArchived={showArchived}
+        unreadCount={unread[0]?.value ?? 0}
+        canDelete={canDelete}
+      />
     </div>
   );
 }
