@@ -601,6 +601,13 @@ export const ar = {
   'tags.nameEn': 'الاسم (إنجليزي)',
   'tags.referenceName': 'الاسم المرجعي',
 
+  'media.showUnused': 'عرض غير المستخدم ({count})',
+  'media.showAll': 'عرض الكل',
+  'media.deleteUnused': 'حذف {count} ملفاً غير مستخدم',
+  'media.cleanupConfirm': 'سيُحذف {count} ملفاً لا يشير إليه أي محتوى. يُعاد التحقّق على الخادم قبل الحذف. متابعة؟',
+  'media.cleanupSkipped': 'تم تخطّي {count} ملفاً لأنه صار مستخدماً أثناء العرض.',
+  'media.noUnused': 'كل الملفات مستخدمة.',
+
   'forms.tabs': 'نوع الإرسال',
   'forms.export': 'تصدير CSV',
   'forms.showArchived': 'عرض المؤرشفة',
@@ -1234,6 +1241,13 @@ export const en: Partial<Record<MessageKey, string>> = {
   'tags.nameAr': 'Name (Arabic)',
   'tags.nameEn': 'Name (English)',
   'tags.referenceName': 'Reference name',
+
+  'media.showUnused': 'Show unused ({count})',
+  'media.showAll': 'Show all',
+  'media.deleteUnused': 'Delete {count} unused',
+  'media.cleanupConfirm': '{count} files that no content references will be deleted. They are re-checked on the server first. Continue?',
+  'media.cleanupSkipped': 'Skipped {count} file(s) that became referenced while the list was open.',
+  'media.noUnused': 'Every file is in use.',
 
   'forms.tabs': 'Submission type',
   'forms.export': 'Export CSV',

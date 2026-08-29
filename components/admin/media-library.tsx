@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { UploadCloud, Trash2, Copy, Check, Loader2, FileText, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useT } from './i18n-provider';
 
 export interface MediaAsset {
@@ -31,10 +32,70 @@ interface MediaLibraryProps {
   /** Picker mode: clicking a tile selects it instead of opening details. */
   onSelect?: (asset: MediaAsset) => void;
   selectable?: boolean;
+  /** How many uploads nothing currently references. Absent in picker mode. */
+  unusedCount?: number;
+  /** True when the grid is already filtered to unused assets. */
+  showingUnused?: boolean;
+  /** Bulk cleanup is admin-only. */
+  canCleanup?: boolean;
 }
 
-export function MediaLibrary({ initial, onSelect, selectable = false }: MediaLibraryProps) {
+export function MediaLibrary({
+  initial,
+  onSelect,
+  selectable = false,
+  unusedCount,
+  showingUnused = false,
+  canCleanup = false,
+}: MediaLibraryProps) {
   const t = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [cleaning, setCleaning] = useState(false);
+
+  const toggleUnused = () => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (showingUnused) next.delete('filter');
+    else next.set('filter', 'unused');
+    router.push(`${pathname}?${next.toString()}`);
+  };
+
+  /**
+   * Deletes everything currently listed as unused.
+   *
+   * The ids are re-checked server-side before anything is removed: this grid is
+   * a snapshot, and an editor in another tab can drop one of these images into
+   * a page between it rendering and this click.
+   */
+  const cleanUp = async () => {
+    const ids = assets.map((a) => a.id);
+    if (ids.length === 0) return;
+    if (!window.confirm(t('media.cleanupConfirm', { count: ids.length }))) return;
+
+    setCleaning(true);
+    try {
+      const res = await fetch('/api/media/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (data?.success) {
+        setAssets((prev) => prev.filter((a) => !ids.includes(a.id)));
+        // `skipped` means something became referenced between listing and
+        // deleting — worth saying rather than silently doing less.
+        if (data.data?.skipped > 0) {
+          window.alert(t('media.cleanupSkipped', { count: data.data.skipped }));
+        }
+        router.refresh();
+      }
+    } finally {
+      setCleaning(false);
+    }
+  };
   const [assets, setAssets] = useState<MediaAsset[]>(initial);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -151,6 +212,33 @@ export function MediaLibrary({ initial, onSelect, selectable = false }: MediaLib
           id="media-upload-input"
           onChange={(e) => e.target.files && void upload(e.target.files)}
         />
+        {unusedCount !== undefined && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={toggleUnused}
+              data-test-id="media-filter-unused"
+              className="rounded-lg border border-[var(--admin-line)] px-3 py-1.5 text-xs text-[var(--admin-text-secondary)] hover:text-[var(--admin-text)]"
+            >
+              {showingUnused
+                ? t('media.showAll')
+                : t('media.showUnused', { count: unusedCount })}
+            </button>
+
+            {showingUnused && canCleanup && assets.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void cleanUp()}
+                disabled={cleaning}
+                data-test-id="media-cleanup"
+                className="rounded-lg border border-[var(--admin-danger)] px-3 py-1.5 text-xs text-[var(--admin-danger)] hover:bg-red-500/10 disabled:opacity-50"
+              >
+                {cleaning ? t('common.saving') : t('media.deleteUnused', { count: assets.length })}
+              </button>
+            )}
+          </div>
+        )}
+
         <label htmlFor="media-upload-input" className="admin-btn cursor-pointer" data-test-id="media-upload">
           {uploading ? (
             <Loader2 size={16} className="animate-spin" aria-hidden="true" />
