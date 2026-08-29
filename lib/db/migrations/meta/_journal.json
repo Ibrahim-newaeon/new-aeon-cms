@@ -78,6 +78,13 @@
       "when": 1788019424768,
       "tag": "0010_superb_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788020782921,
+      "tag": "0011_fat_swordsman",
+      "breakpoints": true
     }
   ]
 }

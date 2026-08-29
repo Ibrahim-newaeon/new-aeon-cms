@@ -8,6 +8,8 @@ import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
 import { formatPrice } from '@/lib/money';
 import { AddToCart } from '@/components/site/add-to-cart';
+import { ProductReviews } from '@/components/site/product-reviews';
+import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
 import { locales, type Locale } from '@/lib/env';
 
 interface Props {
@@ -41,6 +43,14 @@ export default async function ProductPage({ params }: Props) {
   const currency = settings?.currency ?? 'JOD';
   const { product, images, specs, options, selectable, inStock } = record;
   const ar = typedLocale === 'ar';
+
+  // Only approved reviews reach the page, and the average is computed from the
+  // same set rather than stored — a denormalised mean drifts the first time a
+  // moderation path forgets to update it.
+  const [reviews, summary] = await Promise.all([
+    listApprovedReviews(product.id),
+    reviewSummary(product.id),
+  ]);
 
   return (
     <article className="mx-auto max-w-6xl px-4 py-16">
@@ -123,6 +133,19 @@ export default async function ProductPage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      <ProductReviews
+        productId={product.id}
+        locale={typedLocale}
+        summary={summary}
+        reviews={reviews.map((r) => ({
+          id: r.id,
+          customerName: r.customerName,
+          rating: r.rating,
+          body: r.body,
+          createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+        }))}
+      />
     </article>
   );
 }
