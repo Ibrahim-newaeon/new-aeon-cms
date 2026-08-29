@@ -21,6 +21,8 @@ public/uploads/
 coverage/
 playwright-report/
 test-results/
+# Saved admin session for the browser suite — a real login cookie.
+e2e/.auth/
 
 .vscode/
 .idea/
