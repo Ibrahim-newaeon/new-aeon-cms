@@ -608,6 +608,9 @@ export const ar = {
   'media.cleanupSkipped': 'تم تخطّي {count} ملفاً لأنه صار مستخدماً أثناء العرض.',
   'media.noUnused': 'كل الملفات مستخدمة.',
 
+  'dashboard.vsPrevious': 'مقارنة بالثلاثين يوماً السابقة',
+  'dashboard.newThisPeriod': 'خلال آخر ٣٠ يوماً',
+
   'forms.tabs': 'نوع الإرسال',
   'forms.export': 'تصدير CSV',
   'forms.showArchived': 'عرض المؤرشفة',
@@ -1248,6 +1251,9 @@ export const en: Partial<Record<MessageKey, string>> = {
   'media.cleanupConfirm': '{count} files that no content references will be deleted. They are re-checked on the server first. Continue?',
   'media.cleanupSkipped': 'Skipped {count} file(s) that became referenced while the list was open.',
   'media.noUnused': 'Every file is in use.',
+
+  'dashboard.vsPrevious': 'vs the previous 30 days',
+  'dashboard.newThisPeriod': 'in the last 30 days',
 
   'forms.tabs': 'Submission type',
   'forms.export': 'Export CSV',

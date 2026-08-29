@@ -5,23 +5,50 @@ import { AlertTriangle } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
 import { db } from '@/lib/db';
 import { content, contentI18n, mediaAssets, formSubmissions } from '@/lib/db/schema';
-import { count, eq, and, desc } from 'drizzle-orm';
+import { count, eq, and, desc, gte, lt } from 'drizzle-orm';
 import { getSettings } from '@/lib/db/queries';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { trendOf, trendWindows } from '@/lib/admin/trend';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function AdminDashboard() {
   const t = createTranslator(await getAdminLocale());
-  const [settings, totals, published, drafts, media, unreadForms] = await Promise.all([
+  // Two equal windows, compared from real created_at timestamps. The previous
+  // dashboard showed no trends because the ones that existed were invented;
+  // these are measured or absent.
+  const { currentStart, previousStart } = trendWindows();
+
+  const inWindow = (from: Date, to?: Date) =>
+    to ? and(gte(content.createdAt, from), lt(content.createdAt, to)) : gte(content.createdAt, from);
+
+  const [
+    settings, totals, published, drafts, media, unreadForms,
+    contentRecent, contentPrior, mediaRecent, mediaPrior,
+  ] = await Promise.all([
     getSettings(),
     db.select({ count: count() }).from(content),
     db.select({ count: count() }).from(content).where(eq(content.status, 'published')),
     db.select({ count: count() }).from(content).where(eq(content.status, 'draft')),
     db.select({ count: count() }).from(mediaAssets),
     db.select({ count: count() }).from(formSubmissions).where(eq(formSubmissions.isRead, false)),
+    db.select({ count: count() }).from(content).where(inWindow(currentStart)),
+    db.select({ count: count() }).from(content).where(inWindow(previousStart, currentStart)),
+    db
+      .select({ count: count() })
+      .from(mediaAssets)
+      .where(gte(mediaAssets.createdAt, currentStart)),
+    db
+      .select({ count: count() })
+      .from(mediaAssets)
+      .where(and(gte(mediaAssets.createdAt, previousStart), lt(mediaAssets.createdAt, currentStart))),
   ]);
+
+  const contentTrend = trendOf(contentRecent[0]?.count ?? 0, contentPrior[0]?.count ?? 0);
+  const mediaTrend = trendOf(mediaRecent[0]?.count ?? 0, mediaPrior[0]?.count ?? 0);
+  const trendLabel = t('dashboard.vsPrevious');
+  const newLabel = t('dashboard.newThisPeriod');
 
   const siteName = settings?.siteName ?? 'New Aeon';
 
@@ -42,6 +69,9 @@ export default async function AdminDashboard() {
           value={totals[0]?.count ?? 0}
           icon="file-text"
           href={`${ADMIN_PATH}/content/pages`}
+          trend={contentTrend}
+          trendLabel={trendLabel}
+          newLabel={newLabel}
         />
         <StatCard
           title={t('dashboard.published')}
@@ -55,6 +85,9 @@ export default async function AdminDashboard() {
           value={media[0]?.count ?? 0}
           icon="image"
           href={`${ADMIN_PATH}/media`}
+          trend={mediaTrend}
+          trendLabel={trendLabel}
+          newLabel={newLabel}
         />
       </div>
 
