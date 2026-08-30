@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Search, User } from 'lucide-react';
+import { Menu, X, Search, User, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** Shape returned by getNavigation(). Was `any[]`. */
@@ -100,6 +100,17 @@ export function Navbar({ navigation, logo, siteName, locale, commerceOn = false 
 
             {/* Only when there is a shop: an account here exists to show order
                 history, so it is meaningless on a content-only site. */}
+            {commerceOn && (
+              <Link
+                href={`/${locale}/account/wishlist`}
+                aria-label={locale === 'ar' ? 'المفضّلة' : 'Wishlist'}
+                data-test-id="navbar-wishlist"
+                className="rounded-full p-2 hover:bg-site-surface-raised"
+              >
+                <Heart size={20} aria-hidden="true" />
+              </Link>
+            )}
+
             {commerceOn && (
               <Link
                 href={`/${locale}/account`}

@@ -5,8 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Heart, X } from 'lucide-react';
 
 const COPY = {
+  /**
+   * "Wishlist", not "Saved". Shoppers go looking for a wishlist, and a tab
+   * labelled Saved reads as something else — the feature was reported missing
+   * while sitting right there under the other name.
+   */
   ar: { save: 'أضف للمفضّلة', saved: 'في المفضّلة', remove: 'إزالة', signIn: 'سجّل الدخول لحفظ المنتجات' },
-  en: { save: 'Save', saved: 'Saved', remove: 'Remove', signIn: 'Sign in to save products' },
+  en: { save: 'Add to wishlist', saved: 'In your wishlist', remove: 'Remove', signIn: 'Sign in to save products' },
 } as const;
 
 async function toggle(productId: string, saved: boolean) {

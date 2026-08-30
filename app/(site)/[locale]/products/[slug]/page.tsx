@@ -149,12 +149,6 @@ export default async function ProductPage({ params }: Props) {
               Now they select a variant and add it. */}
           <AddToCart options={options} variants={selectable} locale={typedLocale} />
 
-          <WishlistButton
-            productId={product.id}
-            locale={typedLocale}
-            initial={saved}
-            signedIn={Boolean(shopper)}
-          />
 
           {product.description && (
             <p className="whitespace-pre-line text-site-ink-muted">{product.description}</p>
@@ -171,12 +165,23 @@ export default async function ProductPage({ params }: Props) {
             </dl>
           )}
 
-          <Link
-            href={`/${typedLocale}/contact`}
-            className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
-          >
-            {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
-          </Link>
+          {/* Both are inline-flex, so in a space-y stack they sat on one line
+              and overlapped. A flex row with a gap is what was meant. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <WishlistButton
+              productId={product.id}
+              locale={typedLocale}
+              initial={saved}
+              signedIn={Boolean(shopper)}
+            />
+
+            <Link
+              href={`/${typedLocale}/contact`}
+              className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
+            >
+              {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
+            </Link>
+          </div>
         </div>
       </div>
 

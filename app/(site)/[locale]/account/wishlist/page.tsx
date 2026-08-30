@@ -32,15 +32,21 @@ export default async function WishlistPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16">
-      <h1 className="text-3xl font-bold text-site-ink">{ar ? 'المفضّلة' : 'Saved'}</h1>
+      <h1 className="text-3xl font-bold text-site-ink">{ar ? 'المفضّلة' : 'Wishlist'}</h1>
       <div className="mt-8">
         <AccountNav locale={typedLocale} current="wishlist" wishlistCount={items.length} />
       </div>
 
       {items.length === 0 ? (
-        <p className="mt-6 text-sm text-site-ink-muted" data-test-id="wishlist-empty">
-          {ar ? 'لم تحفظ أي منتج بعد.' : 'Nothing saved yet.'}
-        </p>
+        <div className="mt-6 flex flex-col items-start gap-3" data-test-id="wishlist-empty">
+          <p className="text-sm text-site-ink-muted">
+            {ar ? 'لم تحفظ أي منتج بعد.' : 'Your wishlist is empty.'}
+          </p>
+          {/* A dead end otherwise: the way to fill a wishlist is the shop. */}
+          <Link href={`/${typedLocale}/shop`} className="site-btn-outline py-1.5 text-sm">
+            {ar ? 'تصفّح المتجر' : 'Browse the shop'}
+          </Link>
+        </div>
       ) : (
         <ul className="mt-6 grid gap-3 sm:grid-cols-2" data-test-id="wishlist-items">
           {items.map((item) => (

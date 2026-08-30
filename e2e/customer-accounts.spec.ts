@@ -266,10 +266,20 @@ test.describe('an account holds', () => {
     await page.goto('/en/shop');
     await page.locator('a[href^="/en/products/"]').first().click();
 
-    await page.getByTestId('wishlist-toggle').click();
-    await expect(page.getByTestId('wishlist-toggle')).toHaveAttribute('aria-pressed', 'true');
+    // The button and the enquiry link are both inline-flex and once sat on the
+    // same line, overlapping. If they overlap again the click lands on the
+    // wrong one, so this asserts they are actually separated.
+    const save = page.getByTestId('wishlist-toggle');
+    const enquire = page.getByRole('link', { name: /enquire/i });
+    const [a, b] = [await save.boundingBox(), await enquire.boundingBox()];
+    expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x + 1);
 
-    await page.goto('/en/account/wishlist');
+    await save.click();
+    await expect(save).toHaveAttribute('aria-pressed', 'true');
+
+    // Reachable in one click from anywhere, not only from inside the account.
+    await page.getByTestId('navbar-wishlist').click();
+    await expect(page).toHaveURL(/\/account\/wishlist/);
     await expect(page.getByTestId('wishlist-items').locator('li')).toHaveCount(1);
 
     await page.getByTestId('wishlist-remove').click();

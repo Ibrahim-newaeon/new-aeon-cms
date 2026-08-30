@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 const COPY = {
   ar: { orders: 'طلباتي', addresses: 'عناويني', wishlist: 'المفضّلة', profile: 'بياناتي' },
-  en: { orders: 'Orders', addresses: 'Addresses', wishlist: 'Saved', profile: 'Details' },
+  en: { orders: 'Orders', addresses: 'Addresses', wishlist: 'Wishlist', profile: 'Details' },
 } as const;
 
 /** The four things a customer account holds. */
