@@ -147,6 +147,74 @@ test.describe('home page slider', () => {
     await expect(page.getByTestId('slider-counter')).toHaveText('03/03');
   });
 
+  test('peeks on both sides at the first and last slide', async ({ page }) => {
+    await page.goto('/en');
+    await page.getByTestId('slider').hover();
+
+    const band = page.getByTestId('slider');
+    const bandBox = (await band.boundingBox())!;
+
+    // A card overlapping each edge of the band, at every position — that is
+    // what the cloned track buys. Without clones the first slide has empty
+    // space to its left and the last has empty space to its right.
+    const peeksBothSides = async () => {
+      const boxes = await page
+        .locator('[data-test-id^="slider-slide-"], [data-test-id^="slider-clone-"]')
+        .evaluateAll((nodes) =>
+          nodes.map((n) => {
+            const r = n.getBoundingClientRect();
+            return { left: r.left, right: r.right };
+          })
+        );
+      return {
+        left: boxes.some((b) => b.left < 0 && b.right > 0),
+        right: boxes.some((b) => b.left < bandBox.width && b.right > bandBox.width),
+      };
+    };
+
+    expect(await activeSlide(page)).toBe(0);
+    expect(await peeksBothSides()).toEqual({ left: true, right: true });
+
+    // And at the far end.
+    await page.getByTestId('slider-dot-2').click();
+    await expect.poll(() => activeSlide(page)).toBe(2);
+    expect(await peeksBothSides()).toEqual({ left: true, right: true });
+  });
+
+  test('wrapping past the end lands on the first slide and keeps going', async ({ page }) => {
+    await page.goto('/en');
+    await page.getByTestId('slider').hover();
+
+    // Forward past the last slide: the track steps onto a clone and is then
+    // snapped back to the real one. If the snap were missed the counter would
+    // be right and the next step would jump backwards.
+    for (const expected of [1, 2, 0, 1]) {
+      await page.getByTestId('slider-next').click();
+      await expect.poll(() => activeSlide(page)).toBe(expected);
+    }
+
+    // Backwards across the other seam.
+    for (const expected of [0, 2, 1]) {
+      await page.getByTestId('slider-prev').click();
+      await expect.poll(() => activeSlide(page)).toBe(expected);
+    }
+  });
+
+  test('clones are hidden from assistive technology', async ({ page }) => {
+    await page.goto('/en');
+
+    // They exist for the eye only. Announcing them would tell a screen-reader
+    // user the page has five slides when it has three.
+    const clones = page.locator('[data-test-id^="slider-clone-"]');
+    await expect(clones).toHaveCount(2);
+    for (const clone of await clones.all()) {
+      await expect(clone).toHaveAttribute('aria-hidden', 'true');
+    }
+
+    // The real slides are still announced, and there are exactly three.
+    await expect(page.locator('[data-test-id^="slider-slide-"]')).toHaveCount(3);
+  });
+
   test('the hero spans the full viewport width', async ({ page }) => {
     await page.goto('/en');
 

@@ -40,6 +40,14 @@ const HEIGHT: Record<SliderBlockType['height'], string> = {
   tall: 'h-[440px] sm:h-[600px]',
 };
 
+/**
+ * Slide transition, applied as an inline style rather than a `duration-*`
+ * class. The wrap-around snap has to happen exactly when the slide finishes
+ * moving, so this number is read by both the CSS and the timer — a class would
+ * leave two values that must agree and no way to notice when they stop.
+ */
+const TRANSITION_MS = 500;
+
 /** Two digits, so the counter does not change width between 9 and 10. */
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -49,6 +57,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * `main` is a SHOWCASE: one slide holds the middle with its neighbours peeking
  * in at both edges, and clicking a neighbour brings it to the centre. Each card
  * is two columns — words on one side, media on the other — stacking on a phone.
+ * The track is looped with cloned slides, so there is a neighbour on both sides
+ * at every position, including the first and last.
  *
  * `inner` keeps the plainer full-bleed crossfade: one slide at a time, media
  * filling the frame with the words over it. A showcase partway down an article
@@ -70,7 +80,21 @@ export function SliderBlock({
   const count = slides.length;
   const showcase = block.variant === 'main';
 
-  const [index, setIndex] = useState(0);
+  /**
+   * Looping needs at least two slides to have anything to clone, and only the
+   * showcase shows neighbours at all.
+   */
+  const looped = showcase && count > 1;
+
+  /**
+   * Position in TRACK coordinates.
+   *
+   * When looped the track is [cloneOfLast, ...slides, cloneOfFirst], so real
+   * slide 0 sits at 1 and the real range is 1..count. Outside that range means
+   * we are standing on a clone and owe the track a silent snap back.
+   */
+  const [position, setPosition] = useState(looped ? 1 : 0);
+  const [animated, setAnimated] = useState(true);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const dragStart = useRef<number | null>(null);
@@ -85,29 +109,83 @@ export function SliderBlock({
     return () => query.removeEventListener('change', apply);
   }, []);
 
-  const go = useCallback(
-    (next: number) => setIndex(((next % count) + count) % count),
-    [count]
+  /** Which real slide is showing, whatever the track is standing on. */
+  const index = looped ? (((position - 1) % count) + count) % count : position;
+
+  const step = useCallback(
+    (delta: number) =>
+      setPosition((p) => (looped ? p + delta : (((p + delta) % count) + count) % count)),
+    [looped, count]
   );
 
+  /** Jump to a real slide, by its real index. */
+  const go = useCallback((real: number) => setPosition(looped ? real + 1 : real), [looped]);
+
+  const moving = !reducedMotion && animated;
   const rotating = block.autoplay && !paused && !reducedMotion && count > 1;
 
   useEffect(() => {
     if (!rotating) return;
-    const timer = window.setInterval(
-      () => setIndex((i) => (i + 1) % count),
-      slideIntervalMs(block.intervalMs)
-    );
+    const timer = window.setInterval(() => step(1), slideIntervalMs(block.intervalMs));
     return () => window.clearInterval(timer);
-  }, [rotating, block.intervalMs, count]);
+  }, [rotating, block.intervalMs, step]);
+
+  /**
+   * The seam.
+   *
+   * Stepping past either end lands on a clone, which looks identical to the
+   * slide it copies. Once the movement has finished we swap to the real one
+   * with animation off, so the track is back inside its range with nothing
+   * visible having happened.
+   *
+   * A timer rather than `transitionend`: that event does not fire at all when
+   * the transition is disabled — which is exactly the reduced-motion case — and
+   * fires per property when it does, so it would need filtering anyway.
+   */
+  useEffect(() => {
+    if (!looped) return;
+    if (position >= 1 && position <= count) return;
+
+    const settle = () => {
+      setAnimated(false);
+      setPosition(position === 0 ? count : 1);
+    };
+
+    if (!moving) {
+      settle();
+      return;
+    }
+    const timer = window.setTimeout(settle, TRANSITION_MS);
+    return () => window.clearTimeout(timer);
+  }, [looped, position, count, moving]);
+
+  /**
+   * Re-arm the transition after a snap.
+   *
+   * Two frames, not one: a single rAF can still be batched into the same paint
+   * as the position change, which puts the transition back before the browser
+   * has committed the jump — and the snap animates, which is the whole thing we
+   * are hiding.
+   */
+  useEffect(() => {
+    if (animated) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setAnimated(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [animated]);
 
   if (count === 0) return null;
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     // Arrow keys only while the slider has focus, so they do not fight the
     // page's own scrolling.
-    if (event.key === 'ArrowRight') go(index + 1);
-    else if (event.key === 'ArrowLeft') go(index - 1);
+    if (event.key === 'ArrowRight') step(1);
+    else if (event.key === 'ArrowLeft') step(-1);
     else return;
     event.preventDefault();
   };
@@ -126,7 +204,7 @@ export function SliderBlock({
     if (start === null) return;
     const dx = event.clientX - start;
     if (Math.abs(dx) < 40) return;
-    go(index + (dx < 0 ? 1 : -1));
+    step(dx < 0 ? 1 : -1);
   };
 
   return (
@@ -157,11 +235,14 @@ export function SliderBlock({
       {showcase ? (
         <ShowcaseTrack
           slides={slides}
+          position={position}
           index={index}
+          looped={looped}
+          moving={moving}
           height={block.height}
           locale={locale}
           reducedMotion={reducedMotion}
-          onSelect={go}
+          onSelect={setPosition}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
         />
@@ -187,7 +268,7 @@ export function SliderBlock({
               sides between the Arabic and English trees. */}
           <button
             type="button"
-            onClick={() => go(index - 1)}
+            onClick={() => step(-1)}
             aria-label={copy.previous}
             data-test-id="slider-prev"
             className={cn(
@@ -203,7 +284,14 @@ export function SliderBlock({
             // and how many there are, rather than dots alone.
             <p
               className="text-sm tabular-nums text-white/70"
-              aria-live="polite"
+              /*
+                Announced only when the slider is NOT rotating on its own.
+                A live region that fires every few seconds turns a screen
+                reader into a metronome, and the visitor did not ask for any of
+                those changes. Once paused, the changes are theirs and worth
+                hearing.
+              */
+              aria-live={rotating ? 'off' : 'polite'}
               data-test-id="slider-counter"
             >
               <span className="text-white">{pad(index + 1)}</span>
@@ -214,7 +302,7 @@ export function SliderBlock({
 
           <button
             type="button"
-            onClick={() => go(index + 1)}
+            onClick={() => step(1)}
             aria-label={copy.next}
             data-test-id="slider-next"
             className={cn(
@@ -266,16 +354,25 @@ export function SliderBlock({
 
 /**
  * The home-page layout: a centred card with its neighbours showing at the
- * edges.
+ * edges, on a looped track.
+ *
+ * The track carries a clone of the last slide before the first and a clone of
+ * the first after the last, so there is always something to peek at on both
+ * sides. Clones are `aria-hidden` and inert — visually they are the point, but
+ * to a screen reader they are duplicates of slides it has already been told
+ * about.
  *
  * Geometry is in `vw`, not measured pixels. The band is full-bleed, so the
  * viewport and the track's container are the same width — which makes "centre
- * card i" exactly `50vw - (i + 0.5) * card-width`, with nothing to measure, no
- * resize observer, and no jump on first paint.
+ * card at position p" exactly `50vw - (p + 0.5) * card-width`, with nothing to
+ * measure, no resize observer, and no jump on first paint.
  */
 function ShowcaseTrack({
   slides,
+  position,
   index,
+  looped,
+  moving,
   height,
   locale,
   reducedMotion,
@@ -284,15 +381,28 @@ function ShowcaseTrack({
   onPointerUp,
 }: {
   slides: Slide[];
+  position: number;
   index: number;
+  looped: boolean;
+  moving: boolean;
   height: SliderBlockType['height'];
   locale: 'ar' | 'en';
   reducedMotion: boolean;
-  onSelect: (index: number) => void;
+  onSelect: (position: number) => void;
   onPointerDown: (event: React.PointerEvent) => void;
   onPointerUp: (event: React.PointerEvent) => void;
 }) {
   const copy = COPY[locale];
+  const last = slides.length - 1;
+
+  /** Track order, with the wrap-around clones when looping. */
+  const cards = looped
+    ? [
+        { slide: slides[last]!, real: last, clone: true },
+        ...slides.map((slide, i) => ({ slide, real: i, clone: false })),
+        { slide: slides[0]!, real: 0, clone: true },
+      ]
+    : slides.map((slide, i) => ({ slide, real: i, clone: false }));
 
   return (
     <ul
@@ -307,33 +417,46 @@ function ShowcaseTrack({
         // The card is a share of the viewport; the remainder is what the
         // neighbours show through. Wider on a phone, so the peek does not eat
         // the content.
-        '[--card-w:88vw] sm:[--card-w:72vw]',
-        !reducedMotion && 'transition-transform duration-500 ease-out'
+        '[--card-w:88vw] sm:[--card-w:72vw]'
       )}
-      style={{ transform: `translateX(calc(50vw - (${index} + 0.5) * var(--card-w)))` }}
+      style={{
+        transform: `translateX(calc(50vw - (${position} + 0.5) * var(--card-w)))`,
+        // Paired with the snap timer, from one constant.
+        transition: moving ? `transform ${TRANSITION_MS}ms ease-out` : 'none',
+      }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
     >
-      {slides.map((slide, i) => {
-        const active = i === index;
+      {cards.map((card, p) => {
+        const centred = p === position;
+        const slide = card.slide;
         const hasWords = Boolean(slide.eyebrow || slide.title || slide.text);
 
         return (
           <li
-            key={i}
+            key={p}
             className="relative w-[var(--card-w)] shrink-0 px-2 sm:px-3"
-            data-test-id={`slider-slide-${i}`}
-            data-active={active ? 'true' : 'false'}
+            // Clones get their own ids so a selector cannot match two cards for
+            // the same slide. `data-active` stays on the REAL card for the
+            // slide showing, so it is still true during the instant the track
+            // is standing on a clone.
+            data-test-id={card.clone ? `slider-clone-${card.real}` : `slider-slide-${card.real}`}
+            data-active={!card.clone && card.real === index ? 'true' : 'false'}
+            aria-hidden={card.clone || undefined}
           >
             <div
-              role="group"
-              aria-roledescription="slide"
-              aria-label={copy.slideOf
-                .replace('{n}', String(i + 1))
-                .replace('{total}', String(slides.length))}
-              // Inert while it is not the centre card, so links inside a
-              // neighbour are not tab stops.
-              inert={!active}
+              role={card.clone ? undefined : 'group'}
+              aria-roledescription={card.clone ? undefined : 'slide'}
+              aria-label={
+                card.clone
+                  ? undefined
+                  : copy.slideOf
+                      .replace('{n}', String(card.real + 1))
+                      .replace('{total}', String(slides.length))
+              }
+              // Inert unless centred, so links inside a neighbour — or inside a
+              // clone, which is never reachable — are not tab stops.
+              inert={!centred}
               className={cn(
                 'grid overflow-hidden rounded-2xl bg-gray-900 text-white',
                 HEIGHT[height] ?? HEIGHT.medium,
@@ -341,7 +464,7 @@ function ShowcaseTrack({
                 !reducedMotion && 'transition-all duration-500',
                 // Dimmed and scaled back rather than hidden: seeing what is on
                 // either side is the point of the layout.
-                active ? 'opacity-100 shadow-2xl' : 'scale-[0.94] opacity-50'
+                centred ? 'opacity-100 shadow-2xl' : 'scale-[0.94] opacity-50'
               )}
             >
               {hasWords && (
@@ -374,26 +497,42 @@ function ShowcaseTrack({
               <div className="relative min-h-[160px] md:min-h-0">
                 <SlideMedia
                   slide={slide}
-                  index={i}
-                  active={active}
+                  // Keyed to the real slide, not the track position: the clone
+                  // of the last slide is rendered FIRST, and it is the real
+                  // first slide that is the LCP element.
+                  index={card.real}
+                  active={centred}
                   reducedMotion={reducedMotion}
                   sizes="(max-width: 768px) 88vw, 36vw"
+                  // A clone must never be the eager one, or the browser is told
+                  // to rush a slide that is only ever seen mid-wrap.
+                  eager={!card.clone && card.real === 0}
                 />
               </div>
             </div>
 
-            {!active && (
+            {!centred && (
               /*
                 A neighbour is selected by clicking it. The card's own content
                 is inert, so this transparent overlay takes the click — and
                 being a real button, it is what a screen reader announces and a
-                keyboard can reach.
+                keyboard reaches. Selecting by TRACK position, so clicking a
+                clone walks the short way round rather than rewinding.
               */
               <button
                 type="button"
-                onClick={() => onSelect(i)}
-                aria-label={copy.goTo.replace('{n}', String(i + 1))}
-                data-test-id={`slider-peek-${i}`}
+                onClick={() => onSelect(p)}
+                aria-label={copy.goTo.replace('{n}', String(card.real + 1))}
+                tabIndex={card.clone ? -1 : undefined}
+                aria-hidden={card.clone || undefined}
+                /*
+                  No id on a clone's overlay. `slider-clone-peek-0` shares a
+                  prefix with `slider-clone-0`, so a prefix selector for the
+                  cards matched the buttons too and counted four clones where
+                  there are two. Clones are decoration; nothing should be
+                  selecting them by name.
+                */
+                data-test-id={card.clone ? undefined : `slider-peek-${card.real}`}
                 className="absolute inset-0 z-10 cursor-pointer"
               />
             )}
@@ -453,6 +592,7 @@ function CrossfadeStack({
               active={active}
               reducedMotion={reducedMotion}
               sizes="100vw"
+              eager={i === 0}
             />
 
             {(slide.eyebrow || slide.title || slide.text || (slide.buttonText && slide.buttonUrl)) && (
@@ -491,12 +631,14 @@ function SlideMedia({
   active,
   reducedMotion,
   sizes,
+  eager,
 }: {
   slide: Slide;
   index: number;
   active: boolean;
   reducedMotion: boolean;
   sizes: string;
+  eager: boolean;
 }) {
   if (slide.kind === 'youtube') {
     const id = youTubeId(slide.src);
@@ -523,8 +665,8 @@ function SlideMedia({
     }
     return (
       <iframe
-        // Only the visible card gets a src: otherwise every neighbour loads a
-        // player for a slide nobody is watching.
+        // Only the centred card gets a src: otherwise every neighbour and every
+        // clone loads a player for a slide nobody is watching.
         src={active ? youTubeEmbedUrl(id, { autoplay: true, muted: true, controls: false }) : undefined}
         title={slide.alt ?? slide.title ?? 'YouTube'}
         allow="autoplay; encrypted-media; picture-in-picture"
@@ -548,7 +690,7 @@ function SlideMedia({
         loop
         playsInline
         autoPlay={active}
-        preload={index === 0 ? 'auto' : 'none'}
+        preload={eager ? 'auto' : 'none'}
         aria-label={slide.alt || undefined}
         className="absolute inset-0 h-full w-full object-cover"
         data-test-id={`slider-video-${index}`}
@@ -561,8 +703,9 @@ function SlideMedia({
       src={slide.kind === 'video' ? (slide.poster ?? slide.src) : slide.src}
       alt={slide.alt ?? ''}
       fill
-      // The first slide is the LCP element on a home page; the rest are not.
-      priority={index === 0}
+      // The first real slide is the LCP element on a home page; the rest, and
+      // every clone, are not.
+      priority={eager}
       sizes={sizes}
       className="object-cover"
     />
