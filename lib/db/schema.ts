@@ -1,11 +1,23 @@
 import { 
   pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, pgEnum, index, uniqueIndex, primaryKey
+  timestamp, jsonb, pgEnum, pgSequence, index, uniqueIndex, primaryKey
 } from 'drizzle-orm/pg-core';
 // Self-referencing FKs (categories.parentId -> categories.id) are circular, so
 // TS cannot infer the callback's return type. AnyPgColumn breaks the cycle.
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import type { Theme } from '../theme/slots';
 import { relations } from 'drizzle-orm';
+
+/**
+ * Human-readable order numbers (ORD-1001), read by lib/commerce/checkout.
+ *
+ * Declared HERE, not only in migration 0006. drizzle-kit push diffs the
+ * database against this file, so an object it cannot see is an object it
+ * drops: running db:push deleted this sequence and every checkout 500'd on
+ * `nextval`. Declaring it means push creates and keeps it, and the schema
+ * stops lying about what the database contains.
+ */
+export const orderNumberSeq = pgSequence('order_number_seq', { startWith: 1000 });
 import type { ContentBlock } from '../blocks/types';
 
 // Enums
@@ -276,6 +288,13 @@ export const settings = pgTable('settings', {
   metaPixelId: varchar('meta_pixel_id', { length: 255 }),
   tiktokPixelId: varchar('tiktok_pixel_id', { length: 255 }),
   snapPixelId: varchar('snap_pixel_id', { length: 255 }),
+  /**
+   * The storefront theme: a validated map of design slots to hex colours.
+   * jsonb rather than a column per slot, so adding a slot is a code change and
+   * not a migration. Validated by lib/theme/slots.ts on the way in — it is
+   * emitted into a <style> tag, so it is never free-form CSS.
+   */
+  theme: jsonb('theme').$type<Theme>(),
   customCss: text('custom_css'),
   comingSoonMode: boolean('coming_soon_mode').default(false),
   comingSoonMessage: text('coming_soon_message'),

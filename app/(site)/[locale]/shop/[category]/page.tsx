@@ -34,7 +34,7 @@ export default async function ShopCategoryPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="mb-8 text-3xl font-bold text-gray-900">{row.name ?? row.slug}</h1>
+      <h1 className="mb-8 text-3xl font-bold text-site-ink">{row.name ?? row.slug}</h1>
       <ShopGrid items={items} locale={typedLocale} currency={settings?.currency ?? 'JOD'} />
     </div>
   );

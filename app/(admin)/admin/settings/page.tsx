@@ -51,6 +51,7 @@ export default async function SettingsPage() {
     metaPixelId: s?.metaPixelId ?? '',
     tiktokPixelId: s?.tiktokPixelId ?? '',
     snapPixelId: s?.snapPixelId ?? '',
+    theme: s?.theme ?? {},
     customCss: s?.customCss ?? '',
     comingSoonMode: s?.comingSoonMode ?? false,
     comingSoonMessage: s?.comingSoonMessage ?? '',

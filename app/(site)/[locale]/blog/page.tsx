@@ -29,7 +29,7 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="mb-8 text-3xl font-bold text-gray-900">{copy.title}</h1>
+      <h1 className="mb-8 text-3xl font-bold text-site-ink">{copy.title}</h1>
       <ArchiveList entries={entries} locale={typedLocale} emptyMessage={copy.empty} />
     </div>
   );

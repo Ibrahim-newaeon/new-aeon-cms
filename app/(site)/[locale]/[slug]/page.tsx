@@ -47,8 +47,8 @@ export default async function ContentPage({ params }: Params) {
   return (
     <article className="mx-auto max-w-4xl px-4 py-16">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{i18n?.title ?? slug}</h1>
-        {i18n?.excerpt && <p className="mt-2 text-lg text-gray-600">{i18n.excerpt}</p>}
+        <h1 className="text-3xl font-bold text-site-ink">{i18n?.title ?? slug}</h1>
+        {i18n?.excerpt && <p className="mt-2 text-lg text-site-ink-muted">{i18n.excerpt}</p>}
       </header>
 
       <ContentRenderer blocks={asContentBlocks(i18n?.body)} locale={loaded.locale} />

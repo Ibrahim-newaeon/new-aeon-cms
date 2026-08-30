@@ -46,13 +46,13 @@ function TestimonialCard({
 }) {
   return (
     <figure
-      className="flex flex-col gap-4 h-full rounded-lg border border-gray-200 bg-white p-6 text-start shadow-sm"
+      className="flex flex-col gap-4 h-full rounded-lg border border-site-line bg-site-surface p-6 text-start shadow-sm"
       data-test-id={`testimonial-item-${index}`}
     >
       {item.rating !== undefined && <StarRating rating={item.rating} locale={locale} />}
 
       {/* border-s-4 / ps-4 are logical — they flip automatically under dir="rtl". */}
-      <blockquote className="flex-1 border-s-4 border-indigo-500 ps-4 text-gray-700 leading-relaxed">
+      <blockquote className="flex-1 border-s-4 border-site-accent ps-4 text-site-ink-muted leading-relaxed">
         {item.quote}
       </blockquote>
 
@@ -69,16 +69,16 @@ function TestimonialCard({
         ) : (
           <span
             aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-site-accent/10 text-sm font-semibold text-site-accent"
           >
             {item.author.trim().charAt(0)}
           </span>
         )}
 
         <span className="min-w-0">
-          <span className="block truncate font-medium text-gray-900">{item.author}</span>
+          <span className="block truncate font-medium text-site-ink">{item.author}</span>
           {item.role && (
-            <span className="block truncate text-sm text-gray-500">{item.role}</span>
+            <span className="block truncate text-sm text-site-ink-muted">{item.role}</span>
           )}
         </span>
       </figcaption>
@@ -103,7 +103,9 @@ function StarRating({ rating, locale }: { rating: number; locale: 'ar' | 'en' })
           size={16}
           aria-hidden="true"
           className={cn(
-            star <= rating ? 'fill-amber-400 text-amber-400' : 'fill-none text-gray-300'
+            star <= rating
+              ? 'fill-site-warning text-site-warning'
+              : 'fill-none text-site-line'
           )}
         />
       ))}

@@ -55,7 +55,7 @@ export default async function SearchPage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16">
-      <h1 className="text-3xl font-bold text-gray-900">{copy.title}</h1>
+      <h1 className="text-3xl font-bold text-site-ink">{copy.title}</h1>
 
       {/* GET so a search is linkable and back/forward work. */}
       <form method="get" className="mt-6 flex gap-2" role="search">
@@ -68,12 +68,12 @@ export default async function SearchPage({ params, searchParams }: Props) {
           type="search"
           defaultValue={query}
           placeholder={copy.placeholder}
-          className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm"
+          className="min-w-0 flex-1 rounded-lg border border-site-line px-4 py-3 text-sm"
           autoComplete="off"
         />
         <button
           type="submit"
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700"
+          className="inline-flex items-center gap-2 rounded-lg bg-site-accent px-5 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
         >
           <Search size={16} aria-hidden="true" />
           {copy.submit}
@@ -82,24 +82,24 @@ export default async function SearchPage({ params, searchParams }: Props) {
 
       <div className="mt-8" aria-live="polite">
         {query.length < 2 ? (
-          <p className="text-sm text-gray-500">{copy.prompt}</p>
+          <p className="text-sm text-site-ink-muted">{copy.prompt}</p>
         ) : results.length === 0 ? (
-          <p className="text-sm text-gray-500">{copy.none}</p>
+          <p className="text-sm text-site-ink-muted">{copy.none}</p>
         ) : (
           <>
-            <p className="mb-4 text-sm text-gray-500">{copy.resultsFor(results.length, query)}</p>
+            <p className="mb-4 text-sm text-site-ink-muted">{copy.resultsFor(results.length, query)}</p>
             <ul className="space-y-3">
               {results.map((hit) => (
                 <li key={hit.slug}>
                   <Link
                     href={`/${typedLocale}/${hit.slug}`}
-                    className="block rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
+                    className="block rounded-lg border border-site-line p-4 transition-colors hover:bg-site-surface-raised"
                   >
-                    <h2 className="font-semibold text-gray-900">{hit.title}</h2>
+                    <h2 className="font-semibold text-site-ink">{hit.title}</h2>
                     {hit.excerpt && (
-                      <p className="mt-1 line-clamp-2 text-sm text-gray-600">{hit.excerpt}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-site-ink-muted">{hit.excerpt}</p>
                     )}
-                    <p className="mt-1 text-xs text-gray-400" dir="ltr">
+                    <p className="mt-1 text-xs text-site-ink-muted" dir="ltr">
                       /{typedLocale}/{hit.slug}
                     </p>
                   </Link>

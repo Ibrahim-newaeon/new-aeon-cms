@@ -69,8 +69,8 @@ export default async function BundlesPage({
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{ar ? 'الحزم' : 'Bundles'}</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-3xl font-bold text-site-ink">{ar ? 'الحزم' : 'Bundles'}</h1>
+        <p className="mt-2 text-site-ink-muted">
           {ar
             ? 'مجموعات مختارة بسعر واحد أقل من شراء القطع منفردة.'
             : 'Curated sets at one price, below the cost of buying the pieces separately.'}
@@ -78,7 +78,7 @@ export default async function BundlesPage({
       </header>
 
       {bundles.length === 0 ? (
-        <p className="text-gray-500">{ar ? 'لا توجد حزم حالياً.' : 'No bundles right now.'}</p>
+        <p className="text-site-ink-muted">{ar ? 'لا توجد حزم حالياً.' : 'No bundles right now.'}</p>
       ) : (
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-test-id="bundle-list">
           {bundles.map((bundle) => (

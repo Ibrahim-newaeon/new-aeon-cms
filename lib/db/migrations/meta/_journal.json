@@ -85,6 +85,13 @@
       "when": 1788020782921,
       "tag": "0011_fat_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788108255138,
+      "tag": "0012_boring_ink",
+      "breakpoints": true
     }
   ]
 }

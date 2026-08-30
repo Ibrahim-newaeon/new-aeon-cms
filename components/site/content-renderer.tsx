@@ -55,7 +55,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
     case 'heading': {
       const Tag = HEADING_TAG[block.level];
       return (
-        <Tag id={block.anchor} className={cn('font-bold text-gray-900', HEADING_SIZE[block.level])}>
+        <Tag id={block.anchor} className={cn('font-bold text-site-ink', HEADING_SIZE[block.level])}>
           {block.text}
         </Tag>
       );
@@ -64,7 +64,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
     case 'paragraph':
       return (
         <p
-          className={cn('text-gray-700 leading-relaxed', {
+          className={cn('text-site-ink-muted leading-relaxed', {
             // Logical alignment: `start`/`end` follow dir, so Arabic and
             // English both read correctly. The previous version defaulted to
             // text-right, which is wrong under dir="ltr".
@@ -121,7 +121,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
             className="h-auto w-full rounded-lg"
           />
           {block.caption && (
-            <figcaption className="text-center text-sm text-gray-500 mt-2">
+            <figcaption className="text-center text-sm text-site-ink-muted mt-2">
               {block.caption}
             </figcaption>
           )}
@@ -159,15 +159,15 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
         // the reading-start edge in both directions. Was border-r-4 pr-4.
         <blockquote
           className={cn('py-2 my-6 ps-4 rounded-e-lg', {
-            'border-s-4 border-indigo-500 bg-gray-50': block.style === 'bordered',
+            'border-s-4 border-site-accent bg-site-surface-raised': block.style === 'bordered',
             'text-xl font-medium': block.style === 'pull',
           })}
         >
-          <p className="text-lg text-gray-700 italic">{block.text}</p>
+          <p className="text-lg text-site-ink-muted italic">{block.text}</p>
           {block.author && (
-            <cite className="block mt-2 text-sm text-gray-500 not-italic">
+            <cite className="block mt-2 text-sm text-site-ink-muted not-italic">
               — {block.author}
-              {block.source && <span className="text-gray-400"> · {block.source}</span>}
+              {block.source && <span className="text-site-ink-muted"> · {block.source}</span>}
             </cite>
           )}
         </blockquote>
@@ -186,11 +186,11 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
               'px-8 py-4 text-lg': block.size === 'lg',
             },
             {
-              'bg-indigo-600 text-white hover:bg-indigo-700': block.variant === 'primary',
-              'bg-gray-200 text-gray-900 hover:bg-gray-300': block.variant === 'secondary',
-              'border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50':
+              'bg-site-accent text-site-accent-ink hover:bg-site-accent-hover': block.variant === 'primary',
+              'bg-site-line text-site-ink hover:bg-site-line': block.variant === 'secondary',
+              'border-2 border-site-accent text-site-accent hover:bg-site-accent/10':
                 block.variant === 'outline',
-              'text-indigo-600 hover:bg-indigo-50': block.variant === 'ghost',
+              'text-site-accent hover:bg-site-accent/10': block.variant === 'ghost',
             }
           )}
         >
@@ -201,10 +201,10 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
     case 'divider':
       if (block.style === 'space') return <div className="h-12" />;
       if (block.style === 'dots')
-        return <div className="text-center text-2xl text-gray-300 my-8">• • •</div>;
+        return <div className="text-center text-2xl text-site-ink-inverted/70 my-8">• • •</div>;
       if (block.style === 'stars')
-        return <div className="text-center text-2xl text-gray-300 my-8">✦ ✦ ✦</div>;
-      return <hr className="border-gray-200 my-8" />;
+        return <div className="text-center text-2xl text-site-ink-inverted/70 my-8">✦ ✦ ✦</div>;
+      return <hr className="border-site-line my-8" />;
 
     case 'spacer':
       return <div style={{ height: `${block.height}rem` }} aria-hidden="true" />;
@@ -219,15 +219,17 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
               : undefined
           }
         >
+          {/* Scrim, tied to the inverted surface so a light brand does not get
+              a black band it never chose. */}
           {block.backgroundImage && block.overlay && (
-            <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+            <div className="absolute inset-0 bg-site-surface-inverted/50" aria-hidden="true" />
           )}
-          <div className={cn('relative', block.backgroundImage && 'text-white')}>
+          <div className={cn('relative', block.backgroundImage && 'text-site-ink-inverted')}>
             <h2 className="text-2xl font-bold">{block.title}</h2>
             <p className="mt-2">{block.text}</p>
             <a
               href={block.button.url}
-              className="mt-6 inline-flex rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700"
+              className="mt-6 inline-flex rounded-lg bg-site-accent px-6 py-3 font-medium text-site-accent-ink hover:bg-site-accent-hover"
             >
               {block.button.text}
             </a>
@@ -245,10 +247,10 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
           })}
         >
           {block.items.map((item, idx) => (
-            <div key={idx} className="rounded-lg border border-gray-200 p-6 text-start">
+            <div key={idx} className="rounded-lg border border-site-line p-6 text-start">
               {item.icon && <div className="mb-3 text-2xl">{item.icon}</div>}
-              <h3 className="font-semibold text-gray-900">{item.title}</h3>
-              <p className="mt-1 text-sm text-gray-600">{item.description}</p>
+              <h3 className="font-semibold text-site-ink">{item.title}</h3>
+              <p className="mt-1 text-sm text-site-ink-muted">{item.description}</p>
             </div>
           ))}
         </div>
@@ -262,12 +264,12 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {block.items.map((item, idx) => (
             <div key={idx} className="text-center">
-              <p className="text-3xl font-bold text-indigo-600" dir="ltr">
+              <p className="text-3xl font-bold text-site-accent" dir="ltr">
                 {item.prefix}
                 {item.value}
                 {item.suffix}
               </p>
-              <p className="mt-1 text-sm text-gray-600">{item.label}</p>
+              <p className="mt-1 text-sm text-site-ink-muted">{item.label}</p>
             </div>
           ))}
         </div>
@@ -285,7 +287,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
                     <th
                       key={i}
                       scope="col"
-                      className="border border-gray-200 bg-gray-50 px-3 py-2 text-start text-sm font-semibold"
+                      className="border border-site-line bg-site-surface-raised px-3 py-2 text-start text-sm font-semibold"
                     >
                       {cell}
                     </th>
@@ -297,7 +299,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
               {block.data.slice(block.headerRow ? 1 : 0).map((row, r) => (
                 <tr key={r}>
                   {row.map((cell, c) => (
-                    <td key={c} className="border border-gray-200 px-3 py-2 text-sm">
+                    <td key={c} className="border border-site-line px-3 py-2 text-sm">
                       {cell}
                     </td>
                   ))}
@@ -342,8 +344,8 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       return (
         <div className="space-y-2">
           {block.items.map((item, idx) => (
-            <details key={idx} className="rounded-lg border border-gray-200 p-4">
-              <summary className="cursor-pointer font-medium text-gray-900">{item.title}</summary>
+            <details key={idx} className="rounded-lg border border-site-line p-4">
+              <summary className="cursor-pointer font-medium text-site-ink">{item.title}</summary>
               <div className="mt-3 space-y-4">
                 {item.content.map((child, i) => (
                   <BlockRenderer key={i} block={child} locale={locale} />
@@ -359,7 +361,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
         <div className="space-y-6">
           {block.items.map((item, idx) => (
             <section key={idx}>
-              <h3 className="mb-3 border-b border-gray-200 pb-2 font-semibold text-gray-900">
+              <h3 className="mb-3 border-b border-site-line pb-2 font-semibold text-site-ink">
                 {item.label}
               </h3>
               <div className="space-y-4">
@@ -388,7 +390,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       if (!Component) {
         if (process.env.NODE_ENV !== 'production') {
           return (
-            <div className="rounded border border-dashed border-amber-400 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="rounded border border-dashed border-site-warning/40 bg-site-warning/10 p-4 text-sm text-site-warning">
               Custom block not registered: <code dir="ltr">{block.component}</code>
             </div>
           );
@@ -404,7 +406,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       // Silent in production; visible while building so gaps are obvious.
       if (process.env.NODE_ENV !== 'production') {
         return (
-          <div className="rounded border border-dashed border-amber-400 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="rounded border border-dashed border-site-warning/40 bg-site-warning/10 p-4 text-sm text-site-warning">
             Block type not implemented yet: <code dir="ltr">{(block as { type: string }).type}</code>
           </div>
         );

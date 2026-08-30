@@ -78,7 +78,7 @@ export function BundleCard({
 
   return (
     <li
-      className="flex flex-col overflow-hidden rounded-lg border border-gray-200"
+      className="flex flex-col overflow-hidden rounded-lg border border-site-line"
       data-test-id={`bundle-card-${bundle.id}`}
     >
       {bundle.image && (
@@ -94,21 +94,21 @@ export function BundleCard({
       )}
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h2 className="font-semibold text-gray-900">{bundle.name}</h2>
+        <h2 className="font-semibold text-site-ink">{bundle.name}</h2>
 
-        {bundle.description && <p className="text-sm text-gray-600">{bundle.description}</p>}
+        {bundle.description && <p className="text-sm text-site-ink-muted">{bundle.description}</p>}
 
         <p className="mt-auto flex flex-wrap items-baseline gap-2">
-          <span className="text-lg font-semibold text-gray-900" dir="ltr">
+          <span className="text-lg font-semibold text-site-ink" dir="ltr">
             {formatPrice(bundle.price, currency, locale)}
           </span>
 
           {saving > 0 && (
             <>
-              <span className="text-sm text-gray-400 line-through" dir="ltr">
+              <span className="text-sm text-site-ink-muted line-through" dir="ltr">
                 {formatPrice(bundle.partsTotal, currency, locale)}
               </span>
-              <span className="text-sm font-medium text-green-700" dir="ltr">
+              <span className="text-sm font-medium text-site-success" dir="ltr">
                 {copy.save} {formatPrice(saving, currency, locale)}
               </span>
             </>
@@ -116,15 +116,15 @@ export function BundleCard({
         </p>
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-site-danger">
             {error}
           </p>
         )}
 
         {!bundle.available ? (
-          <p className="text-sm text-red-600">{copy.unavailable}</p>
+          <p className="text-sm text-site-danger">{copy.unavailable}</p>
         ) : state === 'done' ? (
-          <a href={`/${locale}/cart`} className="text-sm text-indigo-600 hover:underline" data-test-id={`bundle-added-${bundle.id}`}>
+          <a href={`/${locale}/cart`} className="text-sm text-site-accent hover:underline" data-test-id={`bundle-added-${bundle.id}`}>
             <Check size={15} aria-hidden="true" className="me-1 inline" />
             {copy.viewCart}
           </a>
@@ -133,7 +133,7 @@ export function BundleCard({
             type="button"
             onClick={() => void add()}
             disabled={state === 'busy'}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-gray-300"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-site-accent px-4 py-2.5 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:bg-site-line"
             data-test-id={`bundle-add-${bundle.id}`}
           >
             {state === 'busy' ? (

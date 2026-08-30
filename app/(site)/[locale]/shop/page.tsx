@@ -35,7 +35,7 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="mb-8 text-3xl font-bold text-gray-900">
+      <h1 className="mb-8 text-3xl font-bold text-site-ink">
         {typedLocale === 'ar' ? 'المتجر' : 'Shop'}
       </h1>
       <ShopGrid items={items} locale={typedLocale} currency={settings?.currency ?? 'JOD'} />

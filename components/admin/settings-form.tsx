@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { socialPlatforms, type SettingsInput } from '@/lib/settings-schema';
 import { MediaField } from './media-field';
 import { useT } from './i18n-provider';
+import { ThemeEditor } from './theme-editor';
 import type { MessageKey } from '@/lib/admin-i18n';
 
 const TABS: { id: string; key: MessageKey }[] = [
@@ -249,7 +250,16 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
         )}
 
         {tab === 'appearance' && (
-          <Field label={t('settings.customCss')} hint={t('settings.customCssHint')}>
+          <>
+            <Field label={t('settings.theme')} hint={t('settings.themeHint')}>
+              <ThemeEditor
+                value={value.theme ?? {}}
+                onChange={(theme) => patch({ theme })}
+                commerceEnabled={Boolean(value.eCommerceEnabled)}
+              />
+            </Field>
+
+            <Field label={t('settings.customCss')} hint={t('settings.customCssHint')}>
             <textarea
               rows={12}
               dir="ltr"
@@ -257,8 +267,9 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
               value={value.customCss ?? ''}
               onChange={(e) => patch({ customCss: e.target.value })}
               data-test-id="settings-custom-css"
-            />
-          </Field>
+              />
+            </Field>
+          </>
         )}
 
         {tab === 'commerce' && (

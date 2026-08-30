@@ -30,17 +30,22 @@ export function HeroSection({ title, subtitle, cta, backgroundImage, overlay = t
             sizes="100vw"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          {overlay && <div className="absolute inset-0 bg-black/40" />}
+          {overlay && <div className="absolute inset-0 bg-site-surface-inverted/45" />}
         </>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-purple-900" />
+        // The fallback when no background image is set: the brand colour over
+        // the inverted surface, rather than a fixed indigo/purple nobody chose.
+        <>
+          <div className="absolute inset-0 bg-site-surface-inverted" />
+          <div className="absolute inset-0 bg-gradient-to-br from-site-accent/30 to-transparent" />
+        </>
       )}
 
       <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">{title}</h1>
-        {subtitle && <p className="text-lg md:text-xl text-white/90 mb-8">{subtitle}</p>}
+        <h1 className="text-4xl md:text-6xl font-bold text-site-ink-inverted mb-4">{title}</h1>
+        {subtitle && <p className="text-lg md:text-xl text-site-ink-inverted/90 mb-8">{subtitle}</p>}
         {cta && (
-          <Link href={cta.url} className="inline-flex items-center px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors">
+          <Link href={cta.url} className="inline-flex items-center px-8 py-3 bg-site-surface text-site-ink rounded-full font-medium hover:bg-site-surface-raised transition-colors">
             {cta.text}
           </Link>
         )}

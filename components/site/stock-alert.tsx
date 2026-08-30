@@ -75,7 +75,7 @@ export function StockAlert({
     return (
       <p
         role="status"
-        className="rounded-lg bg-green-50 p-3 text-sm text-green-800"
+        className="rounded-lg bg-site-success/10 p-3 text-sm text-site-success"
         data-test-id="stock-alert-done"
       >
         {copy.done}
@@ -85,13 +85,13 @@ export function StockAlert({
 
   return (
     <form onSubmit={submit} method="post" className="space-y-2" data-test-id="stock-alert-form">
-      <p className="flex items-center gap-2 text-sm text-gray-700">
+      <p className="flex items-center gap-2 text-sm text-site-ink-muted">
         <BellRing size={15} aria-hidden="true" />
         {copy.prompt}
       </p>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-site-danger">
           {error}
         </p>
       )}
@@ -103,13 +103,13 @@ export function StockAlert({
           required
           dir="ltr"
           placeholder={copy.email}
-          className="min-w-[200px] flex-1 rounded-lg border border-gray-300 p-2.5 text-start text-sm"
+          className="min-w-[200px] flex-1 rounded-lg border border-site-line p-2.5 text-start text-sm"
           data-test-id="stock-alert-email"
         />
         <button
           type="submit"
           disabled={state === 'busy'}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:bg-gray-300"
+          className="inline-flex items-center gap-2 rounded-lg bg-site-surface-inverted px-4 py-2.5 text-sm font-medium text-site-ink-inverted hover:bg-site-surface-inverted/90 disabled:bg-site-line"
           data-test-id="stock-alert-submit"
         >
           {state === 'busy' && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}

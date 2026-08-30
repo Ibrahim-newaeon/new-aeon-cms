@@ -30,8 +30,8 @@ export default async function TagArchive({ params }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <header className="mb-8">
-        <p className="text-sm text-gray-500">{typedLocale === 'ar' ? 'وسم' : 'Tag'}</p>
-        <h1 className="text-3xl font-bold text-gray-900">{tag.name}</h1>
+        <p className="text-sm text-site-ink-muted">{typedLocale === 'ar' ? 'وسم' : 'Tag'}</p>
+        <h1 className="text-3xl font-bold text-site-ink">{tag.name}</h1>
       </header>
       <ArchiveList entries={entries} locale={typedLocale} emptyMessage={empty} />
     </div>

@@ -68,7 +68,7 @@ export default async function ProductPage({ params }: Props) {
               className="h-auto w-full rounded-lg"
             />
           ) : (
-            <div className="aspect-square w-full rounded-lg bg-gray-100" />
+            <div className="aspect-square w-full rounded-lg bg-site-surface-raised" />
           )}
 
           {images.length > 1 && (
@@ -89,20 +89,20 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         <div className="space-y-5">
-          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+          <h1 className="text-3xl font-bold text-site-ink">{product.name}</h1>
 
           <p className="flex items-baseline gap-3">
-            <span className="text-2xl font-semibold text-gray-900" dir="ltr">
+            <span className="text-2xl font-semibold text-site-ink" dir="ltr">
               {formatPrice(product.basePrice, currency, typedLocale)}
             </span>
             {product.compareAtPrice != null && product.compareAtPrice > product.basePrice && (
-              <span className="text-lg text-gray-400 line-through" dir="ltr">
+              <span className="text-lg text-site-ink-muted line-through" dir="ltr">
                 {formatPrice(product.compareAtPrice, currency, typedLocale)}
               </span>
             )}
           </p>
 
-          <p className={inStock ? 'text-sm text-green-700' : 'text-sm text-red-600'}>
+          <p className={inStock ? 'text-sm text-site-success' : 'text-sm text-site-danger'}>
             {inStock ? (ar ? 'متوفّر' : 'In stock') : ar ? 'غير متوفّر حالياً' : 'Out of stock'}
           </p>
 
@@ -111,15 +111,15 @@ export default async function ProductPage({ params }: Props) {
           <AddToCart options={options} variants={selectable} locale={typedLocale} />
 
           {product.description && (
-            <p className="whitespace-pre-line text-gray-700">{product.description}</p>
+            <p className="whitespace-pre-line text-site-ink-muted">{product.description}</p>
           )}
 
           {specs.length > 0 && (
-            <dl className="divide-y divide-gray-200 border-t border-gray-200 text-sm">
+            <dl className="divide-y divide-site-line border-t border-site-line text-sm">
               {specs.map((spec) => (
                 <div key={spec.id} className="flex justify-between gap-4 py-2">
-                  <dt className="text-gray-500">{spec.key}</dt>
-                  <dd className="text-gray-900">{spec.value}</dd>
+                  <dt className="text-site-ink-muted">{spec.key}</dt>
+                  <dd className="text-site-ink">{spec.value}</dd>
                 </div>
               ))}
             </dl>
@@ -127,7 +127,7 @@ export default async function ProductPage({ params }: Props) {
 
           <Link
             href={`/${typedLocale}/contact`}
-            className="inline-flex rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700"
+            className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
           >
             {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
           </Link>

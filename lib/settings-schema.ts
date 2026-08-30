@@ -1,5 +1,6 @@
 // lib/settings-schema.ts
 import { z } from 'zod';
+import { themeSchema } from './theme/slots';
 
 const SOCIAL_PLATFORMS = [
   'facebook',
@@ -52,6 +53,8 @@ export const settingsSchema = z.object({
   snapPixelId: trackingId.optional(),
 
   // Injected into a <style> tag, so it must not be able to close it.
+  /** Strict: an unknown slot is rejected, not stored and ignored. */
+  theme: themeSchema.optional(),
   customCss: z
     .string()
     .max(20000, 'CSS طويل جداً')

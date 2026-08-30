@@ -71,7 +71,7 @@ export async function ProductGridBlock({
           <a
             key={product.id}
             href={`/${locale}/products/${product.slug}`}
-            className="block overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
+            className="block overflow-hidden rounded-lg border border-site-line transition-colors hover:bg-site-surface-raised"
           >
             {image && (
               <div className="relative aspect-square w-full">
@@ -85,16 +85,16 @@ export async function ProductGridBlock({
               </div>
             )}
             <div className="p-4">
-              <h3 className="font-medium text-gray-900">{product.name ?? product.slug}</h3>
+              <h3 className="font-medium text-site-ink">{product.name ?? product.slug}</h3>
               {product.shortDesc && (
-                <p className="mt-1 line-clamp-2 text-sm text-gray-600">{product.shortDesc}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-site-ink-muted">{product.shortDesc}</p>
               )}
               <p className="mt-2 flex items-baseline gap-2">
-                <span className="font-semibold text-gray-900" dir="ltr">
+                <span className="font-semibold text-site-ink" dir="ltr">
                   {formatPrice(product.basePrice, currency, locale)}
                 </span>
                 {product.compareAtPrice != null && product.compareAtPrice > product.basePrice && (
-                  <span className="text-sm text-gray-400 line-through" dir="ltr">
+                  <span className="text-sm text-site-ink-muted line-through" dir="ltr">
                     {formatPrice(product.compareAtPrice, currency, locale)}
                   </span>
                 )}

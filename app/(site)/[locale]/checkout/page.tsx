@@ -46,7 +46,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="mb-8 text-3xl font-bold text-gray-900">
+      <h1 className="mb-8 text-3xl font-bold text-site-ink">
         {typedLocale === 'ar' ? 'إتمام الطلب' : 'Checkout'}
       </h1>
       <CheckoutForm

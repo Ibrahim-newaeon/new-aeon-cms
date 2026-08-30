@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { Navbar } from '@/components/site/navbar';
+import { themeToCss } from '@/lib/theme/slots';
 import { Footer } from '@/components/site/footer';
 import { getNavigation, getSettings } from '@/lib/db/queries';
 import { TrackingScripts, TrackingNoScript } from '@/components/site/tracking-scripts';
@@ -95,6 +96,9 @@ export default async function SiteLayout({
   const dir = typedLocale === 'ar' ? 'rtl' : 'ltr';
   const nonce = headerList.get('x-nonce') ?? undefined;
 
+  const themeCss = themeToCss(settings?.theme ?? null);
+
+
   return (
     <html lang={typedLocale} dir={dir} className={`${cairo.variable} ${inter.variable} h-full`}>
       <body className="min-h-full antialiased">
@@ -126,8 +130,33 @@ export default async function SiteLayout({
 
         <TrackingScripts settings={settings} />
 
+        {/*
+          The saved theme, before customCss so a hand-written override still
+          wins. Values come from themeToCss, which only ever emits known slots
+          with hex values — a theme cannot smuggle CSS into the page the way a
+          raw stylesheet field could.
+        */}
+        {themeCss && (
+          <style
+            nonce={nonce}
+            // The nonce exists only on the server: React does not serialise it
+            // to the client, so hydration compares nonce="abc…" against "" and
+            // reports a mismatch on every page load. Suppressed rather than
+            // dropped — without the nonce the CSP blocks the style outright.
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: themeCss }}
+          />
+        )}
+
         {settings?.customCss && (
-          <style nonce={nonce} dangerouslySetInnerHTML={{ __html: settings.customCss }} />
+          // Same nonce/hydration story as the theme block above. This one has
+          // always had the problem; it simply never fired, because no install
+          // in this repo had customCss set.
+          <style
+            nonce={nonce}
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: settings.customCss }}
+          />
         )}
       </body>
     </html>

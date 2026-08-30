@@ -64,11 +64,11 @@ export default async function OrderPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
-      <p className="text-sm text-green-700">
+      <p className="text-sm text-site-success">
         {ar ? 'تم استلام طلبك.' : 'Your order has been received.'}
       </p>
-      <h1 className="mt-2 text-3xl font-bold text-gray-900" dir="ltr">{order.orderNumber}</h1>
-      <p className="mt-1 text-sm text-gray-500">
+      <h1 className="mt-2 text-3xl font-bold text-site-ink" dir="ltr">{order.orderNumber}</h1>
+      <p className="mt-1 text-sm text-site-ink-muted">
         {ar ? 'الحالة: ' : 'Status: '}{ar ? status.ar : status.en}
       </p>
 
@@ -76,16 +76,16 @@ export default async function OrderPage({
         No phone, no address. This page is reachable by order number alone, so it
         shows what was bought and what it cost — never anything personal.
       */}
-      <ul className="mt-8 divide-y divide-gray-200 border-y border-gray-200">
+      <ul className="mt-8 divide-y divide-site-line border-y border-site-line">
         {items.map((item) => (
           <li key={item.id} className="flex justify-between gap-4 py-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900">{item.nameSnapshot}</p>
-              <p className="text-xs text-gray-500" dir="ltr">
+              <p className="text-sm font-medium text-site-ink">{item.nameSnapshot}</p>
+              <p className="text-xs text-site-ink-muted" dir="ltr">
                 {item.skuSnapshot} × {item.qty}
               </p>
             </div>
-            <p className="shrink-0 text-sm text-gray-900" dir="ltr">
+            <p className="shrink-0 text-sm text-site-ink" dir="ltr">
               {formatPrice(item.priceSnapshot * item.qty, currency, typedLocale)}
             </p>
           </li>
@@ -101,17 +101,17 @@ export default async function OrderPage({
           />
         )}
         <Row label={ar ? 'التوصيل' : 'Delivery'} value={formatPrice(order.shipping, currency, typedLocale)} />
-        <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-semibold">
+        <div className="flex justify-between border-t border-site-line pt-2 text-base font-semibold">
           <dt>{ar ? 'الإجمالي' : 'Total'}</dt>
           <dd dir="ltr">{formatPrice(order.total, currency, typedLocale)}</dd>
         </div>
       </dl>
 
-      <p className="mt-6 text-sm text-gray-600">
+      <p className="mt-6 text-sm text-site-ink-muted">
         {ar ? 'الدفع نقداً عند الاستلام.' : 'Payment is cash on delivery.'}
       </p>
 
-      <Link href={`/${typedLocale}/shop`} className="mt-8 inline-block text-indigo-600 hover:underline">
+      <Link href={`/${typedLocale}/shop`} className="mt-8 inline-block text-site-accent hover:underline">
         {ar ? 'متابعة التسوّق' : 'Continue shopping'}
       </Link>
     </div>
@@ -121,8 +121,8 @@ export default async function OrderPage({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-gray-600">{label}</dt>
-      <dd className="text-gray-900" dir="ltr">{value}</dd>
+      <dt className="text-site-ink-muted">{label}</dt>
+      <dd className="text-site-ink" dir="ltr">{value}</dd>
     </div>
   );
 }

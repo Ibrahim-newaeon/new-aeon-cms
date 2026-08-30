@@ -77,8 +77,8 @@ export function CartViewClient({
   if (cart.lines.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-gray-500">{copy.empty}</p>
-        <Link href={`/${locale}/shop`} className="mt-4 inline-block text-indigo-600 hover:underline">
+        <p className="text-site-ink-muted">{copy.empty}</p>
+        <Link href={`/${locale}/shop`} className="mt-4 inline-block text-site-accent hover:underline">
           {copy.browse}
         </Link>
       </div>
@@ -87,7 +87,7 @@ export function CartViewClient({
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
-      <ul className="divide-y divide-gray-200 lg:col-span-2">
+      <ul className="divide-y divide-site-line lg:col-span-2">
         {cart.lines.map((line) => (
           <li key={line.variantId} className="flex gap-4 py-4" data-test-id={`cart-line-${line.variantId}`}>
             {line.image ? (
@@ -99,21 +99,21 @@ export function CartViewClient({
                 className="h-20 w-20 rounded object-cover"
               />
             ) : (
-              <div className="h-20 w-20 rounded bg-gray-100" />
+              <div className="h-20 w-20 rounded bg-site-surface-raised" />
             )}
 
             <div className="min-w-0 flex-1">
-              <Link href={`/${locale}/products/${line.productSlug}`} className="font-medium text-gray-900 hover:underline">
+              <Link href={`/${locale}/products/${line.productSlug}`} className="font-medium text-site-ink hover:underline">
                 {line.name}
               </Link>
-              {line.optionSummary && <p className="text-sm text-gray-500">{line.optionSummary}</p>}
+              {line.optionSummary && <p className="text-sm text-site-ink-muted">{line.optionSummary}</p>}
 
               {/* Unavailable lines stay visible with a reason — silently dropping
                   them leaves the buyer wondering what happened. */}
               {!line.available ? (
-                <p className="mt-1 text-sm text-red-600">{copy.unavailable[line.reason ?? 'missing']}</p>
+                <p className="mt-1 text-sm text-site-danger">{copy.unavailable[line.reason ?? 'missing']}</p>
               ) : (
-                <p className="mt-1 text-sm text-gray-700" dir="ltr">
+                <p className="mt-1 text-sm text-site-ink-muted" dir="ltr">
                   {formatPrice(line.unitPrice, currency, locale)}
                 </p>
               )}
@@ -134,13 +134,13 @@ export function CartViewClient({
                     const next = Number(e.target.value) || 1;
                     if (next !== line.qty) void mutate(line.variantId, next);
                   }}
-                  className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
+                  className="w-16 rounded border border-site-line px-2 py-1 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => void mutate(line.variantId, 0)}
                   aria-label={copy.remove}
-                  className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                  className="rounded p-1.5 text-site-danger hover:bg-site-danger/10"
                   data-test-id={`cart-remove-${line.variantId}`}
                 >
                   {busyId === line.variantId ? (
@@ -152,7 +152,7 @@ export function CartViewClient({
               </div>
 
               {line.available && (
-                <p className="font-medium text-gray-900" dir="ltr">
+                <p className="font-medium text-site-ink" dir="ltr">
                   {formatPrice(line.lineTotal, currency, locale)}
                 </p>
               )}
@@ -161,16 +161,16 @@ export function CartViewClient({
         ))}
       </ul>
 
-      <aside className="h-fit rounded-lg border border-gray-200 p-5">
+      <aside className="h-fit rounded-lg border border-site-line p-5">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">{copy.subtotal}</span>
-          <span className="font-semibold text-gray-900" dir="ltr">
+          <span className="text-site-ink-muted">{copy.subtotal}</span>
+          <span className="font-semibold text-site-ink" dir="ltr">
             {formatPrice(cart.subtotal, currency, locale)}
           </span>
         </div>
         {cart.bundleDiscount > 0 && (
           <div
-            className="mt-2 flex justify-between text-sm text-green-700"
+            className="mt-2 flex justify-between text-sm text-site-success"
             data-test-id="cart-bundle-saving"
           >
             <span>{copy.bundleSaving}</span>
@@ -178,19 +178,19 @@ export function CartViewClient({
           </div>
         )}
 
-        <p className="mt-2 text-xs text-gray-500">{copy.shippingNote}</p>
+        <p className="mt-2 text-xs text-site-ink-muted">{copy.shippingNote}</p>
 
         {cart.hasUnavailable && (
-          <p className="mt-3 text-sm text-red-600">{copy.fixFirst}</p>
+          <p className="mt-3 text-sm text-site-danger">{copy.fixFirst}</p>
         )}
 
         <Link
           href={cart.hasUnavailable || cart.itemCount === 0 ? '#' : `/${locale}/checkout`}
           aria-disabled={cart.hasUnavailable || cart.itemCount === 0}
-          className={`mt-4 block rounded-lg px-6 py-3 text-center text-sm font-medium text-white ${
+          className={`mt-4 block rounded-lg px-6 py-3 text-center text-sm font-medium text-site-ink-inverted ${
             cart.hasUnavailable || cart.itemCount === 0
-              ? 'pointer-events-none bg-gray-300'
-              : 'bg-indigo-600 hover:bg-indigo-700'
+              ? 'pointer-events-none bg-site-line'
+              : 'bg-site-accent hover:bg-site-accent-hover'
           }`}
           data-test-id="cart-checkout"
         >

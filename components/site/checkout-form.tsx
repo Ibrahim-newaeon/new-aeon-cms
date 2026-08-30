@@ -114,23 +114,23 @@ export function CheckoutForm({
     <form onSubmit={submit} method="post" className="grid gap-8 lg:grid-cols-3" data-test-id="checkout-form">
       <div className="space-y-4 lg:col-span-2">
         <Field label={copy.name}>
-          <input name="name" required minLength={2} className="w-full rounded-lg border border-gray-300 p-3 text-sm" data-test-id="checkout-name" />
+          <input name="name" required minLength={2} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-name" />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={copy.phone}>
             <input name="phone" required type="tel" dir="ltr" placeholder="07XXXXXXXX"
-              className="w-full rounded-lg border border-gray-300 p-3 text-start text-sm" data-test-id="checkout-phone" />
+              className="w-full rounded-lg border border-site-line p-3 text-start text-sm" data-test-id="checkout-phone" />
           </Field>
           <Field label={copy.email}>
             <input name="email" type="email" dir="ltr"
-              className="w-full rounded-lg border border-gray-300 p-3 text-start text-sm" />
+              className="w-full rounded-lg border border-site-line p-3 text-start text-sm" />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={copy.governorate}>
-            <select name="governorate" required className="w-full rounded-lg border border-gray-300 p-3 text-sm" data-test-id="checkout-governorate">
+            <select name="governorate" required className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-governorate">
               <option value="">{copy.choose}</option>
               {GOVERNORATES.map((g) => (
                 <option key={g.value} value={g.value}>{locale === 'ar' ? g.ar : g.en}</option>
@@ -138,48 +138,48 @@ export function CheckoutForm({
             </select>
           </Field>
           <Field label={copy.city}>
-            <input name="city" required minLength={2} className="w-full rounded-lg border border-gray-300 p-3 text-sm" data-test-id="checkout-city" />
+            <input name="city" required minLength={2} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-city" />
           </Field>
         </div>
 
         <Field label={copy.address}>
-          <input name="addressLine" required minLength={5} className="w-full rounded-lg border border-gray-300 p-3 text-sm" data-test-id="checkout-address" />
+          <input name="addressLine" required minLength={5} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-address" />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={copy.landmark}>
-            <input name="landmark" className="w-full rounded-lg border border-gray-300 p-3 text-sm" />
+            <input name="landmark" className="w-full rounded-lg border border-site-line p-3 text-sm" />
           </Field>
           <Field label={copy.notes}>
-            <input name="notes" className="w-full rounded-lg border border-gray-300 p-3 text-sm" />
+            <input name="notes" className="w-full rounded-lg border border-site-line p-3 text-sm" />
           </Field>
         </div>
       </div>
 
-      <aside className="h-fit space-y-4 rounded-lg border border-gray-200 p-5">
+      <aside className="h-fit space-y-4 rounded-lg border border-site-line p-5">
         <Field label={copy.coupon}>
           <input name="couponCode" dir="ltr" placeholder="CODE"
-            className="w-full rounded-lg border border-gray-300 p-3 text-start text-sm uppercase" data-test-id="checkout-coupon" />
+            className="w-full rounded-lg border border-site-line p-3 text-start text-sm uppercase" data-test-id="checkout-coupon" />
         </Field>
 
-        <div className="flex justify-between border-t border-gray-200 pt-4 text-sm">
-          <span className="text-gray-600">{copy.subtotal}</span>
-          <span className="font-semibold text-gray-900" dir="ltr">
+        <div className="flex justify-between border-t border-site-line pt-4 text-sm">
+          <span className="text-site-ink-muted">{copy.subtotal}</span>
+          <span className="font-semibold text-site-ink" dir="ltr">
             {formatPrice(subtotal, currency, locale)}
           </span>
         </div>
-        <p className="text-xs text-gray-500">{copy.shippingNote}</p>
-        <p className="text-xs text-gray-500">{copy.codNote}</p>
+        <p className="text-xs text-site-ink-muted">{copy.shippingNote}</p>
+        <p className="text-xs text-site-ink-muted">{copy.codNote}</p>
 
         {unavailable.length > 0 && (
-          <ul role="alert" className="space-y-1 text-sm text-red-600">
+          <ul role="alert" className="space-y-1 text-sm text-site-danger">
             {unavailable.map((item) => <li key={item}>{item}</li>)}
           </ul>
         )}
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-site-danger">{error}</p>}
 
         <button type="submit" disabled={saving}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:opacity-50"
           data-test-id="checkout-submit">
           {saving && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
           {saving ? copy.placing : copy.place}
@@ -192,7 +192,7 @@ export function CheckoutForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm text-gray-700">{label}</span>
+      <span className="mb-1 block text-sm text-site-ink-muted">{label}</span>
       {children}
     </label>
   );

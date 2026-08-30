@@ -67,6 +67,13 @@
     --site-in-stock: #15803d;
     --site-out-of-stock: #b91c1c;
 
+    /* Status. Generic, and separate from the shop's price/stock slots: an
+       "add to cart failed" red and a "sale price" red are the same colour by
+       default and a brand may well want them different. */
+    --site-success: #15803d;
+    --site-warning: #b45309;
+    --site-danger: #b91c1c;
+
     /* Channel twins of the colours above.
        Tailwind's `/opacity` modifier needs a colour it can inject an alpha
        into; given `var(--site-ink)` it produces an invalid value that falls
@@ -88,6 +95,9 @@
     --site-price-sale-rgb: 220 38 38;
     --site-in-stock-rgb: 21 128 61;
     --site-out-of-stock-rgb: 185 28 28;
+    --site-success-rgb: 21 128 61;
+    --site-warning-rgb: 180 83 9;
+    --site-danger-rgb: 185 28 28;
   }
 
   html {

@@ -41,11 +41,11 @@ export default async function CategoryArchive({ params }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-site-ink">
           {loaded.category.name ?? loaded.category.slug}
         </h1>
         {loaded.category.description && (
-          <p className="mt-2 text-gray-600">{loaded.category.description}</p>
+          <p className="mt-2 text-site-ink-muted">{loaded.category.description}</p>
         )}
       </header>
       <ArchiveList entries={entries} locale={loaded.locale} emptyMessage={empty} />

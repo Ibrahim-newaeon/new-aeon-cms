@@ -15,7 +15,7 @@ export function ShopGrid({
 }) {
   if (items.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-gray-500">
+      <p className="py-12 text-center text-sm text-site-ink-muted">
         {locale === 'ar' ? 'لا توجد منتجات معروضة حالياً.' : 'No products available yet.'}
       </p>
     );
@@ -27,7 +27,7 @@ export function ShopGrid({
         <li key={item.slug}>
           <Link
             href={`/${locale}/products/${item.slug}`}
-            className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
+            className="flex h-full flex-col overflow-hidden rounded-lg border border-site-line transition-colors hover:bg-site-surface-raised"
           >
             {item.image && (
               // fill needs a positioned ancestor; the wrapper also holds the
@@ -43,16 +43,16 @@ export function ShopGrid({
               </div>
             )}
             <div className="flex flex-1 flex-col gap-2 p-4">
-              <h2 className="font-semibold text-gray-900">{item.name}</h2>
+              <h2 className="font-semibold text-site-ink">{item.name}</h2>
               {item.shortDesc && (
-                <p className="line-clamp-2 text-sm text-gray-600">{item.shortDesc}</p>
+                <p className="line-clamp-2 text-sm text-site-ink-muted">{item.shortDesc}</p>
               )}
               <p className="mt-auto flex items-baseline gap-2">
-                <span className="font-semibold text-gray-900" dir="ltr">
+                <span className="font-semibold text-site-ink" dir="ltr">
                   {formatPrice(item.basePrice, currency, locale)}
                 </span>
                 {item.compareAtPrice != null && item.compareAtPrice > item.basePrice && (
-                  <span className="text-sm text-gray-400 line-through" dir="ltr">
+                  <span className="text-sm text-site-ink-muted line-through" dir="ltr">
                     {formatPrice(item.compareAtPrice, currency, locale)}
                   </span>
                 )}

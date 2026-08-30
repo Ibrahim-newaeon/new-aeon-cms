@@ -33,6 +33,8 @@ export async function PUT(request: Request) {
       metaPixelId: empty(data.metaPixelId),
       tiktokPixelId: empty(data.tiktokPixelId),
       snapPixelId: empty(data.snapPixelId),
+      // Already validated by themeSchema: only known slots, only hex values.
+      theme: data.theme ?? null,
       customCss: empty(data.customCss),
       comingSoonMode: data.comingSoonMode,
       comingSoonMessage: empty(data.comingSoonMessage),

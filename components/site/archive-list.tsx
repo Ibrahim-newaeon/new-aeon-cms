@@ -14,7 +14,7 @@ export function ArchiveList({
   emptyMessage: string;
 }) {
   if (entries.length === 0) {
-    return <p className="py-12 text-center text-sm text-gray-500">{emptyMessage}</p>;
+    return <p className="py-12 text-center text-sm text-site-ink-muted">{emptyMessage}</p>;
   }
 
   return (
@@ -23,7 +23,7 @@ export function ArchiveList({
         <li key={entry.slug}>
           <Link
             href={`/${locale}/${entry.slug}`}
-            className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 transition-colors hover:bg-gray-50"
+            className="flex h-full flex-col overflow-hidden rounded-lg border border-site-line transition-colors hover:bg-site-surface-raised"
           >
             {entry.featuredImage && (
               <div className="relative aspect-video w-full">
@@ -37,14 +37,14 @@ export function ArchiveList({
               </div>
             )}
             <div className="flex flex-1 flex-col gap-2 p-4">
-              <h2 className="font-semibold text-gray-900">{entry.title}</h2>
+              <h2 className="font-semibold text-site-ink">{entry.title}</h2>
               {entry.excerpt && (
-                <p className="line-clamp-3 flex-1 text-sm text-gray-600">{entry.excerpt}</p>
+                <p className="line-clamp-3 flex-1 text-sm text-site-ink-muted">{entry.excerpt}</p>
               )}
               {entry.publishedAt && (
                 <time
                   dateTime={entry.publishedAt.toISOString()}
-                  className="text-xs text-gray-400"
+                  className="text-xs text-site-ink-muted"
                   dir="ltr"
                 >
                   {entry.publishedAt.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB')}

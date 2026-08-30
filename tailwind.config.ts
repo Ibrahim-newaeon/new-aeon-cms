@@ -30,6 +30,9 @@ const config: Config = {
           'price-sale': 'rgb(var(--site-price-sale-rgb) / <alpha-value>)',
           'in-stock': 'rgb(var(--site-in-stock-rgb) / <alpha-value>)',
           'out-of-stock': 'rgb(var(--site-out-of-stock-rgb) / <alpha-value>)',
+          'success': 'rgb(var(--site-success-rgb) / <alpha-value>)',
+          'warning': 'rgb(var(--site-warning-rgb) / <alpha-value>)',
+          'danger': 'rgb(var(--site-danger-rgb) / <alpha-value>)',
         },
         admin: {
           bg: '#0c0e13',

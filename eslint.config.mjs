@@ -62,15 +62,11 @@ const config = [
      * quietly undoing the conversion. Theming rots because nobody notices the
      * first `bg-gray-800` going back in; this is what noticing looks like.
      *
-     * The list grows as components are converted. When it covers
-     * components/site entirely, this becomes a directory glob and the list
-     * goes away.
+     * Now the whole storefront, since the whole storefront is converted. The
+     * admin is deliberately excluded: it is New Aeon's own tool with its own
+     * fixed --admin-* palette, and it is not something a customer rebrands.
      */
-    files: [
-      'components/site/navbar.tsx',
-      'components/site/footer.tsx',
-      'components/site/blocks/slider.tsx',
-    ],
+    files: ['components/site/**/*.tsx', 'app/(site)/**/*.tsx'],
     rules: {
       'no-restricted-syntax': [
         'error',

@@ -86,7 +86,7 @@ export function AddToCart({
     <div className="space-y-4">
       {options.map((option) => (
         <div key={option.id}>
-          <p className="mb-1 text-sm font-medium text-gray-700">{option.name}</p>
+          <p className="mb-1 text-sm font-medium text-site-ink-muted">{option.name}</p>
           <div className="flex flex-wrap gap-2">
             {option.values.map((v) => {
               const on = selection[option.name] === v;
@@ -113,8 +113,8 @@ export function AddToCart({
                   className={cn(
                     'rounded-full border px-4 py-1.5 text-sm transition-colors',
                     on
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50',
+                      ? 'border-site-accent bg-site-accent/10 text-site-accent'
+                      : 'border-site-line text-site-ink-muted hover:bg-site-surface-raised',
                     !reachable && !on && 'opacity-40'
                   )}
                 >
@@ -127,17 +127,17 @@ export function AddToCart({
       ))}
 
       {!matched && options.length > 0 && (
-        <p className="text-sm text-gray-500">{copy.unavailable}</p>
+        <p className="text-sm text-site-ink-muted">{copy.unavailable}</p>
       )}
       {matched && matched.stock <= 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-red-600">{copy.outOfStock}</p>
+          <p className="text-sm text-site-danger">{copy.outOfStock}</p>
           {/* Keyed on the variant so switching selection resets the form
               rather than carrying a submitted state to a different SKU. */}
           <StockAlert key={matched.id} variantId={matched.id} locale={locale} />
         </div>
       )}
-      {state === 'error' && <p role="alert" className="text-sm text-red-600">{copy.failed}</p>}
+      {state === 'error' && <p role="alert" className="text-sm text-site-danger">{copy.failed}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -145,7 +145,7 @@ export function AddToCart({
           onClick={() => void add()}
           disabled={!canAdd || state === 'busy'}
           data-test-id="add-to-cart"
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="inline-flex items-center gap-2 rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:cursor-not-allowed disabled:bg-site-line"
         >
           {state === 'busy' ? (
             <Loader2 size={16} className="animate-spin" aria-hidden="true" />
@@ -158,7 +158,7 @@ export function AddToCart({
         </button>
 
         {state === 'done' && (
-          <a href={`/${locale}/cart`} className="text-sm text-indigo-600 hover:underline">
+          <a href={`/${locale}/cart`} className="text-sm text-site-accent hover:underline">
             {copy.viewCart}
           </a>
         )}

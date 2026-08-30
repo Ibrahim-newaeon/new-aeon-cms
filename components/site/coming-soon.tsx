@@ -22,7 +22,7 @@ export function ComingSoon({
     (locale === 'ar' ? 'الموقع قيد التجهيز. نعود قريباً.' : 'We are getting things ready. Back soon.');
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-950 px-6 text-center">
+    <main className="flex min-h-screen items-center justify-center bg-site-surface-inverted px-6 text-center">
       <div className="max-w-lg space-y-5">
         {settings?.logo ? (
           <Image
@@ -34,14 +34,14 @@ export function ComingSoon({
             className="mx-auto h-12 w-auto object-contain"
           />
         ) : (
-          <h1 className="text-3xl font-bold text-white">{siteName}</h1>
+          <h1 className="text-3xl font-bold text-site-ink-inverted">{siteName}</h1>
         )}
 
-        <p className="text-lg text-gray-300">{message}</p>
+        <p className="text-lg text-site-ink-inverted/70">{message}</p>
 
         {settings?.contactEmail && (
-          <p className="text-sm text-gray-500">
-            <a href={`mailto:${settings.contactEmail}`} className="hover:text-gray-300" dir="ltr">
+          <p className="text-sm text-site-ink-muted">
+            <a href={`mailto:${settings.contactEmail}`} className="hover:text-site-ink-inverted/70" dir="ltr">
               {settings.contactEmail}
             </a>
           </p>

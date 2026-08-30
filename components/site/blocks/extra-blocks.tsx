@@ -71,10 +71,10 @@ export function EmbedBlock({ block }: { block: Pick_<'embed'> }) {
       href={block.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
+      className="flex items-center justify-between gap-4 rounded-lg border border-site-line p-4 transition-colors hover:bg-site-surface-raised"
     >
-      <span className="text-sm font-medium text-gray-900 capitalize">{block.provider}</span>
-      <span className="truncate text-sm text-gray-500" dir="ltr">
+      <span className="text-sm font-medium text-site-ink capitalize">{block.provider}</span>
+      <span className="truncate text-sm text-site-ink-muted" dir="ltr">
         {block.url}
       </span>
     </a>
@@ -85,7 +85,7 @@ export function TeamBlock({ block }: { block: Pick_<'team'> }) {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {block.members.map((m, idx) => (
-        <div key={idx} className="rounded-lg border border-gray-200 p-6 text-center">
+        <div key={idx} className="rounded-lg border border-site-line p-6 text-center">
           {m.photo ? (
             <Image
               src={m.photo}
@@ -95,13 +95,13 @@ export function TeamBlock({ block }: { block: Pick_<'team'> }) {
               className="mx-auto h-24 w-24 rounded-full object-cover"
             />
           ) : (
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-indigo-100 text-2xl font-semibold text-indigo-700">
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-site-accent/10 text-2xl font-semibold text-site-accent">
               {m.name.trim().charAt(0)}
             </div>
           )}
-          <h3 className="mt-4 font-semibold text-gray-900">{m.name}</h3>
-          <p className="text-sm text-gray-500">{m.role}</p>
-          {m.bio && <p className="mt-2 text-sm text-gray-600">{m.bio}</p>}
+          <h3 className="mt-4 font-semibold text-site-ink">{m.name}</h3>
+          <p className="text-sm text-site-ink-muted">{m.role}</p>
+          {m.bio && <p className="mt-2 text-sm text-site-ink-muted">{m.bio}</p>}
         </div>
       ))}
     </div>
@@ -111,18 +111,18 @@ export function TeamBlock({ block }: { block: Pick_<'team'> }) {
 export function TimelineBlock({ block }: { block: Pick_<'timeline'> }) {
   return (
     // border-s / ps / start-0 keep the rail on the reading-start edge in RTL.
-    <ol className="relative ms-3 border-s-2 border-gray-200 ps-6">
+    <ol className="relative ms-3 border-s-2 border-site-line ps-6">
       {block.items.map((item, idx) => (
         <li key={idx} className="mb-8 last:mb-0">
           <span
             aria-hidden="true"
-            className="absolute -start-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-white bg-indigo-500"
+            className="absolute -start-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-site-surface bg-site-accent"
           />
-          <time className="text-xs text-gray-500" dir="ltr">
+          <time className="text-xs text-site-ink-muted" dir="ltr">
             {item.date}
           </time>
-          <h3 className="mt-1 font-semibold text-gray-900">{item.title}</h3>
-          <p className="mt-1 text-sm text-gray-600">{item.description}</p>
+          <h3 className="mt-1 font-semibold text-site-ink">{item.title}</h3>
+          <p className="mt-1 text-sm text-site-ink-muted">{item.description}</p>
         </li>
       ))}
     </ol>
@@ -137,20 +137,20 @@ export function PricingBlock({ block }: { block: Pick_<'pricing'> }) {
           key={idx}
           className={cn(
             'flex flex-col rounded-xl border p-6',
-            plan.highlighted ? 'border-indigo-500 shadow-lg' : 'border-gray-200'
+            plan.highlighted ? 'border-site-accent shadow-lg' : 'border-site-line'
           )}
         >
-          <h3 className="font-semibold text-gray-900">{plan.name}</h3>
+          <h3 className="font-semibold text-site-ink">{plan.name}</h3>
           <p className="mt-2">
             <span className="text-3xl font-bold" dir="ltr">
               {plan.price}
             </span>
-            {plan.period && <span className="text-sm text-gray-500"> / {plan.period}</span>}
+            {plan.period && <span className="text-sm text-site-ink-muted"> / {plan.period}</span>}
           </p>
-          <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-600">
+          <ul className="mt-4 flex-1 space-y-2 text-sm text-site-ink-muted">
             {plan.features.map((f, i) => (
               <li key={i} className="flex gap-2">
-                <span aria-hidden="true" className="text-indigo-500">
+                <span aria-hidden="true" className="text-site-accent">
                   ✓
                 </span>
                 {f}
@@ -162,8 +162,8 @@ export function PricingBlock({ block }: { block: Pick_<'pricing'> }) {
             className={cn(
               'mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-medium',
               plan.highlighted
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'border border-gray-300 text-gray-900 hover:bg-gray-50'
+                ? 'bg-site-accent text-site-accent-ink hover:bg-site-accent-hover'
+                : 'border border-site-line text-site-ink hover:bg-site-surface-raised'
             )}
           >
             {plan.cta.text}
@@ -191,12 +191,12 @@ export function ComparisonBlock({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th scope="col" className="border border-gray-200 bg-gray-50 px-3 py-2 text-start" />
+            <th scope="col" className="border border-site-line bg-site-surface-raised px-3 py-2 text-start" />
             {block.columns.map((col) => (
               <th
                 key={col}
                 scope="col"
-                className="border border-gray-200 bg-gray-50 px-3 py-2 text-start font-semibold"
+                className="border border-site-line bg-site-surface-raised px-3 py-2 text-start font-semibold"
               >
                 {col}
               </th>
@@ -206,13 +206,13 @@ export function ComparisonBlock({
         <tbody>
           {block.items.map((row, idx) => (
             <tr key={idx}>
-              <th scope="row" className="border border-gray-200 px-3 py-2 text-start font-medium">
+              <th scope="row" className="border border-site-line px-3 py-2 text-start font-medium">
                 {row.feature}
               </th>
               {block.columns.map((col) => {
                 const v = row.values[col];
                 return (
-                  <td key={col} className="border border-gray-200 px-3 py-2">
+                  <td key={col} className="border border-site-line px-3 py-2">
                     {typeof v === 'boolean' ? (
                       <span aria-label={v ? yes : no}>{v ? '✓' : '—'}</span>
                     ) : (
@@ -245,10 +245,10 @@ export function MapBlock({
       href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+      className="flex items-center justify-between gap-4 rounded-lg border border-site-line p-4 hover:bg-site-surface-raised"
     >
-      <span className="text-sm font-medium text-gray-900">{block.marker ?? (locale === 'ar' ? 'الموقع على الخريطة' : 'Location on the map')}</span>
-      <span className="text-sm text-gray-500" dir="ltr">
+      <span className="text-sm font-medium text-site-ink">{block.marker ?? (locale === 'ar' ? 'الموقع على الخريطة' : 'Location on the map')}</span>
+      <span className="text-sm text-site-ink-muted" dir="ltr">
         {lat.toFixed(4)}, {lng.toFixed(4)}
       </span>
     </a>
@@ -331,8 +331,8 @@ export async function SocialLinksBlock({
               className={cn(
                 'inline-flex items-center justify-center capitalize',
                 block.style === 'buttons'
-                  ? 'rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50'
-                  : 'h-10 w-10 rounded-full bg-gray-100 text-xs hover:bg-gray-200'
+                  ? 'rounded-lg border border-site-line px-4 py-2 text-sm hover:bg-site-surface-raised'
+                  : 'h-10 w-10 rounded-full bg-site-surface-raised text-xs hover:bg-site-line'
               )}
             >
               {block.style === 'buttons' ? p : p.slice(0, 2)}
@@ -371,7 +371,7 @@ export async function RecentPostsBlock({
 
   return (
     <section>
-      {block.title && <h2 className="mb-4 text-xl font-bold text-gray-900">{block.title}</h2>}
+      {block.title && <h2 className="mb-4 text-xl font-bold text-site-ink">{block.title}</h2>}
       <div
         className={cn(
           block.layout === 'grid' ? 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-4'
@@ -381,10 +381,10 @@ export async function RecentPostsBlock({
           <a
             key={row.slug}
             href={`/${locale}/${row.slug}`}
-            className="block rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+            className="block rounded-lg border border-site-line p-4 hover:bg-site-surface-raised"
           >
-            <h3 className="font-semibold text-gray-900">{row.title ?? row.slug}</h3>
-            {row.excerpt && <p className="mt-1 text-sm text-gray-600">{row.excerpt}</p>}
+            <h3 className="font-semibold text-site-ink">{row.title ?? row.slug}</h3>
+            {row.excerpt && <p className="mt-1 text-sm text-site-ink-muted">{row.excerpt}</p>}
           </a>
         ))}
       </div>

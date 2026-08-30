@@ -115,7 +115,7 @@ export function ContactFormBlock({
 
   if (status === 'sent') {
     return (
-      <p role="status" className="rounded-lg bg-green-50 p-4 text-sm text-green-800">
+      <p role="status" className="rounded-lg bg-site-success/10 p-4 text-sm text-site-success">
         {block.successMessage ?? copy.sent}
       </p>
     );
@@ -127,12 +127,12 @@ export function ContactFormBlock({
 
       {block.fields.map((field) => (
         <label key={field} className="block">
-          <span className="mb-1 block text-sm text-gray-700">{copy.fields[field] ?? field}</span>
+          <span className="mb-1 block text-sm text-site-ink-muted">{copy.fields[field] ?? field}</span>
           {field === 'message' ? (
             <textarea
               required
               rows={4}
-              className="w-full rounded-lg border border-gray-300 p-3 text-sm"
+              className="w-full rounded-lg border border-site-line p-3 text-sm"
               value={values[field] ?? ''}
               onChange={(e) => setValues((p) => ({ ...p, [field]: e.target.value }))}
             />
@@ -141,7 +141,7 @@ export function ContactFormBlock({
               required
               type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
               dir={field === 'email' || field === 'phone' ? 'ltr' : undefined}
-              className="w-full rounded-lg border border-gray-300 p-3 text-sm"
+              className="w-full rounded-lg border border-site-line p-3 text-sm"
               value={values[field] ?? ''}
               onChange={(e) => setValues((p) => ({ ...p, [field]: e.target.value }))}
             />
@@ -150,7 +150,7 @@ export function ContactFormBlock({
       ))}
 
       {status === 'error' && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-site-danger">
           {copy.sendFailed}
         </p>
       )}
@@ -158,7 +158,7 @@ export function ContactFormBlock({
       <button
         type="submit"
         disabled={status === 'sending'}
-        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:opacity-50"
       >
         {status === 'sending' && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
         {block.submitLabel ?? copy.submit}
@@ -192,12 +192,12 @@ export function NewsletterBlock({
   };
 
   return (
-    <section className="rounded-xl bg-gray-50 p-6">
-      <h2 className="text-lg font-bold text-gray-900">{block.title}</h2>
-      {block.description && <p className="mt-1 text-sm text-gray-600">{block.description}</p>}
+    <section className="rounded-xl bg-site-surface-raised p-6">
+      <h2 className="text-lg font-bold text-site-ink">{block.title}</h2>
+      {block.description && <p className="mt-1 text-sm text-site-ink-muted">{block.description}</p>}
 
       {status === 'sent' ? (
-        <p role="status" className="mt-4 text-sm text-green-700">
+        <p role="status" className="mt-4 text-sm text-site-success">
           {copy.subscribed}
         </p>
       ) : (
@@ -208,7 +208,7 @@ export function NewsletterBlock({
             type="email"
             dir="ltr"
             aria-label={copy.emailLabel}
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 p-3 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-site-line p-3 text-sm"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -216,7 +216,7 @@ export function NewsletterBlock({
           <button
             type="submit"
             disabled={status === 'sending'}
-            className="rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-site-accent px-5 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:opacity-50"
           >
             {block.buttonText ?? copy.subscribe}
           </button>
@@ -224,13 +224,13 @@ export function NewsletterBlock({
       )}
 
       {status === 'error' && (
-        <p role="alert" className="mt-2 text-sm text-red-600">
+        <p role="alert" className="mt-2 text-sm text-site-danger">
           {copy.subscribeFailed}
         </p>
       )}
 
       {block.privacyNote && (
-        <p className="mt-2 text-xs text-gray-500">{block.privacyNote}</p>
+        <p className="mt-2 text-xs text-site-ink-muted">{block.privacyNote}</p>
       )}
     </section>
   );
