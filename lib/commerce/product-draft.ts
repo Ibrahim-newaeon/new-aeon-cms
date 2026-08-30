@@ -27,7 +27,8 @@ export interface VariantDraft {
 export interface ProductFormValue {
   slug: string;
   brandId: string | null;
-  categoryId: string | null;
+  /** Ordered; the first is the primary category (breadcrumb + canonical URL). */
+  categoryIds: string[];
   basePrice: number;
   compareAtPrice: number | null;
   isActive: boolean;

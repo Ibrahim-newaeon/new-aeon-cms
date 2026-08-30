@@ -1,5 +1,6 @@
 // lib/commerce/products.ts
 import { db } from '@/lib/db';
+import { getProductCategories } from './product-categories';
 import {
   products, productI18n, productImages, productSpecs, productVariants,
   productOptions, variantOptionValues, brands, categories, categoryI18n,
@@ -148,12 +149,13 @@ export async function getProductForEdit(id: string) {
   const product = base[0];
   if (!product) return null;
 
-  const [i18n, images, specs, options, variants] = await Promise.all([
+  const [i18n, images, specs, options, variants, categoryIds] = await Promise.all([
     db.select().from(productI18n).where(eq(productI18n.productId, id)),
     db.select().from(productImages).where(eq(productImages.productId, id)).orderBy(asc(productImages.sortOrder)),
     db.select().from(productSpecs).where(eq(productSpecs.productId, id)).orderBy(asc(productSpecs.sortOrder)),
     db.select().from(productOptions).where(eq(productOptions.productId, id)).orderBy(asc(productOptions.position)),
     db.select().from(productVariants).where(eq(productVariants.productId, id)).orderBy(asc(productVariants.sku)),
+    getProductCategories(id),
   ]);
 
   const variantIds = variants.map((v) => v.id);
@@ -165,6 +167,8 @@ export async function getProductForEdit(id: string) {
 
   return {
     product,
+    // Primary first, so the form's "primary" badge lands on the right row.
+    categoryIds,
     i18n,
     images,
     specs,

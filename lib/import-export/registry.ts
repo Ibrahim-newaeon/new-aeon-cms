@@ -70,7 +70,13 @@ export const ENTITIES: readonly EntityDef[] = [
       { key: 'name_en', labelEn: 'Name (EN)', labelAr: 'الاسم (إنجليزي)', example: 'Amber Oud' },
       { key: 'name_ar', labelEn: 'Name (AR)', labelAr: 'الاسم (عربي)', example: 'عنبر وعود' },
       { key: 'brand', labelEn: 'Brand', labelAr: 'العلامة', example: 'Aeon Atelier' },
-      { key: 'category', labelEn: 'Category', labelAr: 'التصنيف', example: 'general' },
+      {
+        key: 'category',
+        labelEn: 'Categories',
+        labelAr: 'التصنيفات',
+        example: 'perfumes|women|gifts',
+        hintEn: 'One or more slugs separated by | — the first is the primary category',
+      },
       {
         key: 'price',
         labelEn: 'Price',

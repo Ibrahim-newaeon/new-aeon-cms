@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { setProductCategories } from '@/lib/commerce/product-categories';
 import { products, productI18n } from '@/lib/db/schema';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { productSchema } from '@/lib/commerce-schema';
@@ -30,7 +31,6 @@ export async function POST(request: Request) {
       .values({
         slug: data.slug,
         brandId: data.brandId ?? null,
-        categoryId: data.categoryId ?? null,
         basePrice: data.basePrice,
         compareAtPrice: data.compareAtPrice ?? null,
         isActive: data.isActive,
@@ -39,6 +39,9 @@ export async function POST(request: Request) {
       .returning({ id: products.id });
 
     if (!row) throw new Error('insert returned no row');
+
+    // Ordered: the first is the primary category.
+    await setProductCategories(row.id, data.categoryIds);
 
     await db.insert(productI18n).values(
       data.translations.map((t) => ({

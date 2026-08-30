@@ -6,7 +6,7 @@ import {
 // TS cannot infer the callback's return type. AnyPgColumn breaks the cycle.
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { Theme } from '../theme/slots';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 /**
  * Human-readable order numbers (ORD-1001), read by lib/commerce/checkout.
@@ -334,7 +334,6 @@ export const products = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: varchar('slug', { length: 255 }).notNull(),
   brandId: uuid('brand_id').references(() => brands.id),
-  categoryId: uuid('category_id').references((): AnyPgColumn => categories.id),
   basePrice: integer('base_price').notNull(),
   compareAtPrice: integer('compare_at_price'),
   isActive: boolean('is_active').default(true),
@@ -391,6 +390,32 @@ export const variantOptionValues = pgTable('variant_option_values', {
   value: varchar('value', { length: 255 }).notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.variantId, table.optionId] }),
+}));
+
+/**
+ * Products <-> categories.
+ *
+ * This replaced a single `products.category_id`. A real catalogue does not fit
+ * it: the imported Juman range put products in up to four categories at once
+ * ("perfumes" AND "women" AND "gifts"), so importing it kept the first and
+ * silently dropped 50 assignments — which is why two categories ended up
+ * holding 50 of 52 products and two more held none.
+ *
+ * `isPrimary` marks the one category that owns the product's breadcrumb and
+ * canonical /shop/[category] URL. Exactly one per product, enforced by a
+ * partial unique index rather than by convention, because "the first row" is
+ * not a thing a table guarantees.
+ */
+export const productCategories = pgTable('product_categories', {
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  isPrimary: boolean('is_primary').notNull().default(false),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.productId, table.categoryId] }),
+  categoryIdx: index('product_categories_category_idx').on(table.categoryId),
+  onePrimary: uniqueIndex('product_categories_one_primary_idx')
+    .on(table.productId)
+    .where(sql`is_primary`),
 }));
 
 export const productImages = pgTable('product_images', {
@@ -555,7 +580,7 @@ export const mediaFoldersRelations = relations(mediaFolders, ({ one, many }) => 
 
 export const productsRelations = relations(products, ({ one, many }) => ({
   brand: one(brands, { fields: [products.brandId], references: [brands.id] }),
-  category: one(categories, { fields: [products.categoryId], references: [categories.id] }),
+  categories: many(productCategories),
   i18n: many(productI18n),
   variants: many(productVariants),
   images: many(productImages),

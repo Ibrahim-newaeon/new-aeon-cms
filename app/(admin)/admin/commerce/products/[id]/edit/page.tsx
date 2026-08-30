@@ -54,7 +54,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
       initial={{
         slug: record.product.slug,
         brandId: record.product.brandId,
-        categoryId: record.product.categoryId,
+        categoryIds: record.categoryIds,
         basePrice: record.product.basePrice,
         compareAtPrice: record.product.compareAtPrice,
         isActive: record.product.isActive ?? true,

@@ -28,7 +28,7 @@ export default async function ShopCategoryPage({ params }: Props) {
   if (!row) notFound();
 
   const [items, settings] = await Promise.all([
-    listShopProducts(typedLocale, row.id),
+    listShopProducts(typedLocale, { category: row.slug }),
     getSettings(),
   ]);
 

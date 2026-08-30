@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { setProductCategories } from '@/lib/commerce/product-categories';
 import { products, productI18n, productVariants } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { requireApiAuth } from '@/lib/auth/api-guard';
@@ -44,7 +45,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       .set({
         slug: data.slug,
         brandId: data.brandId ?? null,
-        categoryId: data.categoryId ?? null,
         basePrice: data.basePrice,
         compareAtPrice: data.compareAtPrice ?? null,
         isActive: data.isActive,
@@ -52,6 +52,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         updatedAt: new Date(),
       })
       .where(eq(products.id, id));
+
+    await setProductCategories(id, data.categoryIds);
 
     for (const t of data.translations) {
       const found = await db

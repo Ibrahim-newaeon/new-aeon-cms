@@ -19,7 +19,7 @@ export default async function NewProduct() {
       initial={{
         slug: '',
         brandId: null,
-        categoryId: null,
+        categoryIds: [],
         basePrice: 0,
         compareAtPrice: null,
         isActive: true,

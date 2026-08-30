@@ -3,6 +3,7 @@
 // NOTE: relative imports, not '@/...'. tsx does NOT resolve tsconfig `paths`
 // by default, so the alias form fails with "Cannot find module '@/lib/db'".
 import { db } from '../lib/db';
+import { setProductCategories } from '../lib/commerce/product-categories';
 import {
   users, settings, categories, categoryI18n, contentTypes, content, contentI18n,
   brands, products, productI18n, productImages, productOptions, productVariants,
@@ -460,7 +461,6 @@ async function seed() {
       .values({
         slug: 'amber-oud',
         brandId: brand?.id,
-        categoryId: generalCategory?.id,
         basePrice: 129000,
         isActive: true,
         sortOrder: 1,
@@ -468,6 +468,8 @@ async function seed() {
       .returning();
 
     if (product) {
+      if (generalCategory?.id) await setProductCategories(product.id, [generalCategory.id]);
+
       // Both locales, so /ar/shop is not an empty grid on a site whose default
       // locale is Arabic. The specs pin `en` for stable assertions.
       await db.insert(productI18n).values([

@@ -215,12 +215,52 @@ export function ProductForm({
           </select>
         </Field>
 
-        <Field label={t('product.category')}>
-          <select className="admin-input" value={value.categoryId ?? ''}
-            onChange={(e) => setValue((p) => ({ ...p, categoryId: e.target.value || null }))} data-test-id="product-category">
-            <option value="">{t('common.none')}</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
+        {/* Several categories per product, and ORDER carries meaning: the first
+            ticked is the primary one, which owns the breadcrumb and the
+            canonical /shop/[category] URL. A single select could not express
+            "this is a perfume, and a gift, and for women" — which is what the
+            imported catalogue actually said. */}
+        <Field label={t('product.categories')}>
+          <div
+            className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-lg border border-[var(--admin-line)] p-2"
+            role="group"
+            aria-label={t('product.categories')}
+            data-test-id="product-categories"
+          >
+            {categories.length === 0 && (
+              <span className="px-1 py-2 text-sm text-[var(--admin-text-secondary)]">
+                {t('common.none')}
+              </span>
+            )}
+            {categories.map((c) => {
+              const at = value.categoryIds.indexOf(c.id);
+              const checked = at !== -1;
+              return (
+                <label key={c.id} className="flex items-center gap-2 px-1 py-0.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    data-test-id={`product-category-${c.id}`}
+                    onChange={(e) =>
+                      setValue((p) => ({
+                        ...p,
+                        // Append on tick so the first one ticked stays first.
+                        categoryIds: e.target.checked
+                          ? [...p.categoryIds, c.id]
+                          : p.categoryIds.filter((id) => id !== c.id),
+                      }))
+                    }
+                  />
+                  <span>{c.label}</span>
+                  {at === 0 && (
+                    <span className="rounded bg-[var(--admin-accent)]/15 px-1.5 py-0.5 text-[11px] text-[var(--admin-accent)]">
+                      {t('product.primaryCategory')}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
         </Field>
 
         <label className="flex items-end gap-2 pb-2 text-sm">

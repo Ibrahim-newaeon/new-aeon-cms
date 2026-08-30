@@ -2,10 +2,12 @@
 import 'server-only';
 import { and, asc, count, eq, inArray, sql, sum } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { setProductCategories } from '@/lib/commerce/product-categories';
 import {
   brands,
   productImages,
   categories,
+  productCategories,
   categoryI18n,
   coupons,
   customers,
@@ -56,14 +58,21 @@ async function exportRows(entity: EntityDef): Promise<Record<string, string>[]> 
           stock: productVariants.stock,
           active: productVariants.isActive,
           brand: brands.slug,
-          category: categories.slug,
+          // Every category the product is in, primary first, pipe-joined —
+          // the same shape the importer reads back. Exporting only one would
+          // round-trip as a silent deletion of the rest.
+          category: sql<string>`(
+            select string_agg(c.slug, '|' order by pc.is_primary desc, c.slug)
+            from ${productCategories} pc
+            join ${categories} c on c.id = pc.category_id
+            where pc.product_id = ${products.id}
+          )`,
           productId: products.id,
           variantId: productVariants.id,
         })
         .from(productVariants)
         .innerJoin(products, eq(productVariants.productId, products.id))
         .leftJoin(brands, eq(products.brandId, brands.id))
-        .leftJoin(categories, eq(products.categoryId, categories.id))
         .orderBy(asc(products.slug), asc(productVariants.sku));
 
       if (rows.length === 0) return [];
@@ -318,7 +327,28 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
   const compareAt = row.compare_at_price ? toMinorUnits(row.compare_at_price, exponent) : null;
 
   const brandId = row.brand ? await lookupId(brands, brands.slug, row.brand) : null;
-  const categoryId = row.category ? await lookupId(categories, categories.slug, row.category) : null;
+  /**
+   * `category` accepts several slugs separated by | — "perfumes|women|gifts".
+   * The first is the primary one.
+   *
+   * A single slug was why importing the Juman catalogue dropped 50 category
+   * assignments: its products belong to up to four at once, and one column
+   * holding one value could only keep the first.
+   *
+   * An unknown slug is an error rather than a silent skip. Skipping it would
+   * file the product under nothing and report success.
+   */
+  const categorySlugs = (row.category ?? '')
+    .split('|')
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  const categoryIds: string[] = [];
+  for (const slug of categorySlugs) {
+    const found = await lookupId(categories, categories.slug, slug);
+    if (!found) throw new Error(`unknown category "${slug}"`);
+    categoryIds.push(found);
+  }
 
   const [existingProduct] = await db
     .select({ id: products.id })
@@ -333,7 +363,6 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
       .values({
         slug: row.slug!,
         brandId,
-        categoryId,
         basePrice: price,
         compareAtPrice: compareAt,
         isActive: parseBoolean(row.active ?? ''),
@@ -345,7 +374,6 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
       .update(products)
       .set({
         brandId,
-        categoryId,
         basePrice: price,
         /**
          * Both of these were written to the VARIANT only, and the storefront
@@ -367,6 +395,11 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
       })
       .where(eq(products.id, productId));
   }
+
+  // Replaces the whole set, so removing a slug from the sheet removes the link.
+  // Only when the column carried something: a blank cell on a partial sheet
+  // must not silently unfile a product.
+  if (categorySlugs.length > 0) await setProductCategories(productId, categoryIds);
 
   for (const [locale, name] of [['en', row.name_en], ['ar', row.name_ar]] as const) {
     if (!name) continue;
