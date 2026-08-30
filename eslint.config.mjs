@@ -55,6 +55,43 @@ const config = [
 
   {
     /**
+     * Storefront files already converted to design slots.
+     *
+     * A raw palette class cannot be rebranded — that is the whole reason the
+     * slots exist — so reintroducing one here fails the build rather than
+     * quietly undoing the conversion. Theming rots because nobody notices the
+     * first `bg-gray-800` going back in; this is what noticing looks like.
+     *
+     * The list grows as components are converted. When it covers
+     * components/site entirely, this becomes a directory glob and the list
+     * goes away.
+     */
+    files: [
+      'components/site/navbar.tsx',
+      'components/site/footer.tsx',
+      'components/site/blocks/slider.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "Literal[value=/\\b(bg|text|border|ring|divide|from|via|to)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)([-/][0-9]{1,3})?\\b/]",
+          message:
+            'Use a design slot (var(--site-*)) or a .site-btn-* class instead of a raw Tailwind colour. See the STOREFRONT DESIGN SLOTS block in app/globals.css.',
+        },
+        {
+          selector:
+            "TemplateElement[value.raw=/\\b(bg|text|border|ring|divide|from|via|to)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)([-/][0-9]{1,3})?\\b/]",
+          message:
+            'Use a design slot (var(--site-*)) or a .site-btn-* class instead of a raw Tailwind colour. See the STOREFRONT DESIGN SLOTS block in app/globals.css.',
+        },
+      ],
+    },
+  },
+
+  {
+    /**
      * Admin thumbnails stay on plain <img>. next/image wants every host in
      * next.config's remotePatterns, and these render whatever storage URL an
      * upload produced — local, S3 or R2 — so the list cannot be known ahead of

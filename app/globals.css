@@ -29,13 +29,65 @@
     --sidebar-width: 16rem;
     --header-height: 4rem;
 
-    /* Public-site tokens.
-       Separate from --admin-* on purpose: the storefront was reading
-       --admin-accent, so restyling the panel silently restyled the public
-       banner. Same value today, different owners — the admin is New Aeon's
-       tool, the storefront belongs to whoever runs the shop. */
-    --site-accent: #ffc619;
-    --site-accent-ink: #130c0e;
+    /* ------------------------------------------------------------------
+       STOREFRONT DESIGN SLOTS
+
+       The fixed list a business fills in — from the Settings pickers or by
+       uploading a design-system file. Components must name a SLOT, never a
+       colour, or the site cannot be rebranded without editing components.
+
+       Separate from --admin-* on purpose: the admin is New Aeon's own tool,
+       the storefront belongs to whoever runs the shop. The two must not move
+       together.
+
+       Slots are named by ROLE, not by appearance. "surface" survives a switch
+       to a dark brand; "light-grey" does not.
+       ------------------------------------------------------------------ */
+
+    /* Core — every site has these. */
+    --site-surface: #ffffff;          /* page background */
+    --site-surface-raised: #f9fafb;   /* cards, panels sitting above the page */
+    --site-surface-inverted: #0f172a; /* footer, dark bands */
+    --site-ink: #111827;              /* body text */
+    --site-ink-muted: #6b7280;        /* secondary text, captions */
+    --site-ink-inverted: #ffffff;     /* text on an inverted surface */
+    --site-line: #e5e7eb;             /* borders, rules */
+    --site-accent: #ffc619;           /* the brand colour: buttons, links */
+    --site-accent-hover: #fddc0d;
+    --site-accent-ink: #130c0e;       /* text ON the accent — a pale accent
+                                         needs dark ink, and vice versa */
+    --site-radius: 0.75rem;
+
+    /* Shop — only meaningful when commerce is on, but harmless when it is not.
+       These exist because a shop has states a content site does not. Without a
+       named slot for "out of stock", a business picks a light theme and its
+       own stock warning turns unreadable. */
+    --site-price: #111827;
+    --site-price-sale: #dc2626;
+    --site-in-stock: #15803d;
+    --site-out-of-stock: #b91c1c;
+
+    /* Channel twins of the colours above.
+       Tailwind's `/opacity` modifier needs a colour it can inject an alpha
+       into; given `var(--site-ink)` it produces an invalid value that falls
+       back to black — which is exactly what happened, silently, to the footer
+       text and the slider controls. The hex slots stay the human contract (a
+       design-system file speaks hex); these are what the utilities compile
+       against, and the Settings emitter writes both. */
+    --site-surface-rgb: 255 255 255;
+    --site-surface-raised-rgb: 249 250 251;
+    --site-surface-inverted-rgb: 15 23 42;
+    --site-ink-rgb: 17 24 39;
+    --site-ink-muted-rgb: 107 114 128;
+    --site-ink-inverted-rgb: 255 255 255;
+    --site-line-rgb: 229 231 235;
+    --site-accent-rgb: 255 198 25;
+    --site-accent-hover-rgb: 253 220 13;
+    --site-accent-ink-rgb: 19 12 14;
+    --site-price-rgb: 17 24 39;
+    --site-price-sale-rgb: 220 38 38;
+    --site-in-stock-rgb: 21 128 61;
+    --site-out-of-stock-rgb: 185 28 28;
   }
 
   html {
@@ -94,6 +146,33 @@
 }
 
 @layer components {
+  /* Storefront buttons. Every one on the public site should be one of these —
+     a raw `bg-indigo-600` cannot be rebranded. */
+  .site-btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium transition-colors;
+    border-radius: var(--site-radius);
+    min-block-size: 2.75rem;
+  }
+
+  .site-btn-primary {
+    @apply site-btn;
+    background: var(--site-accent);
+    color: var(--site-accent-ink);
+  }
+  .site-btn-primary:hover {
+    background: var(--site-accent-hover);
+  }
+
+  .site-btn-outline {
+    @apply site-btn;
+    background: transparent;
+    color: var(--site-ink);
+    border: 1px solid var(--site-line);
+  }
+  .site-btn-outline:hover {
+    background: var(--site-surface-raised);
+  }
+
   .admin-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
     background: var(--admin-accent);

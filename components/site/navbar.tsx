@@ -40,7 +40,7 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
     /^https?:\/\//i.test(url) ? url : `/${locale}${url.startsWith('/') ? url : `/${url}`}`;
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
+    <nav className="sticky top-0 z-50 border-b border-site-line bg-site-surface/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link
@@ -58,7 +58,7 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
                 className="h-8 w-auto"
               />
             ) : (
-              <span className="text-xl font-bold text-gray-900">{siteName}</span>
+              <span className="text-xl font-bold text-site-ink">{siteName}</span>
             )}
           </Link>
 
@@ -74,8 +74,10 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
                   aria-current={pathname === href ? 'page' : undefined}
                   data-test-id={`navbar-link-${item.id}`}
                   className={cn(
-                    'text-sm font-medium transition-colors hover:text-gray-900',
-                    pathname === href ? 'text-gray-900' : 'text-gray-600'
+                    'text-sm font-medium transition-colors hover:text-site-ink',
+                    pathname === href
+                      ? 'text-site-ink'
+                      : 'text-site-ink-muted'
                   )}
                 >
                   {item.label}
@@ -89,7 +91,7 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
               href={`/${locale}/search`}
               aria-label={locale === 'ar' ? 'بحث' : 'Search'}
               data-test-id="navbar-search"
-              className="p-2 hover:bg-gray-100 rounded-full"
+              className="rounded-full p-2 hover:bg-site-surface-raised"
             >
               <Search size={20} aria-hidden="true" />
             </Link>
@@ -99,7 +101,7 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
               hrefLang={otherLocale}
               aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
               data-test-id="navbar-locale-switch"
-              className="text-sm font-medium px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200"
+              className="rounded-full bg-site-surface-raised px-3 py-1 text-sm font-medium hover:bg-site-line"
             >
               {locale === 'ar' ? 'EN' : 'عربي'}
             </Link>
@@ -120,14 +122,14 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
       </div>
 
       {mobileOpen && (
-        <div id="navbar-mobile" className="md:hidden border-t bg-white">
+        <div id="navbar-mobile" className="border-t border-site-line bg-site-surface md:hidden">
           <div className="px-4 py-3 flex flex-col gap-1">
             {navigation.map((item) => (
               <Link
                 key={item.id}
                 href={localized(item.url)}
                 onClick={() => setMobileOpen(false)}
-                className="py-3 text-sm font-medium text-gray-700 hover:text-gray-900"
+                className="py-3 text-sm font-medium text-site-ink-muted hover:text-site-ink"
                 data-test-id={`navbar-mobile-link-${item.id}`}
               >
                 {item.label}

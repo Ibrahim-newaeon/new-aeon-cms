@@ -213,7 +213,9 @@ export function SliderBlock({
       aria-label={copy.region}
       className={cn(
         'relative overflow-hidden',
-        showcase ? 'bg-gray-950 py-8 sm:py-12' : 'bg-gray-100',
+        showcase
+          ? 'bg-site-surface-inverted py-8 sm:py-12'
+          : 'bg-site-surface-raised',
         // Full bleed. Every page wraps its blocks in `max-w-4xl mx-auto`, so
         // the band has to break out to reach the edges. `overflow-x: clip` on
         // <main> absorbs the scrollbar width that 100vw counts and the visible
@@ -272,8 +274,8 @@ export function SliderBlock({
             aria-label={copy.previous}
             data-test-id="slider-prev"
             className={cn(
-              'rounded-full p-2 text-white',
-              showcase ? 'bg-white/10 hover:bg-white/20' : 'bg-black/40 hover:bg-black/60'
+              'rounded-full p-2 text-site-ink-inverted',
+              'bg-site-ink-inverted/10 hover:bg-site-ink-inverted/25'
             )}
           >
             <ChevronLeft size={20} aria-hidden="true" className="rtl:rotate-180" />
@@ -283,7 +285,7 @@ export function SliderBlock({
             // The counter the showcase layout is built around: where you are
             // and how many there are, rather than dots alone.
             <p
-              className="text-sm tabular-nums text-white/70"
+              className="text-sm tabular-nums text-site-ink-inverted/70"
               /*
                 Announced only when the slider is NOT rotating on its own.
                 A live region that fires every few seconds turns a screen
@@ -294,8 +296,8 @@ export function SliderBlock({
               aria-live={rotating ? 'off' : 'polite'}
               data-test-id="slider-counter"
             >
-              <span className="text-white">{pad(index + 1)}</span>
-              <span className="mx-1 text-white/40">/</span>
+              <span className="text-site-ink-inverted">{pad(index + 1)}</span>
+              <span className="mx-1 text-site-ink-inverted/40">/</span>
               {pad(count)}
             </p>
           )}
@@ -306,8 +308,8 @@ export function SliderBlock({
             aria-label={copy.next}
             data-test-id="slider-next"
             className={cn(
-              'rounded-full p-2 text-white',
-              showcase ? 'bg-white/10 hover:bg-white/20' : 'bg-black/40 hover:bg-black/60'
+              'rounded-full p-2 text-site-ink-inverted',
+              'bg-site-ink-inverted/10 hover:bg-site-ink-inverted/25'
             )}
           >
             <ChevronRight size={20} aria-hidden="true" className="rtl:rotate-180" />
@@ -324,7 +326,9 @@ export function SliderBlock({
                 data-test-id={`slider-dot-${i}`}
                 className={cn(
                   'h-2 rounded-full transition-all',
-                  i === index ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'
+                  i === index
+                    ? 'w-6 bg-site-ink-inverted'
+                    : 'w-2 bg-site-ink-inverted/40 hover:bg-site-ink-inverted/70'
                 )}
               />
             ))}
@@ -339,8 +343,8 @@ export function SliderBlock({
               aria-label={paused ? copy.play : copy.pause}
               data-test-id="slider-toggle"
               className={cn(
-                'ms-1 rounded-full p-1.5 text-white',
-                showcase ? 'bg-white/10 hover:bg-white/20' : 'bg-black/40 hover:bg-black/60'
+                'ms-1 rounded-full p-1.5 text-site-ink-inverted',
+                'bg-site-ink-inverted/10 hover:bg-site-ink-inverted/25'
               )}
             >
               {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
@@ -458,7 +462,11 @@ function ShowcaseTrack({
               // clone, which is never reachable — are not tab stops.
               inert={!centred}
               className={cn(
-                'grid overflow-hidden rounded-2xl bg-gray-900 text-white',
+                // The band behind uses the same slot, so without a hairline the card has
+              // no edge. Previously two hardcoded greys did that job; a slot set
+              // cannot rely on two shades of the same role being different.
+              'grid overflow-hidden rounded-[var(--site-radius)] bg-site-surface-inverted text-site-ink-inverted',
+              'ring-1 ring-site-ink-inverted/10',
                 HEIGHT[height] ?? HEIGHT.medium,
                 hasWords ? 'md:grid-cols-2' : 'grid-cols-1',
                 !reducedMotion && 'transition-all duration-500',
@@ -473,7 +481,7 @@ function ShowcaseTrack({
                   className="flex flex-col justify-center gap-3 p-6 text-start sm:p-10"
                 >
                   {slide.eyebrow && (
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+                    <p className="text-xs uppercase tracking-[0.2em] text-site-ink-inverted/60">
                       {slide.eyebrow}
                     </p>
                   )}
@@ -481,12 +489,12 @@ function ShowcaseTrack({
                     <h2 className="text-2xl font-bold leading-tight sm:text-4xl">{slide.title}</h2>
                   )}
                   {slide.text && (
-                    <p className="max-w-prose text-sm text-white/80 sm:text-base">{slide.text}</p>
+                    <p className="max-w-prose text-sm text-site-ink-inverted/80 sm:text-base">{slide.text}</p>
                   )}
                   {slide.buttonText && slide.buttonUrl && (
                     <Link
                       href={slide.buttonUrl}
-                      className="mt-2 inline-flex w-fit rounded-lg bg-[var(--site-accent)] px-6 py-3 text-sm font-medium text-[var(--site-accent-ink)] hover:opacity-90"
+                      className="site-btn-primary mt-2 w-fit"
                     >
                       {slide.buttonText}
                     </Link>
@@ -596,21 +604,29 @@ function CrossfadeStack({
             />
 
             {(slide.eyebrow || slide.title || slide.text || (slide.buttonText && slide.buttonUrl)) && (
-              <div className="absolute inset-0 flex items-center bg-gradient-to-t from-black/65 via-black/25 to-transparent">
-                <div className="w-full max-w-3xl p-6 sm:p-10 text-white">
+              <div className="absolute inset-0 flex items-center"
+                // A scrim, not a colour choice: it exists so the words stay
+                // readable over whatever image the shop uploaded. Tied to the
+                // inverted-surface slot so a light brand gets a light scrim
+                // with dark ink rather than a black band it never asked for.
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to top, color-mix(in srgb, var(--site-surface-inverted) 70%, transparent), color-mix(in srgb, var(--site-surface-inverted) 25%, transparent) 45%, transparent)',
+                }}>
+                <div className="w-full max-w-3xl p-6 text-site-ink-inverted sm:p-10">
                   {slide.eyebrow && (
-                    <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/70">
+                    <p className="mb-2 text-xs uppercase tracking-[0.2em] text-site-ink-inverted/70">
                       {slide.eyebrow}
                     </p>
                   )}
                   {slide.title && <h2 className="text-2xl font-bold sm:text-4xl">{slide.title}</h2>}
                   {slide.text && (
-                    <p className="mt-3 max-w-xl text-sm text-white/90 sm:text-base">{slide.text}</p>
+                    <p className="mt-3 max-w-xl text-sm text-site-ink-inverted/90 sm:text-base">{slide.text}</p>
                   )}
                   {slide.buttonText && slide.buttonUrl && (
                     <Link
                       href={slide.buttonUrl}
-                      className="mt-5 inline-flex rounded-lg bg-[var(--site-accent)] px-6 py-3 text-sm font-medium text-[var(--site-accent-ink)] hover:opacity-90"
+                      className="site-btn-primary mt-5"
                     >
                       {slide.buttonText}
                     </Link>
