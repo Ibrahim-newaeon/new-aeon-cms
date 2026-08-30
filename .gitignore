@@ -45,3 +45,10 @@ shop.txt
 
 # Scratch files from local verification runs
 .tmp-verify/
+
+# Local-only working notes: the AI/chat dumps the codebase was drafted from,
+# superseded design notes, and curl cookie jars from manual API testing.
+# Kept on disk for reference, deliberately out of the repo and out of any
+# client copy. Write throwaway cookie jars in here, not at the repo root —
+# ca/cb/cc.txt were committed with live admin tokens in them.
+prompt-archive/

@@ -1,6 +1,8 @@
 // lib/blocks/types.ts
-// Canonical ContentBlock union, transcribed from new-aeon-mega-prompt.md
-// > CONTENT BLOCKS (Structured Editor).
+// Canonical ContentBlock union. Originally transcribed from a design document
+// that has since been archived out of the repo; THIS file is the source of
+// truth now, and lib/blocks/defaults.ts derives its lists from it rather than
+// restating them.
 //
 // Blocks are persisted as JSON in `contentI18n.body` (jsonb) — adding a block
 // type requires NO database migration. See lib/db/schema.ts.
