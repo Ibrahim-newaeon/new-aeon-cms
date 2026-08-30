@@ -16,15 +16,19 @@ const PASSWORD = 'author-password-123';
 
 test.describe('author permissions', () => {
   test.describe.configure({ mode: 'serial' });
+  /**
+   * Its own client IP. Login is rate limited per client — correctly — and every
+   * browser test otherwise shares 127.0.0.1, so this spec's four sign-ins ran
+   * out of budget and failed as "author could not sign in" rather than as
+   * anything to do with permissions.
+   */
+  test.use({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.51' } });
 
   const email = `author-${Date.now()}@example.test`;
   let authorId: string;
   let editorsContentId: string;
-  let origin: string;
 
   test.beforeAll(async () => {
-    origin = new URL(test.info().project.use.baseURL!).origin;
-
     authorId = await withDb(async (db) => {
       const r = await db.query(
         `insert into users (email, password_hash, name, role, is_active)
