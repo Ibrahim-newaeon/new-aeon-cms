@@ -335,6 +335,7 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
         brandId,
         categoryId,
         basePrice: price,
+        compareAtPrice: compareAt,
         isActive: parseBoolean(row.active ?? ''),
       })
       .returning({ id: products.id });
@@ -342,7 +343,28 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
   } else {
     await db
       .update(products)
-      .set({ brandId, categoryId, basePrice: price, updatedAt: new Date() })
+      .set({
+        brandId,
+        categoryId,
+        basePrice: price,
+        /**
+         * Both of these were written to the VARIANT only, and the storefront
+         * reads them from the PRODUCT — listShopProducts and getShopProduct
+         * both select products.compareAtPrice and filter products.isActive.
+         *
+         * So an import reported "53 updated", wrote 53 variant rows, and
+         * changed nothing a shopper could see: 51 discounts imported and no
+         * strikethrough appeared anywhere. Deactivating a product likewise
+         * deactivated its variant and left the product on the shop grid.
+         *
+         * A blank compare-at clears the discount rather than preserving it.
+         * The importer rejects a file missing this column, so blank is a
+         * deliberate "no discount", not an absence of information.
+         */
+        compareAtPrice: compareAt,
+        isActive: parseBoolean(row.active ?? ''),
+        updatedAt: new Date(),
+      })
       .where(eq(products.id, productId));
   }
 

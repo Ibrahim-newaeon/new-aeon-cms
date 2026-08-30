@@ -139,18 +139,28 @@ export async function searchProducts(
 }
 
 /**
- * Active products for the sitemap.
+ * Active products for the sitemap, with the locales each one actually exists in.
  *
  * Without this the storefront's entire catalogue was absent from the sitemap —
  * 52 pages a crawler could only reach by following links from /shop.
+ *
+ * `locales` is not decoration. getShopProduct INNER JOINs product_i18n, so a
+ * product with no English name 404s on /en while serving fine on /ar. Listing
+ * every product under every locale therefore advertised URLs that do not
+ * exist: this catalogue has two such products, whose source export had a blank
+ * nameEn. Content behaves differently — it LEFT JOINs and renders regardless —
+ * which is why only this query carries the per-locale set.
  */
 export async function listProductsForSitemap() {
   return db
     .select({
       slug: products.slug,
       updatedAt: sql<Date>`coalesce(${products.updatedAt}, ${products.createdAt})`,
+      locales: sql<string[]>`array_agg(distinct ${productI18n.locale}::text)`,
     })
     .from(products)
+    .innerJoin(productI18n, eq(productI18n.productId, products.id))
     .where(eq(products.isActive, true))
+    .groupBy(products.id, products.slug, products.updatedAt, products.createdAt)
     .orderBy(desc(products.createdAt));
 }
