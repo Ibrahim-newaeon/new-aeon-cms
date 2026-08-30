@@ -93,6 +93,27 @@ test.describe('home page slider', () => {
     await expect(page.getByTestId('slider-dot-1')).toBeVisible();
   });
 
+  test('the hero spans the full viewport width', async ({ page }) => {
+    await page.goto('/en');
+
+    const slider = page.getByTestId('slider');
+    await expect(slider).toHaveAttribute('data-variant', 'main');
+
+    const box = await slider.boundingBox();
+    const viewport = await page.evaluate(() => document.documentElement.clientWidth);
+
+    // Edge to edge, not the max-w-4xl the surrounding page column imposes.
+    expect(Math.round(box!.width)).toBe(viewport);
+    expect(Math.round(box!.x)).toBe(0);
+
+    // And breaking out must not hand the page a horizontal scrollbar, which is
+    // what a bare 100vw breakout does: 100vw includes the scrollbar width.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
   test('the Arabic tree gets the same slider, right to left', async ({ page }) => {
     await page.goto('/ar');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
@@ -113,6 +134,19 @@ test.describe('inner-page slider', () => {
     await expect(page.locator('[data-test-id^="slider-slide-"]')).toHaveCount(2);
     await expect(page.locator('[data-test-id^="slider-video-"]')).toHaveCount(0);
     await expect(page.locator('[data-test-id^="slider-youtube-"]')).toHaveCount(0);
+  });
+
+  test('it stays inside the text column rather than going full bleed', async ({ page }) => {
+    await page.goto('/en/about-us');
+
+    const slider = page.getByTestId('slider');
+    await expect(slider).toHaveAttribute('data-variant', 'inner');
+
+    // The opposite of the hero: an inner slider is part of the article, so it
+    // keeps the column width instead of escaping it.
+    const box = await slider.boundingBox();
+    const viewport = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(box!.width).toBeLessThan(viewport);
   });
 
   test('it still rotates and stays inside a phone viewport', async ({ page }) => {

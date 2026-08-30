@@ -115,7 +115,11 @@ export default async function SiteLayout({
               siteName={settings?.siteName ?? 'CMS'}
               locale={typedLocale}
             />
-            <main className="flex-1">{children}</main>
+            {/* clip, not hidden: `hidden` would make this a scroll container
+                and break any position: sticky inside it. This absorbs the few
+                pixels a full-bleed block overhangs by, because 100vw counts
+                the scrollbar and the visible area does not. */}
+            <main className="flex-1 overflow-x-clip">{children}</main>
             <Footer navigation={footerNav} settings={settings} locale={typedLocale} />
           </div>
         </NextIntlClientProvider>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import {
   slideIntervalMs,
@@ -106,8 +107,22 @@ export function SliderBlock({
       ref={regionRef}
       aria-roledescription="carousel"
       aria-label={copy.region}
-      className="relative overflow-hidden rounded-xl bg-gray-100"
+      className={cn(
+        'relative overflow-hidden bg-gray-100',
+        block.variant === 'main'
+          ? // Full bleed. Both pages wrap their blocks in `max-w-4xl mx-auto`,
+            // so a hero has to break out of that container to reach the edges.
+            // `calc(50% - 50vw)` on each side is the standard escape; the
+            // matching `overflow-x: clip` on <main> absorbs the scrollbar
+            // width that 100vw includes and the visible area does not, which
+            // would otherwise give the whole page a horizontal scrollbar.
+            'mx-[calc(50%-50vw)] w-screen max-w-[100vw]'
+          : // Inner sliders sit inside the text column, so they keep the
+            // container's width and its rounded corners.
+            'rounded-xl'
+      )}
       data-test-id="slider"
+      data-variant={block.variant}
       // Hover and focus pause it: text that slides away mid-sentence is the
       // single most common complaint about carousels.
       onMouseEnter={() => setPaused(true)}
