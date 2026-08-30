@@ -6,6 +6,7 @@ import { getSettings } from '@/lib/db/queries';
 import { CouponsManager, type CouponRow } from '@/components/admin/coupons-manager';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 export default async function CouponsPage() {
   const t = createTranslator(await getAdminLocale());
@@ -36,6 +37,8 @@ export default async function CouponsPage() {
           {t('coupons.subtitle')}
         </p>
       </div>
+
+      <ImportExport entity="coupons" />
 
       <CouponsManager initial={initial} currency={settings?.currency ?? 'JOD'} />
     </div>

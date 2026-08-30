@@ -8,6 +8,7 @@ import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
 import { listReviewsForAdmin } from '@/lib/commerce/reviews';
 import { ReviewsManager, type ReviewRow } from '@/components/admin/reviews-manager';
+import { ImportExport } from '@/components/admin/import-export';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,8 @@ export default async function ReviewsPage({
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('reviews.title')}</h1>
         <p className="mt-1 text-sm text-[var(--admin-text-muted)]">{t('reviews.subtitle')}</p>
       </div>
+
+      <ImportExport entity="reviews" />
 
       <ReviewsManager rows={rows} status={status ?? ''} canDelete={canDelete} />
     </div>

@@ -8,6 +8,7 @@ import { isOrderStatus } from '@/lib/commerce/order-status';
 import { OrdersTable, type OrderRow } from '@/components/admin/orders-table';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
@@ -67,6 +68,12 @@ export default async function OrdersPage({
           {t('orders.subtitle')}
         </p>
       </div>
+
+      {/* Customers live here rather than on a page of their own: they are
+          created BY orders, and there is no customers screen. Export only —
+          the phone number is the key that decides whether two orders are one
+          person, and a spreadsheet must not rewrite that. */}
+      <ImportExport entity="customers" canImport={false} />
 
       <OrdersTable
         rows={rows}

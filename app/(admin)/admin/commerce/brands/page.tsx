@@ -5,6 +5,7 @@ import { asc, count, eq } from 'drizzle-orm';
 import { BrandsManager, type BrandRow } from '@/components/admin/brands-manager';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 export default async function BrandsPage() {
   const t = createTranslator(await getAdminLocale());
@@ -43,6 +44,8 @@ export default async function BrandsPage() {
           {t('brands.subtitle')}
         </p>
       </div>
+
+      <ImportExport entity="brands" />
 
       <BrandsManager initial={initial} />
     </div>

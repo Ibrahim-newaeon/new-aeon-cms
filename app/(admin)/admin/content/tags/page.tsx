@@ -5,6 +5,7 @@ import { asc, count, eq } from 'drizzle-orm';
 import { TagsManager, type TagRow } from '@/components/admin/tags-manager';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 export default async function TagsPage() {
   const t = createTranslator(await getAdminLocale());
@@ -43,6 +44,8 @@ export default async function TagsPage() {
           {t('tags.subtitle')}
         </p>
       </div>
+
+      <ImportExport entity="tags" />
 
       <TagsManager initial={initial} />
     </div>

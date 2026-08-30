@@ -5,6 +5,7 @@ import { asc } from 'drizzle-orm';
 import { CategoriesManager, type CategoryRow } from '@/components/admin/categories-manager';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 export default async function CategoriesPage() {
   const t = createTranslator(await getAdminLocale());
@@ -37,6 +38,8 @@ export default async function CategoriesPage() {
           {t('categories.subtitle')}
         </p>
       </div>
+
+      <ImportExport entity="categories" />
 
       <CategoriesManager initial={rows} />
     </div>

@@ -6,6 +6,7 @@ import { getSettings } from '@/lib/db/queries';
 import { ProductsTable, type ProductRow } from '@/components/admin/products-table';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { ImportExport } from '@/components/admin/import-export';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
@@ -26,6 +27,8 @@ export default async function ProductsPage() {
           {t('products.new')}
         </Link>
       </div>
+
+      <ImportExport entity="products" />
 
       <ProductsTable rows={rows as ProductRow[]} basePath={`${ADMIN_PATH}/commerce/products`} currency={currency} />
     </div>
