@@ -5,6 +5,9 @@ import { content, contentI18n, contentTypes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireApiAuth } from '@/lib/auth/api-guard';
+import {
+  checkStatusChange, resolveAuthorId, PERMISSION_MESSAGE,
+} from '@/lib/content/permissions';
 import type { ContentBlock } from '@/lib/blocks/types';
 import { setContentTaxonomy } from '@/lib/content/taxonomy';
 import { CONTENT_TYPE_SLUGS } from '@/lib/content/content-types';
@@ -46,6 +49,17 @@ export async function POST(request: Request) {
   try {
     const validated = createContentSchema.parse(await request.json());
 
+    // An author writes drafts; an editor decides what goes live. Refused
+    // rather than downgraded, so nobody is told their page published when it
+    // did not.
+    const allowed = checkStatusChange(auth.user.role, validated.status, null);
+    if (!allowed.ok) {
+      return NextResponse.json(
+        { success: false, error: { message: PERMISSION_MESSAGE[allowed.reason] } },
+        { status: 403 }
+      );
+    }
+
     const contentType = await db
       .select()
       .from(contentTypes)
@@ -65,7 +79,9 @@ export async function POST(request: Request) {
       .values({
         typeId: foundType.id,
         slug: validated.slug,
-        authorId: validated.authorId ?? auth.user.sub,
+        // Never the client's suggestion for an author: authorId was an
+        // optional body field, so anyone could credit a colleague.
+        authorId: resolveAuthorId(auth.user.role, validated.authorId, auth.user.sub),
         featuredImage: validated.featuredImage,
         status: validated.status,
         publishedAt: validated.status === 'published' ? new Date() : null,

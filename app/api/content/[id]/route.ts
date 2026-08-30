@@ -5,6 +5,9 @@ import { content, contentI18n } from '@/lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireApiAuth } from '@/lib/auth/api-guard';
+import {
+  canEdit, checkStatusChange, PERMISSION_MESSAGE,
+} from '@/lib/content/permissions';
 import { contentPayloadSchema, asContentBlocks } from '@/lib/blocks/content-schema';
 import { setContentTaxonomy } from '@/lib/content/taxonomy';
 
@@ -22,6 +25,30 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json(
         { success: false, error: { message: 'Content not found' } },
         { status: 404 }
+      );
+    }
+
+    /**
+     * An author may work on their own drafts and nothing else. Without this an
+     * author could edit — and unpublish — an editor's live pages, which the
+     * role split exists precisely to prevent.
+     */
+    if (!canEdit(auth.user.role, current.authorId, auth.user.sub)) {
+      return NextResponse.json(
+        { success: false, error: { message: PERMISSION_MESSAGE['not-yours'] } },
+        { status: 403 }
+      );
+    }
+
+    const allowed = checkStatusChange(
+      auth.user.role,
+      validated.status,
+      (current.status ?? 'draft') as 'draft' | 'published' | 'archived'
+    );
+    if (!allowed.ok) {
+      return NextResponse.json(
+        { success: false, error: { message: PERMISSION_MESSAGE[allowed.reason] } },
+        { status: 403 }
       );
     }
 
