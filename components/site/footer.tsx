@@ -60,11 +60,17 @@ export function Footer({ navigation, settings, locale }: FooterProps) {
           <div>
             <h4 className="mb-4 text-sm font-semibold text-site-ink-inverted">{copy.contact}</h4>
             <ul className="space-y-2 text-sm">
+              {/* dir="ltr" because a phone number is a left-to-right run, and on
+                  an Arabic page the bidi algorithm otherwise places the leading
+                  "+" per the paragraph direction — "+962 7 9000 0000" rendered
+                  as "0000 9000 7 962+". The email is Latin letters, which are
+                  strongly LTR and need no help, but it is marked for the same
+                  reason the next person will look here. */}
               {settings?.contactEmail && (
-                <li><a href={`mailto:${settings.contactEmail}`} className="hover:text-site-ink-inverted">{settings.contactEmail}</a></li>
+                <li><a dir="ltr" href={`mailto:${settings.contactEmail}`} className="inline-block hover:text-site-ink-inverted">{settings.contactEmail}</a></li>
               )}
               {settings?.contactPhone && (
-                <li><a href={`tel:${settings.contactPhone}`} className="hover:text-site-ink-inverted">{settings.contactPhone}</a></li>
+                <li><a dir="ltr" href={`tel:${settings.contactPhone}`} className="inline-block hover:text-site-ink-inverted">{settings.contactPhone}</a></li>
               )}
             </ul>
           </div>

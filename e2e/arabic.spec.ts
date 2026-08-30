@@ -73,6 +73,26 @@ test.describe('Arabic storefront', () => {
     await expect(page.locator('h1')).toHaveText('حسابي');
   });
 
+  test('a phone number is not reversed by the RTL context', async ({ page }) => {
+    /**
+     * The inverse of the price bug. A phone starts with a neutral "+" and is
+     * otherwise weak digits, so on an RTL page the bidi algorithm places that
+     * "+" per the paragraph direction: "+962 7 9000 0000" rendered as
+     * "0000 9000 7 962+". A Latin run genuinely does need dir="ltr" — which is
+     * exactly why blanket-removing it from prices would have been wrong too.
+     */
+    await page.goto('/ar');
+    const phone = page.locator('footer a[href^="tel:"]');
+    const count = await phone.count();
+    test.skip(count === 0, 'no contact phone configured');
+
+    await expect(phone.first()).toHaveAttribute('dir', 'ltr');
+
+    // The rendered text still begins with the +, rather than ending with it.
+    const text = (await phone.first().innerText()).trim();
+    expect(text.startsWith('+')).toBe(true);
+  });
+
   test('the product page reads right to left', async ({ page }) => {
     await page.goto('/ar/shop');
     await page.locator('a[href^="/ar/products/"]').first().click();
