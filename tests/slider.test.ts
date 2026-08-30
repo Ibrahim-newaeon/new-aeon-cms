@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { SLIDER_LIMITS, sliderLimits, usableSlides, slideIntervalMs } from '@/lib/blocks/slider';
 import type { SliderBlock } from '@/lib/blocks/slider';
+import { youTubeEmbedUrl, youTubeId } from '@/lib/blocks/youtube';
 
 const build = (over: Partial<SliderBlock> = {}): SliderBlock => ({
   type: 'slider',
@@ -51,12 +52,31 @@ describe('usableSlides', () => {
     expect(usableSlides(block)).toHaveLength(2);
   });
 
-  it('demotes video to image on an inner page rather than dropping the slide', () => {
-    // The author still chose that media. Dropping it would silently lose a
-    // slide; rendering the file as an image at least shows the poster path and
-    // makes the mistake visible.
-    const block = build({ variant: 'inner', slides: [video('/clip.mp4')] });
-    expect(usableSlides(block)).toEqual([{ kind: 'image', src: '/clip.mp4' }]);
+  it('falls back to the poster when an inner page carries a video slide', () => {
+    // Relabelling it as an image and keeping src pointed an <img> at an .mp4.
+    // The poster is the still the author already provided for exactly this.
+    const block = build({
+      variant: 'inner',
+      slides: [{ kind: 'video', src: '/clip.mp4', poster: '/still.png' }],
+    });
+    expect(usableSlides(block)).toEqual([
+      { kind: 'image', src: '/still.png', poster: '/still.png' },
+    ]);
+  });
+
+  it('drops a video slide on an inner page when there is no poster', () => {
+    // Nothing showable: an empty frame in the rotation is worse than one fewer
+    // slide.
+    const block = build({ variant: 'inner', slides: [video('/clip.mp4'), image('/a.png')] });
+    expect(usableSlides(block).map((s) => s.src)).toEqual(['/a.png']);
+  });
+
+  it('treats a YouTube slide the same way on an inner page', () => {
+    const block = build({
+      variant: 'inner',
+      slides: [{ kind: 'youtube', src: 'https://youtu.be/dQw4w9WgXcQ' }],
+    });
+    expect(usableSlides(block)).toEqual([]);
   });
 
   it('keeps video on the home hero', () => {
@@ -78,5 +98,50 @@ describe('slideIntervalMs', () => {
 
   it('passes a sensible value through untouched', () => {
     expect(slideIntervalMs(8000)).toBe(8000);
+  });
+});
+
+
+describe('youTubeId', () => {
+  it('reads the id from the shapes people actually paste', () => {
+    for (const url of [
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://youtu.be/dQw4w9WgXcQ',
+      'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+      'https://youtube.com/watch?v=dQw4w9WgXcQ&t=42s',
+      'dQw4w9WgXcQ',
+    ]) {
+      expect(youTubeId(url), url).toBe('dQw4w9WgXcQ');
+    }
+  });
+
+  it('returns null rather than guessing at a non-video URL', () => {
+    // The previous inline parser took the last path segment, so a channel URL
+    // produced an embed of the channel name.
+    for (const url of [
+      'https://www.youtube.com/@somechannel',
+      'https://example.com/watch?v=dQw4w9WgXcQ',
+      'not a url',
+      '',
+      '   ',
+    ]) {
+      expect(youTubeId(url), url).toBeNull();
+    }
+  });
+});
+
+describe('youTubeEmbedUrl', () => {
+  it('uses the no-cookie host and sets playlist so loop actually loops', () => {
+    const url = youTubeEmbedUrl('dQw4w9WgXcQ', { autoplay: true, muted: true, controls: false });
+    expect(url.startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?')).toBe(true);
+    const params = new URLSearchParams(url.split('?')[1]);
+    // loop=1 alone is ignored by YouTube for a single video.
+    expect(params.get('playlist')).toBe('dQw4w9WgXcQ');
+    expect(params.get('loop')).toBe('1');
+    expect(params.get('autoplay')).toBe('1');
+    expect(params.get('mute')).toBe('1');
+    expect(params.get('controls')).toBe('0');
   });
 });

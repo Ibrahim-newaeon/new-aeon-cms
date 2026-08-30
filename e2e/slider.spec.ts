@@ -100,3 +100,32 @@ test.describe('home page slider', () => {
     await expect(page.locator('[data-test-id^="slider-slide-"]')).toHaveCount(3);
   });
 });
+
+test.describe('inner-page slider', () => {
+  test('the about page gets the two-slide image variant', async ({ page }) => {
+    await page.goto('/en/about-us');
+
+    const slider = page.getByTestId('slider');
+    await expect(slider).toBeVisible();
+
+    // Two, not three: the inner placement caps at two, and the seeded page
+    // uses it rather than the hero variant.
+    await expect(page.locator('[data-test-id^="slider-slide-"]')).toHaveCount(2);
+    await expect(page.locator('[data-test-id^="slider-video-"]')).toHaveCount(0);
+    await expect(page.locator('[data-test-id^="slider-youtube-"]')).toHaveCount(0);
+  });
+
+  test('it still rotates and stays inside a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/en/about-us');
+    await page.getByTestId('slider').hover();
+
+    await page.getByTestId('slider-next').click();
+    await expect.poll(() => activeSlide(page)).toBe(1);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});

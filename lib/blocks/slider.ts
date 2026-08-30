@@ -40,9 +40,13 @@ export function usableSlides(block: SliderBlock): Slide[] {
   const limits = sliderLimits(block.variant);
   return block.slides
     .filter((slide) => slide.src.trim().length > 0)
-    .map((slide) =>
-      slide.kind === 'video' && !limits.allowVideo ? { ...slide, kind: 'image' as const } : slide
-    )
+    .flatMap<Slide>((slide) => {
+      if (slide.kind === 'image' || limits.allowVideo) return [slide];
+      // The placement forbids moving media. Fall back to the poster if the
+      // author set one — an earlier version relabelled the slide as an image
+      // and kept `src`, which pointed an <img> at an .mp4 or a YouTube page.
+      return slide.poster ? [{ ...slide, kind: 'image', src: slide.poster }] : [];
+    })
     .slice(0, limits.maxSlides);
 }
 

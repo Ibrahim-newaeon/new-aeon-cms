@@ -179,11 +179,13 @@ export function MiniSelect({
   value,
   options,
   onChange,
+  testId,
 }: {
   label: string;
   value: string;
   options: ReadonlyArray<{ value: string; label: string }>;
   onChange: (value: string) => void;
+  testId?: string;
 }) {
   return (
     <label className="block">
@@ -192,6 +194,7 @@ export function MiniSelect({
         className="admin-input py-2 text-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        data-test-id={testId}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

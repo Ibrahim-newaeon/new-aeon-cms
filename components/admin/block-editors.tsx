@@ -9,6 +9,8 @@ import {
 } from './blocks/grid-editors';
 import { BLOCK_LABEL_KEYS, isSafeUrl } from '@/lib/blocks/defaults';
 import { sliderLimits } from '@/lib/blocks/slider';
+import { youTubeId } from '@/lib/blocks/youtube';
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatBytes } from '@/lib/media/limits';
 import type { ContentBlock } from '@/lib/blocks/types';
 import { useT } from './i18n-provider';
 
@@ -460,6 +462,10 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             onChange={(slides) => onChange({ ...block, slides })}
             renderItem={(slide, update) => (
               <div className="space-y-2">
+                {/* The media type is chosen FIRST, and everything below it
+                    changes to match: an image picker, a video-file picker, or
+                    a link field. Asking for a file and then a link would leave
+                    an author uploading something the slide will not use. */}
                 {limits.allowVideo && (
                   <MiniSelect
                     label={t('be.slideKind')}
@@ -467,20 +473,49 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                     options={[
                       { value: 'image', label: t('be.slideKindImage') },
                       { value: 'video', label: t('be.slideKindVideo') },
+                      { value: 'youtube', label: t('be.slideKindYouTube') },
                     ]}
                     onChange={(kind) =>
                       // src is cleared on switch: an .mp4 left in an <img> is a
-                      // broken slide, and the reverse is worse.
+                      // broken slide, and a YouTube URL in a <video> is worse.
                       update({ kind: kind as typeof slide.kind, src: '' })
                     }
+                    testId="slider-kind"
                   />
                 )}
 
-                {slide.kind === 'video' && limits.allowVideo ? (
+                {slide.kind === 'youtube' && limits.allowVideo ? (
+                  <>
+                    <MiniField
+                      label={t('be.slideYouTube')}
+                      ltr
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={slide.src}
+                      onChange={(v) => update({ src: v })}
+                    />
+                    {slide.src.trim() !== '' && youTubeId(slide.src) === null && (
+                      // Told at the point of pasting, not discovered as a blank
+                      // slide on the live site.
+                      <p className="text-xs text-[var(--admin-danger)]" data-test-id="slider-yt-invalid">
+                        {t('be.slideYouTubeInvalid')}
+                      </p>
+                    )}
+                    <p className="text-xs text-[var(--admin-text-muted)]">
+                      {t('be.specMainYouTube')}
+                    </p>
+                    <MediaField
+                      label={t('be.slidePoster')}
+                      hint={t('be.slidePosterHint')}
+                      value={slide.poster ?? ''}
+                      onChange={(url) => update({ poster: url || undefined })}
+                      testId="slider-poster"
+                    />
+                  </>
+                ) : slide.kind === 'video' && limits.allowVideo ? (
                   <>
                     <MediaField
                       label={t('be.slideVideo')}
-                      hint={t('be.slideVideoHint')}
+                      hint={t('be.specMainVideo', { videoMax: formatBytes(MAX_VIDEO_BYTES) })}
                       value={slide.src}
                       onChange={(url) => update({ src: url })}
                       testId="slider-video"
@@ -497,7 +532,10 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                 ) : (
                   <MediaField
                     label={t('be.slideImage')}
-                    hint={t('be.slideImageHint')}
+                    hint={t(
+                      block.variant === 'main' ? 'be.specMainImage' : 'be.specInnerImage',
+                      { imageMax: formatBytes(MAX_IMAGE_BYTES) }
+                    )}
                     value={slide.src}
                     onChange={(url) => update({ src: url })}
                     testId="slider-image"

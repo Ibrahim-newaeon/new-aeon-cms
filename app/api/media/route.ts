@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { mediaAssets } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 import { requireApiAuth } from '@/lib/auth/api-guard';
-import { storeUpload, ALLOWED_MIME, MAX_BYTES } from '@/lib/media/storage';
+import { storeUpload, ALLOWED_MIME, maxBytesFor } from '@/lib/media/storage';
 
 // Uploads need the Node runtime for fs and sharp.
 export const runtime = 'nodejs';
@@ -38,16 +38,27 @@ export async function POST(request: Request) {
     }
 
     const created = [];
-    const rejected: string[] = [];
+    /**
+     * Codes, not sentences.
+     *
+     * These used to be Arabic strings built here and rendered verbatim, so an
+     * English admin was told why its upload failed in Arabic — and the size in
+     * the message was a literal "8 ميغابايت" that no longer matched the limit
+     * once video got its own cap. The client owns the wording and reads the
+     * number from the same constant the check uses.
+     */
+    const rejected: { name: string; code: 'UNSUPPORTED_TYPE' | 'TOO_LARGE'; limitBytes?: number }[] =
+      [];
 
     for (const file of files) {
       // Report per-file so one bad file does not fail the whole batch.
       if (!ALLOWED_MIME[file.type]) {
-        rejected.push(`${file.name}: نوع غير مدعوم`);
+        rejected.push({ name: file.name, code: 'UNSUPPORTED_TYPE' });
         continue;
       }
-      if (file.size > MAX_BYTES) {
-        rejected.push(`${file.name}: أكبر من 8 ميغابايت`);
+      const limitBytes = maxBytesFor(file.type);
+      if (file.size > limitBytes) {
+        rejected.push({ name: file.name, code: 'TOO_LARGE', limitBytes });
         continue;
       }
 

@@ -9,6 +9,7 @@ import {
   usableSlides,
   type SliderBlock as SliderBlockType,
 } from '@/lib/blocks/slider';
+import { youTubeEmbedUrl, youTubeId, youTubeThumbnail } from '@/lib/blocks/youtube';
 
 const COPY = {
   ar: {
@@ -138,7 +139,56 @@ export function SliderBlock({
               data-test-id={`slider-slide-${i}`}
               data-active={active ? 'true' : 'false'}
             >
-              {slide.kind === 'video' && !reducedMotion ? (
+              {slide.kind === 'youtube' ? (
+                (() => {
+                  const id = youTubeId(slide.src);
+                  // An unusable link renders the poster, or nothing — never an
+                  // iframe pointed at a guess.
+                  if (!id) {
+                    return slide.poster ? (
+                      <Image
+                        src={slide.poster}
+                        alt={slide.alt ?? ''}
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                      />
+                    ) : null;
+                  }
+                  if (reducedMotion) {
+                    return (
+                      <Image
+                        // The poster if the author set one, otherwise YouTube's
+                        // own still — so a reduced-motion visitor still sees the
+                        // slide rather than an empty frame.
+                        src={slide.poster ?? youTubeThumbnail(id)}
+                        alt={slide.alt ?? ''}
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                        unoptimized={!slide.poster}
+                      />
+                    );
+                  }
+                  return (
+                    <iframe
+                      // Only the visible slide gets a src. Four hidden iframes
+                      // would each load a player and its network traffic for a
+                      // slide nobody is looking at.
+                      src={active ? youTubeEmbedUrl(id, { autoplay: true, muted: true, controls: false }) : undefined}
+                      title={slide.alt ?? slide.title ?? 'YouTube'}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      // A background video must not be a tab stop: it carries
+                      // no controls, so focusing it would strand a keyboard
+                      // user on nothing.
+                      tabIndex={-1}
+                      className="pointer-events-none absolute inset-0 h-full w-full border-0"
+                      data-test-id={`slider-youtube-${i}`}
+                    />
+                  );
+                })()
+              ) : slide.kind === 'video' && !reducedMotion ? (
                 <video
                   // Muted + playsInline is what makes autoplay legal on iOS and
                   // Android; without playsInline Safari takes the video

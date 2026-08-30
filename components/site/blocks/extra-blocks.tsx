@@ -9,6 +9,8 @@ import { and, desc, eq } from 'drizzle-orm';
 import { cn } from '@/lib/utils';
 import type { ContentBlock } from '@/lib/blocks/types';
 
+import { youTubeEmbedUrl, youTubeId } from '@/lib/blocks/youtube';
+
 type Pick_<T extends ContentBlock['type']> = Extract<ContentBlock, { type: T }>;
 
 /** youtube/vimeo ids only; anything else falls back to a plain link. */
@@ -16,9 +18,10 @@ function embedSrc(block: Pick_<'video'>): string | null {
   try {
     const url = new URL(block.url);
     if (block.provider === 'youtube') {
-      const id = url.searchParams.get('v') ?? url.pathname.split('/').filter(Boolean).pop();
-      // -nocookie host avoids setting tracking cookies before consent.
-      return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
+      // Shared with the slider. The old inline version took the last path
+      // segment, so a channel URL produced an embed of the channel name.
+      const id = youTubeId(block.url);
+      return id ? youTubeEmbedUrl(id, { controls: true }) : null;
     }
     if (block.provider === 'vimeo') {
       const id = url.pathname.split('/').filter(Boolean).pop();

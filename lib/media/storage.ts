@@ -1,5 +1,19 @@
 // lib/media/storage.ts
 import { randomUUID } from 'node:crypto';
+import { ALLOWED_MIME, isImageMime, maxBytesFor } from './limits';
+
+// Re-exported so the API routes' existing imports keep working, and so there
+// is still one obvious place to look for upload policy.
+export {
+  ALLOWED_MIME,
+  MAX_BYTES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  UPLOAD_ACCEPT,
+  isImageMime,
+  isVideoMime,
+  maxBytesFor,
+} from './limits';
 import type { StorageDriver } from './drivers/types';
 import { localDriver } from './drivers/local';
 import { s3Driver } from './drivers/s3';
@@ -12,22 +26,6 @@ import { s3Driver } from './drivers/s3';
  * API routes already call, so switching drivers is an env change and nothing
  * more.
  */
-
-export const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
-
-/**
- * Allow-list, not a block-list. `image/svg+xml` is deliberately EXCLUDED: an SVG
- * is a document that can carry <script>, and it would be served same-origin from
- * our own domain — a stored-XSS vector dressed up as an image.
- */
-export const ALLOWED_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/avif': 'avif',
-  'image/gif': 'gif',
-  'application/pdf': 'pdf',
-};
 
 export interface StoredFile {
   filename: string;
@@ -95,7 +93,7 @@ function monthPrefix(): string {
 export async function storeUpload(file: File): Promise<StoredFile> {
   const ext = ALLOWED_MIME[file.type];
   if (!ext) throw new Error('UNSUPPORTED_TYPE');
-  if (file.size > MAX_BYTES) throw new Error('TOO_LARGE');
+  if (file.size > maxBytesFor(file.type)) throw new Error('TOO_LARGE');
 
   const driver = activeDriver();
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -110,7 +108,10 @@ export async function storeUpload(file: File): Promise<StoredFile> {
   let height: number | null = null;
   let thumbnailUrl: string | null = null;
 
-  const sharp = file.type === 'application/pdf' ? null : await loadSharp();
+  // Images only. A video sent through sharp would load the decoder, fail, and
+  // be caught below — the right outcome by accident, at the cost of reading a
+  // 24 MB buffer through an image pipeline for nothing.
+  const sharp = isImageMime(file.type) ? await loadSharp() : null;
 
   if (sharp) {
     try {

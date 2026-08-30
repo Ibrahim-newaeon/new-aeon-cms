@@ -279,6 +279,20 @@ async function seed() {
           body: [
             { type: 'heading', level: 2, text: 'قصتنا' },
             { type: 'paragraph', text: 'نبني أدوات محتوى وتجارة تعمل بالعربية أولاً.' },
+            // The inner-page placement: images only, two slides. Seeded so the
+            // difference between the two variants is visible without building
+            // one by hand.
+            {
+              type: 'slider',
+              variant: 'inner',
+              autoplay: true,
+              intervalMs: 7000,
+              height: 'short',
+              slides: [
+                { kind: 'image', src: '/seed/slide-2.png', alt: 'ورشة العمل', title: 'ورشة العمل' },
+                { kind: 'image', src: '/seed/slide-3.png', alt: 'الفريق', title: 'الفريق' },
+              ],
+            },
           ],
         },
         {
@@ -289,6 +303,17 @@ async function seed() {
           body: [
             { type: 'heading', level: 2, text: 'Our story' },
             { type: 'paragraph', text: 'We build content and commerce tools that work in Arabic first.' },
+            {
+              type: 'slider',
+              variant: 'inner',
+              autoplay: true,
+              intervalMs: 7000,
+              height: 'short',
+              slides: [
+                { kind: 'image', src: '/seed/slide-2.png', alt: 'The workshop', title: 'The workshop' },
+                { kind: 'image', src: '/seed/slide-3.png', alt: 'The team', title: 'The team' },
+              ],
+            },
           ],
         },
       ]);

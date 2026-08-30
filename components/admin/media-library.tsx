@@ -6,6 +6,12 @@ import { UploadCloud, Trash2, Copy, Check, Loader2, FileText, X } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useT } from './i18n-provider';
+import {
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  UPLOAD_ACCEPT,
+  formatBytes,
+} from '@/lib/media/limits';
 
 export interface MediaAsset {
   id: string;
@@ -20,12 +26,6 @@ export interface MediaAsset {
   altText: string | null;
   folderId: string | null;
   createdAt: string | null;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 interface MediaLibraryProps {
@@ -143,7 +143,19 @@ export function MediaLibrary({
       }
 
       if (Array.isArray(data.rejected) && data.rejected.length > 0) {
-        setErrors(data.rejected);
+        // The server sends codes; the wording and the byte limit are resolved
+        // here, so a rejection reads in the admin's language and can never
+        // quote a size the server no longer enforces.
+        setErrors(
+          (data.rejected as { name: string; code: string; limitBytes?: number }[]).map((r) =>
+            r.code === 'TOO_LARGE'
+              ? t('media.rejectedSize', {
+                  name: r.name,
+                  limit: formatBytes(r.limitBytes ?? MAX_IMAGE_BYTES),
+                })
+              : t('media.rejectedType', { name: r.name })
+          )
+        );
       }
       setAssets((prev) => [...(data.data as MediaAsset[]), ...prev]);
     } catch {
@@ -219,11 +231,19 @@ export function MediaLibrary({
           {t('media.types')}
         </p>
 
+        <ul className="mx-auto mt-3 max-w-xl space-y-1 text-start text-xs text-[var(--admin-text-muted)]">
+          <li className="font-medium text-[var(--admin-text-secondary)]">{t('media.specsTitle')}</li>
+          <li>{t('media.specsImages', { imageMax: formatBytes(MAX_IMAGE_BYTES) })}</li>
+          <li>{t('media.specsVideo', { videoMax: formatBytes(MAX_VIDEO_BYTES) })}</li>
+          <li>{t('media.specsDocs', { imageMax: formatBytes(MAX_IMAGE_BYTES) })}</li>
+          <li>{t('media.specsHero')}</li>
+        </ul>
+
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp,image/avif,image/gif,application/pdf"
+          accept={UPLOAD_ACCEPT}
           className="sr-only"
           id="media-upload-input"
           onChange={(e) => e.target.files && void upload(e.target.files)}

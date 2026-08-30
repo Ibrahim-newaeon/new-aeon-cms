@@ -7,9 +7,17 @@ const root = mkdtempSync(path.join(tmpdir(), 'aeon-storage-'));
 process.env.UPLOAD_DIR = root;
 process.env.STORAGE_DRIVER = 'local';
 
-const { storeUpload, deleteStored, activeDriver, ALLOWED_MIME, MAX_BYTES } = await import(
-  '@/lib/media/storage'
-);
+const {
+  storeUpload,
+  deleteStored,
+  activeDriver,
+  ALLOWED_MIME,
+  MAX_BYTES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  UPLOAD_ACCEPT,
+  maxBytesFor,
+} = await import('@/lib/media/storage');
 const { localDriver } = await import('@/lib/media/drivers/local');
 const { s3Driver } = await import('@/lib/media/drivers/s3');
 
@@ -27,9 +35,41 @@ describe('upload policy', () => {
   });
 
   it('allows exactly the intended types', () => {
+    // mp4 and webm are here because the slider offers video slides; without
+    // them the library could not produce a file that block accepts.
     expect(Object.keys(ALLOWED_MIME).sort()).toEqual([
-      'application/pdf', 'image/avif', 'image/gif', 'image/jpeg', 'image/png', 'image/webp',
+      'application/pdf', 'image/avif', 'image/gif', 'image/jpeg', 'image/png',
+      'image/webp', 'video/mp4', 'video/webm',
     ]);
+  });
+
+  it('offers the picker exactly what the server accepts', () => {
+    // The accept attribute used to be a hand-written copy, so a type added to
+    // the allow-list was one the browser would refuse to offer.
+    expect(UPLOAD_ACCEPT.split(',').sort()).toEqual(Object.keys(ALLOWED_MIME).sort());
+  });
+
+  it('gives video a larger cap than images', () => {
+    // One number cannot serve both: 8 MB is generous for a hero image and too
+    // tight for even a short 1080p loop.
+    expect(maxBytesFor('image/png')).toBe(MAX_IMAGE_BYTES);
+    expect(maxBytesFor('application/pdf')).toBe(MAX_IMAGE_BYTES);
+    expect(maxBytesFor('video/mp4')).toBe(MAX_VIDEO_BYTES);
+    expect(MAX_VIDEO_BYTES).toBeGreaterThan(MAX_IMAGE_BYTES);
+  });
+
+  it('holds a video to the video cap, not the image one', async () => {
+    await expect(
+      storeUpload(file('big.mp4', 'video/mp4', MAX_VIDEO_BYTES + 1))
+    ).rejects.toThrow('TOO_LARGE');
+
+    // Comfortably over the image cap, and accepted, which is the whole point.
+    const stored = await storeUpload(file('clip.mp4', 'video/mp4', MAX_IMAGE_BYTES + 1));
+    expect(stored.mimeType).toBe('video/mp4');
+    // No sharp probe on a video: no dimensions and no thumbnail, rather than a
+    // decoder failure swallowed by a catch.
+    expect(stored.thumbnailUrl).toBeNull();
+    expect(stored.width).toBeNull();
   });
 
   it('rejects a disallowed type before writing anything', async () => {

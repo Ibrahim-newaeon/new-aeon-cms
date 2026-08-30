@@ -68,8 +68,12 @@ export type ContentBlock =
        */
       variant: 'main' | 'inner';
       slides: {
-        kind: 'image' | 'video';
-        /** Image URL, or a video file URL for kind: 'video'. */
+        /**
+         * Chosen before anything is uploaded, because it decides what the
+         * editor asks for: an image, a video file, or a YouTube link.
+         */
+        kind: 'image' | 'video' | 'youtube';
+        /** Image URL, an uploaded video URL, or a YouTube link. */
         src: string;
         /** Still shown before a video paints, and instead of it when the
          *  visitor has asked for reduced motion. */
