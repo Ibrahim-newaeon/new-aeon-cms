@@ -5,6 +5,7 @@ import {
   categories, categoryI18n, tags, tagI18n,
 } from './schema';
 import { and, desc, eq } from 'drizzle-orm';
+import type { ContentTypeSlug } from '@/lib/content/content-types';
 
 export interface ArchiveEntry {
   slug: string;
@@ -18,7 +19,7 @@ const published = eq(content.status, 'published');
 
 /** Published items of one content type, newest first. */
 export async function listByType(
-  typeSlug: 'page' | 'post',
+  typeSlug: ContentTypeSlug,
   locale: 'ar' | 'en',
   limit = 50
 ): Promise<ArchiveEntry[]> {

@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { contentCategories, contentTags } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import type { ContentTypeSlug } from '@/lib/content/content-types';
 
 /**
  * Replaces a content item's category and tag links.
@@ -92,7 +93,7 @@ export async function getContentTaxonomy(contentId: string) {
 }
 
 /** Per-type flags from contentTypes — a type may opt out of either taxonomy. */
-export async function getTypeTaxonomyFlags(typeSlug: 'page' | 'post') {
+export async function getTypeTaxonomyFlags(typeSlug: ContentTypeSlug) {
   const { contentTypes } = await import('@/lib/db/schema');
   const { eq } = await import('drizzle-orm');
 

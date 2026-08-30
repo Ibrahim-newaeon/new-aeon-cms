@@ -18,6 +18,7 @@ import {
 } from '@/lib/content/page-draft';
 import { useT } from './i18n-provider';
 import type { MessageKey } from '@/lib/admin-i18n';
+import type { ContentTypeSlug } from '@/lib/content/content-types';
 
 export type { PageFormValue, TranslationDraft };
 
@@ -30,7 +31,7 @@ interface PageFormProps {
   initial: PageFormValue;
   adminPath: string;
   /** Which content type this form writes. Drives the API payload and labels. */
-  contentType?: 'page' | 'post';
+  contentType?: ContentTypeSlug;
   taxonomy?: {
     categories: TaxonomyOption[];
     tags: TaxonomyOption[];
@@ -39,9 +40,13 @@ interface PageFormProps {
   };
 }
 
-const TYPE_LABEL: Record<'page' | 'post', { newTitle: MessageKey; editTitle: MessageKey; segment: string }> = {
+const TYPE_LABEL: Record<
+  ContentTypeSlug,
+  { newTitle: MessageKey; editTitle: MessageKey; segment: string }
+> = {
   page: { newTitle: 'form.newPage', editTitle: 'form.editPage', segment: 'pages' },
   post: { newTitle: 'form.newPost', editTitle: 'form.editPost', segment: 'posts' },
+  resource: { newTitle: 'form.newResource', editTitle: 'form.editResource', segment: 'resources' },
 };
 
 export function PageForm({

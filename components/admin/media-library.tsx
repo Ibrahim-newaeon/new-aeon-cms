@@ -138,7 +138,12 @@ export function MediaLibrary({
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        setErrors([data?.error?.message ?? t('media.uploadFailed')]);
+        // The route returns codes, not sentences: it used to build Arabic
+        // strings that an English admin was shown verbatim.
+        const code = data?.error?.code;
+        setErrors([
+          code === 'NO_FILE' ? t('media.noFile') : (data?.error?.message ?? t('media.uploadFailed')),
+        ]);
         return;
       }
 

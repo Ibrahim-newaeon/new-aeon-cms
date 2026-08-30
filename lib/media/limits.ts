@@ -45,13 +45,33 @@ export const ALLOWED_MIME: Record<string, string> = {
   'video/mp4': 'mp4',
   'video/webm': 'webm',
   'application/pdf': 'pdf',
+  // Documents a Resources page hands to a reader: spec sheets, price lists,
+  // guides. Word and Excel are what suppliers and marketing teams actually
+  // produce, so refusing them would push people to email attachments instead.
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'text/csv': 'csv',
 };
 
 export const isImageMime = (mime: string) => mime.startsWith('image/');
 export const isVideoMime = (mime: string) => mime.startsWith('video/');
 
+/** Anything a reader downloads rather than views inline. */
+export const isDocumentMime = (mime: string) =>
+  mime === 'application/pdf' || mime === 'text/csv' || mime.includes('officedocument');
+
+/**
+ * Documents get their own headroom.
+ *
+ * A spec sheet or a catalogue PDF routinely exceeds the 8 MB an image cap
+ * allows, and the whole point of Resources is handing those to a reader.
+ */
+export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024; // 20 MB
+
 export function maxBytesFor(mime: string): number {
-  return isVideoMime(mime) ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (isVideoMime(mime)) return MAX_VIDEO_BYTES;
+  if (isDocumentMime(mime)) return MAX_DOCUMENT_BYTES;
+  return MAX_IMAGE_BYTES;
 }
 
 /**

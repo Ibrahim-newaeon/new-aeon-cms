@@ -9,9 +9,11 @@ export {
   MAX_BYTES,
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
+  MAX_DOCUMENT_BYTES,
   UPLOAD_ACCEPT,
   isImageMime,
   isVideoMime,
+  isDocumentMime,
   maxBytesFor,
 } from './limits';
 import type { StorageDriver } from './drivers/types';

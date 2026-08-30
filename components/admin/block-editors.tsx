@@ -588,6 +588,40 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
       );
     }
 
+    case 'downloads':
+      return (
+        <ItemsEditor
+          items={block.items}
+          testId="downloads"
+          addLabel={t('be.addFile')}
+          emptyLabel={t('be.noFiles')}
+          createItem={() => ({ title: '', url: '' })}
+          onChange={(items) => onChange({ ...block, items })}
+          renderItem={(item, update) => (
+            <div className="space-y-2">
+              <MiniField
+                label={t('be.fileTitle')}
+                value={item.title}
+                onChange={(v) => update({ title: v })}
+              />
+              <MediaField
+                label={t('be.slideImage')}
+                hint={t('be.fileHint')}
+                value={item.url}
+                onChange={(url) => update({ url })}
+                testId="downloads-file"
+                preview={false}
+              />
+              <MiniField
+                label={t('be.fileMeta')}
+                value={item.meta ?? ''}
+                onChange={(v) => update({ meta: v || undefined })}
+              />
+            </div>
+          )}
+        />
+      );
+
     case 'gallery':
       return (
         <div className="space-y-3">

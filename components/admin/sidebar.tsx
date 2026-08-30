@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  LayoutGrid, Package, Tag, Layers, ShoppingBag, Images, ImageIcon,
+  LayoutGrid, Package, BookOpen, Tag, Layers, ShoppingBag, Images, ImageIcon,
   Ticket, Truck, Settings, ShieldCheck, FileText, Link2, LogOut, ExternalLink, Star, Boxes,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ function buildNavigation(adminPath: string): NavItem[] {
     { key: 'nav.overview', href: adminPath, icon: LayoutGrid },
     { key: 'nav.pages', href: `${adminPath}/content/pages`, icon: FileText },
     { key: 'nav.posts', href: `${adminPath}/content/posts`, icon: Package },
+    { key: 'nav.resources', href: `${adminPath}/content/resources`, icon: BookOpen },
     { key: 'nav.categories', href: `${adminPath}/content/categories`, icon: Tag },
     { key: 'nav.tags', href: `${adminPath}/content/tags`, icon: Layers },
     { key: 'nav.media', href: `${adminPath}/media`, icon: ImageIcon },

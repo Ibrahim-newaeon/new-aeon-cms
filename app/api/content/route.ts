@@ -7,9 +7,13 @@ import { z } from 'zod';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import type { ContentBlock } from '@/lib/blocks/types';
 import { setContentTaxonomy } from '@/lib/content/taxonomy';
+import { CONTENT_TYPE_SLUGS } from '@/lib/content/content-types';
 
 const createContentSchema = z.object({
-  type: z.enum(['page', 'post']),
+  // Derived from CONTENT_TYPE_SLUGS: this was the fourth hand-written copy of
+  // the same union, and it is the one that would have rejected a valid
+  // resource at the API while every screen happily offered it.
+  type: z.enum(CONTENT_TYPE_SLUGS),
   slug: z.string().trim().min(1).max(255),
   status: z.enum(['draft', 'published', 'archived']),
   authorId: z.string().uuid().optional(),

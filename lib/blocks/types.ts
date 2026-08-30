@@ -91,6 +91,20 @@ export type ContentBlock =
       intervalMs: number;
       height: 'short' | 'medium' | 'tall';
     }
+  /**
+   * A list of files a reader can download — the point of a Resources page.
+   * `url` points at /api/media/{id}/download so the browser saves the file
+   * instead of opening a PDF in its viewer.
+   */
+  | {
+      type: 'downloads';
+      items: {
+        title: string;
+        url: string;
+        /** Shown next to the title, e.g. "PDF · 2.4 MB". Set by the editor. */
+        meta?: string;
+      }[];
+    }
   | { type: 'accordion'; items: { title: string; content: ContentBlock[] }[] }
   | { type: 'tabs'; items: { label: string; content: ContentBlock[] }[] }
   | { type: 'cta'; title: string; text: string; button: { text: string; url: string }; backgroundImage?: string; overlay?: boolean }

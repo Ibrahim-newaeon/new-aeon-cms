@@ -75,6 +75,26 @@ async function seed() {
     .onConflictDoNothing()
     .returning();
 
+  /**
+   * Resources: the blog's sibling for a shop — guides, tutorials and documents
+   * a customer can download. Same machinery as posts (archive, categories,
+   * tags), different audience, so it gets its own list rather than competing
+   * with editorial posts.
+   */
+  await db
+    .insert(contentTypes)
+    .values({
+      slug: 'resource',
+      name: 'Resource',
+      hasArchive: true,
+      hasCategories: true,
+      hasTags: true,
+      hasFeaturedImage: true,
+      isActive: true,
+    })
+    .onConflictDoNothing()
+    .returning();
+
   await db
     .insert(contentTypes)
     .values({

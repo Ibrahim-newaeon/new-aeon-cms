@@ -17,6 +17,7 @@ import {
 import { ContactFormBlock, NewsletterBlock } from '@/components/site/blocks/form-blocks';
 import { ProductGridBlock } from '@/components/site/blocks/product-grid';
 import { SliderBlock } from '@/components/site/blocks/slider';
+import { DownloadsBlock } from '@/components/site/blocks/downloads';
 import { resolveCustomBlock } from '@/lib/blocks/custom-registry';
 import type { ContentBlock } from '@/lib/blocks/types';
 
@@ -130,6 +131,9 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
 
     case 'slider':
       return <SliderBlock block={block} locale={locale} />;
+
+    case 'downloads':
+      return <DownloadsBlock block={block} locale={locale} />;
 
     case 'gallery':
       return (

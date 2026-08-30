@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     if (files.length === 0) {
       return NextResponse.json(
-        { success: false, error: { message: 'لم يتم اختيار أي ملف' } },
+        { success: false, error: { code: 'NO_FILE' } },
         { status: 400 }
       );
     }
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Media upload error:', error);
     return NextResponse.json(
-      { success: false, error: { message: 'تعذّر رفع الملف' } },
+      { success: false, error: { code: 'UPLOAD_FAILED' } },
       { status: 500 }
     );
   }

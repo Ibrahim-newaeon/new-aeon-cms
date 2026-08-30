@@ -26,6 +26,7 @@ export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
   spacer: 'block.spacer',
   html: 'block.html',
   table: 'block.table',
+  downloads: 'block.downloads',
   accordion: 'block.accordion',
   tabs: 'block.tabs',
   cta: 'block.cta',
@@ -64,7 +65,7 @@ export const EDITABLE_BLOCKS: ReadonlySet<BlockType> = new Set<BlockType>([
   'spacer', 'html', 'testimonial', 'cta', 'feature-grid', 'stats', 'gallery',
   'video', 'embed', 'team', 'timeline', 'social-links', 'recent-posts', 'map',
   'newsletter', 'contact-form', 'table', 'pricing', 'comparison',
-  'product-grid', 'custom', 'accordion', 'tabs', 'slider',
+  'product-grid', 'custom', 'accordion', 'tabs', 'slider', 'downloads',
 ]);
 
 /**
@@ -97,6 +98,7 @@ const FACTORIES: { [K in BlockType]: () => Extract<ContentBlock, { type: K }> } 
   spacer: () => ({ type: 'spacer', height: 2 }),
   html: () => ({ type: 'html', content: '' }),
   table: () => ({ type: 'table', rows: 2, cols: 2, data: [['', ''], ['', '']], headerRow: true }),
+  downloads: () => ({ type: 'downloads', items: [] }),
   accordion: () => ({ type: 'accordion', items: [] }),
   tabs: () => ({ type: 'tabs', items: [] }),
   cta: () => ({ type: 'cta', title: '', text: '', button: { text: '', url: '' } }),

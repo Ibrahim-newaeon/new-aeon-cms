@@ -15,6 +15,7 @@ const {
   MAX_BYTES,
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
+  MAX_DOCUMENT_BYTES,
   UPLOAD_ACCEPT,
   maxBytesFor,
 } = await import('@/lib/media/storage');
@@ -37,9 +38,14 @@ describe('upload policy', () => {
   it('allows exactly the intended types', () => {
     // mp4 and webm are here because the slider offers video slides; without
     // them the library could not produce a file that block accepts.
+    // Word, Excel and CSV are here because a Resources page hands documents
+    // to a reader; refusing them pushes people back to email attachments.
     expect(Object.keys(ALLOWED_MIME).sort()).toEqual([
-      'application/pdf', 'image/avif', 'image/gif', 'image/jpeg', 'image/png',
-      'image/webp', 'video/mp4', 'video/webm',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/avif', 'image/gif', 'image/jpeg', 'image/png', 'image/webp',
+      'text/csv', 'video/mp4', 'video/webm',
     ]);
   });
 
@@ -49,13 +55,25 @@ describe('upload policy', () => {
     expect(UPLOAD_ACCEPT.split(',').sort()).toEqual(Object.keys(ALLOWED_MIME).sort());
   });
 
-  it('gives video a larger cap than images', () => {
-    // One number cannot serve both: 8 MB is generous for a hero image and too
-    // tight for even a short 1080p loop.
+  it('gives each kind its own cap', () => {
+    // One number cannot serve all three: 8 MB is generous for a hero image,
+    // too tight for a 1080p loop, and too tight for a catalogue PDF.
     expect(maxBytesFor('image/png')).toBe(MAX_IMAGE_BYTES);
-    expect(maxBytesFor('application/pdf')).toBe(MAX_IMAGE_BYTES);
     expect(maxBytesFor('video/mp4')).toBe(MAX_VIDEO_BYTES);
+    expect(maxBytesFor('application/pdf')).toBe(MAX_DOCUMENT_BYTES);
+    expect(maxBytesFor('text/csv')).toBe(MAX_DOCUMENT_BYTES);
+    expect(
+      maxBytesFor('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    ).toBe(MAX_DOCUMENT_BYTES);
     expect(MAX_VIDEO_BYTES).toBeGreaterThan(MAX_IMAGE_BYTES);
+    expect(MAX_DOCUMENT_BYTES).toBeGreaterThan(MAX_IMAGE_BYTES);
+  });
+
+  it('does not send a document through the image pipeline', async () => {
+    // sharp would load a decoder, fail on a PDF, and be swallowed by a catch.
+    const stored = await storeUpload(file('spec.pdf', 'application/pdf', 1024));
+    expect(stored.thumbnailUrl).toBeNull();
+    expect(stored.width).toBeNull();
   });
 
   it('holds a video to the video cap, not the image one', async () => {

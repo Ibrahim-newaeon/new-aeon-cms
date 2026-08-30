@@ -3,13 +3,14 @@ import { db } from '@/lib/db';
 import { content, contentI18n, contentTypes } from '@/lib/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import type { ContentRow } from '@/components/admin/content-table';
+import type { ContentTypeSlug } from '@/lib/content/content-types';
 
 /**
  * Rows for the admin list, already serialized for the Client Component.
  * Dates become ISO strings here — a Date cannot cross the boundary.
  */
 export async function listContentByType(
-  typeSlug: 'page' | 'post',
+  typeSlug: ContentTypeSlug,
   locale: 'ar' | 'en' = 'ar'
 ): Promise<ContentRow[]> {
   const types = await db
