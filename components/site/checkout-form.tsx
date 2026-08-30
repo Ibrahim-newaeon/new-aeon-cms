@@ -54,6 +54,7 @@ export function CheckoutForm({
   subtotal,
   token,
   regions,
+  prefill,
 }: {
   locale: 'ar' | 'en';
   currency: string;
@@ -67,6 +68,18 @@ export function CheckoutForm({
    * falls through to "no zone" at checkout.
    */
   regions: readonly ShippingRegion[];
+  /**
+   * The signed-in shopper's default address, if there is one.
+   *
+   * Prefilled rather than merely offered, because retyping a delivery address
+   * on every order is the single most tedious thing about buying from a small
+   * shop twice. Every field stays editable — this is a starting point, not a
+   * lock.
+   */
+  prefill?: {
+    name?: string; phone?: string; governorate?: string;
+    city?: string; addressLine?: string; landmark?: string | null;
+  } | null;
 }) {
   const router = useRouter();
   const copy = COPY[locale];
@@ -122,12 +135,12 @@ export function CheckoutForm({
     <form onSubmit={submit} method="post" className="grid gap-8 lg:grid-cols-3" data-test-id="checkout-form">
       <div className="space-y-4 lg:col-span-2">
         <Field label={copy.name}>
-          <input name="name" required minLength={2} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-name" />
+          <input name="name" required minLength={2} defaultValue={prefill?.name ?? ''} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-name" />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={copy.phone}>
-            <input name="phone" required type="tel" dir="ltr" placeholder="07XXXXXXXX"
+            <input name="phone" required type="tel" dir="ltr" placeholder="07XXXXXXXX" defaultValue={prefill?.phone ?? ''}
               className="w-full rounded-lg border border-site-line p-3 text-start text-sm" data-test-id="checkout-phone" />
           </Field>
           <Field label={copy.email}>
@@ -138,7 +151,7 @@ export function CheckoutForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={copy.governorate}>
-            <select name="governorate" required className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-governorate">
+            <select name="governorate" required defaultValue={prefill?.governorate ?? ''} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-governorate">
               <option value="">{copy.choose}</option>
               {regions.map((g) => (
                 <option key={g.value} value={g.value}>{locale === 'ar' ? g.ar : g.en}</option>
@@ -146,12 +159,12 @@ export function CheckoutForm({
             </select>
           </Field>
           <Field label={copy.city}>
-            <input name="city" required minLength={2} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-city" />
+            <input name="city" required minLength={2} defaultValue={prefill?.city ?? ''} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-city" />
           </Field>
         </div>
 
         <Field label={copy.address}>
-          <input name="addressLine" required minLength={5} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-address" />
+          <input name="addressLine" required minLength={5} defaultValue={prefill?.addressLine ?? ''} className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-address" />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

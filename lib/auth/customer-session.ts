@@ -1,6 +1,6 @@
 // lib/auth/customer-session.ts
 import { SignJWT, jwtVerify } from 'jose';
-import { CUSTOMER_AUDIENCE } from './session';
+import { CUSTOMER_AUDIENCE, PHONE_PROOF_AUDIENCE } from './session';
 
 /**
  * Shopper sessions.
@@ -80,4 +80,37 @@ export async function currentCustomer(): Promise<CustomerToken | null> {
   const store = await cookies();
   const token = store.get(CUSTOMER_COOKIE)?.value;
   return token ? verifyCustomerToken(token) : null;
+}
+
+/**
+ * Proof that the holder just verified a phone number by one-time code.
+ *
+ * A signed token rather than a flag on the request, because the client is the
+ * one asking to register and "I already verified, honest" is not something a
+ * server can take at face value — that would make the whole code step
+ * decorative, and the thing it protects is somebody else's order history.
+ *
+ * Ten minutes: long enough to fill in a name and a password, short enough that
+ * a proof left in a browser is not a standing key to the number.
+ */
+export async function createPhoneProof(phone: string): Promise<string> {
+  return new SignJWT({ phone })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setAudience(PHONE_PROOF_AUDIENCE)
+    .setExpirationTime('10m')
+    .sign(SECRET);
+}
+
+/** The proven phone, or null. Never returns a session. */
+export async function verifyPhoneProof(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET, {
+      clockTolerance: 60,
+      audience: PHONE_PROOF_AUDIENCE,
+    });
+    return typeof payload.phone === 'string' ? payload.phone : null;
+  } catch {
+    return null;
+  }
 }

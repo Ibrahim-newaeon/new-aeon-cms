@@ -5,8 +5,9 @@ import { verifyCode } from '@/lib/account/otp';
 import { normalisePhone } from '@/lib/commerce/phone';
 import { getStoreCountry } from '@/lib/commerce/regions';
 import { commerceEnabled } from '@/lib/commerce/guard';
-import { createCustomerToken, setCustomerCookie } from '@/lib/auth/customer-session';
+import { createCustomerToken, setCustomerCookie, createPhoneProof } from '@/lib/auth/customer-session';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { mergeSavedCart } from '@/lib/account/cart-sync';
 
 export const runtime = 'nodejs';
 
@@ -62,8 +63,33 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!result.customerId) {
+      /**
+       * The number is proven but has no account. Not a failure — it is where a
+       * registration starts. The proof is returned as a signed token so the
+       * register call can trust it; a boolean from the client would make the
+       * code step decorative.
+       */
+      return NextResponse.json({
+        success: true,
+        data: { registered: false, phoneProof: await createPhoneProof(phone) },
+      });
+    }
+
+    // Signing in brings a cart with it, in both directions — see
+    // mergeSavedCart for why this merges rather than replaces.
+    await mergeSavedCart(result.customerId);
     await setCustomerCookie(await createCustomerToken(result.customerId, phone));
-    return NextResponse.json({ success: true });
+    /**
+     * `needsPassword` is true for a buyer the shop knows only because they
+     * ordered. They are signed in — the code proved the number — but they
+     * have no password yet, and without saying so the only way back in is
+     * another code every time.
+     */
+    return NextResponse.json({
+      success: true,
+      data: { registered: true, needsPassword: !result.hasPassword },
+    });
   } catch {
     return NextResponse.json({ success: false, error: { message: 'طلب غير صالح' } }, { status: 400 });
   }

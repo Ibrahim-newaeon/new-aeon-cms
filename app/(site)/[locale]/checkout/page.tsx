@@ -7,6 +7,7 @@ import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
 import { CheckoutForm } from '@/components/site/checkout-form';
 import { getShippingRegions } from '@/lib/commerce/regions';
+import { checkoutPrefill } from '@/lib/account/prefill';
 import { locales, type Locale } from '@/lib/env';
 
 /**
@@ -52,6 +53,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
       </h1>
       <CheckoutForm
         regions={await getShippingRegions()}
+        prefill={await checkoutPrefill()}
         locale={typedLocale}
         currency={settings?.currency ?? 'JOD'}
         subtotal={cart.subtotal}

@@ -8,20 +8,24 @@ import { sendSms } from '@/lib/sms';
 import { randomInt } from 'node:crypto';
 
 /**
- * Sign-in codes for shoppers.
+ * One-time codes, used for two things: signing in, and proving a phone number
+ * before registering against it.
  *
- * Only a phone that ALREADY has a customer record can request one. Customers
- * are created by placing an order — that is what makes the phone a reliable
- * merge key — and letting sign-in create rows would fill the table with people
- * who have never bought anything and hand a stranger a way to mint records.
- * The trade is that a first-time visitor cannot make an account, which is
- * correct for a shop whose accounts exist to show order history.
+ * A code is issued for ANY valid number, not only one that has ordered.
+ * Anyone may open an account, and the code is what proves the number is
+ * theirs — which matters most in the case it was built for: a number that
+ * already has orders behind it. Registering against one of those hands over
+ * somebody's name, address and order history, so it is gated on this.
+ *
+ * Issuing for unknown numbers also removes an enumeration oracle. When only
+ * known numbers got a code, "did a code arrive" answered the question of
+ * whether a given person shops here.
  */
 
 export const CODE_TTL_MINUTES = 10;
 export const MAX_ATTEMPTS = 5;
 
-export type RequestResult = { ok: true } | { ok: false; reason: 'unknown' };
+export type RequestResult = { ok: true };
 
 /** Six digits, from a CSPRNG rather than Math.random. */
 function generateCode(): string {
@@ -29,14 +33,6 @@ function generateCode(): string {
 }
 
 export async function requestCode(phone: string, locale: 'ar' | 'en'): Promise<RequestResult> {
-  const [customer] = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(eq(customers.phone, phone))
-    .limit(1);
-
-  if (!customer) return { ok: false, reason: 'unknown' };
-
   const code = generateCode();
   const codeHash = await hashPassword(code);
   const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60_000);
@@ -64,7 +60,13 @@ export async function requestCode(phone: string, locale: 'ar' | 'en'): Promise<R
 }
 
 export type VerifyResult =
-  | { ok: true; customerId: string }
+  /**
+   * customerId is null when the number is proven but no customer row exists.
+   * hasPassword tells apart a full account from a buyer the shop knows only
+   * because they ordered — the second is signed in, but should still be
+   * offered a password so they can get back in without a code next time.
+   */
+  | { ok: true; customerId: string | null; hasPassword: boolean }
   | { ok: false; reason: 'no-code' | 'expired' | 'wrong' | 'locked' };
 
 export async function verifyCode(phone: string, code: string): Promise<VerifyResult> {
@@ -92,15 +94,19 @@ export async function verifyCode(phone: string, code: string): Promise<VerifyRes
   }
 
   const [customer] = await db
-    .select({ id: customers.id })
+    .select({ id: customers.id, passwordHash: customers.passwordHash })
     .from(customers)
     .where(eq(customers.phone, phone))
     .limit(1);
 
-  if (!customer) return { ok: false, reason: 'no-code' };
-
   // Single use: the code is spent whether or not a session is kept.
   await db.delete(customerOtp).where(eq(customerOtp.phone, phone));
 
-  return { ok: true, customerId: customer.id };
+  // A proven number with no account is a successful verification, not a
+  // failure — it is exactly the state a new registration starts from.
+  return {
+    ok: true,
+    customerId: customer?.id ?? null,
+    hasPassword: Boolean(customer?.passwordHash),
+  };
 }

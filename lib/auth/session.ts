@@ -18,6 +18,8 @@ const REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET!)
  */
 export const ADMIN_AUDIENCE = 'aeon:admin';
 export const CUSTOMER_AUDIENCE = 'aeon:customer';
+/** Short-lived proof that someone holds a phone number. Not a session. */
+export const PHONE_PROOF_AUDIENCE = 'aeon:phone-proof';
 
 export interface TokenPayload {
   sub: string;

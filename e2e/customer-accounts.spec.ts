@@ -1,0 +1,312 @@
+// e2e/customer-accounts.spec.ts
+import { test, expect } from '@playwright/test';
+import { withDb } from './fixtures';
+import { normalisePhone } from '../lib/commerce/phone';
+import { hashPassword } from '../lib/auth/password';
+
+/**
+ * Customer accounts — the shopper's own login, as distinct from the admin's
+ * staff-only Customers list.
+ *
+ * Signed out throughout: the shared admin storage state would mask the
+ * boundaries these tests exist to check.
+ */
+test.use({ storageState: { cookies: [], origins: [] } });
+
+const PASSWORD = 'correct horse battery';
+const CODE = '424242';
+
+const seedCode = (phone: string) =>
+  withDb(async (db) =>
+    db.query(
+      `insert into customer_otp (phone, code_hash, expires_at, attempts_left)
+       values ($1, $2, now() + interval '10 minutes', 5)
+       on conflict (phone) do update set code_hash = excluded.code_hash,
+         expires_at = excluded.expires_at, attempts_left = 5`,
+      [phone, await hashPassword(CODE)]
+    )
+  );
+
+test.describe('registering', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  const phone = normalisePhone('0788' + String(Date.now()).slice(-6));
+
+  test.afterAll(async () => {
+    await withDb(async (db) => {
+      await db.query('delete from customer_otp where phone = $1', [phone]);
+      await db.query('delete from customers where phone = $1', [phone]);
+    });
+  });
+
+  test('a brand-new number can open an account', async ({ page }) => {
+    // The point of the change: accounts are not limited to people who have
+    // already ordered.
+    await page.goto('/en/account');
+    await page.getByTestId('account-phone').fill(phone);
+    await page.getByTestId('account-continue').click();
+
+    await expect(page.getByTestId('account-name')).toBeVisible();
+    await page.getByTestId('account-name').fill('New Shopper');
+    await page.getByTestId('account-new-password').fill(PASSWORD);
+    await page.getByTestId('account-create').click();
+
+    await expect(page.getByTestId('account-page')).toBeVisible();
+    await expect(page.getByTestId('account-nav')).toBeVisible();
+  });
+
+  test('the password set at registration signs them back in', async ({ page }) => {
+    // A fresh context, so this genuinely starts signed out — Playwright does
+    // not carry cookies between tests even in serial mode, and relying on the
+    // previous test's session would have made this pass without signing in.
+    await page.goto('/en/account');
+    await expect(page.getByTestId('account-auth')).toBeVisible();
+
+    await page.getByTestId('account-phone').fill(phone);
+    await page.getByTestId('account-continue').click();
+    // The number is registered now, so it asks for the password rather than
+    // offering to create an account.
+    await page.getByTestId('account-password').fill(PASSWORD);
+    await page.getByTestId('account-signin').click();
+
+    await expect(page.getByTestId('account-page')).toBeVisible();
+
+    await page.getByTestId('account-signout').click();
+    await expect(page.getByTestId('account-auth')).toBeVisible();
+  });
+});
+
+test.describe('claiming a number that already has orders', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  const phone = normalisePhone('0787' + String(Date.now()).slice(-6));
+
+  test.beforeAll(async () => {
+    // A buyer the shop already knows, with no account.
+    await withDb((db) =>
+      db.query(`insert into customers (phone, name) values ($1, 'Existing Buyer')`, [phone])
+    );
+  });
+
+  test.afterAll(async () => {
+    await withDb(async (db) => {
+      await db.query('delete from customer_otp where phone = $1', [phone]);
+      await db.query('delete from customers where phone = $1', [phone]);
+    });
+  });
+
+  test('the API refuses to register against it without proof', async ({ request }) => {
+    /**
+     * The security core. That row carries somebody's name, address and order
+     * history; handing it over on a claim would be the whole vulnerability.
+     */
+    const res = await request.post('/api/account/register', {
+      data: { phone, name: 'Impostor', password: PASSWORD },
+      headers: { origin: new URL(test.info().project.use.baseURL!).origin },
+    });
+    expect(res.status()).toBe(409);
+    expect((await res.json()).data.state).toBe('needs-verification');
+  });
+
+  test('a proof for a DIFFERENT number does not unlock it', async ({ page, request }) => {
+    // Otherwise a valid proof for any number unlocks every number.
+    const other = normalisePhone('0786' + String(Date.now()).slice(-6));
+    await seedCode(other);
+
+    await page.goto('/en/account');
+    const proof = await page.evaluate(
+      async ([p, c]) => {
+        const res = await fetch('/api/account/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ phone: p, code: c }),
+        });
+        return (await res.json())?.data?.phoneProof ?? null;
+      },
+      [other, CODE]
+    );
+    expect(proof).toBeTruthy();
+
+    const res = await request.post('/api/account/register', {
+      data: { phone, name: 'Impostor', password: PASSWORD, phoneProof: proof },
+      headers: { origin: new URL(test.info().project.use.baseURL!).origin },
+    });
+    expect(res.status()).toBe(409);
+
+    await withDb((db) => db.query('delete from customer_otp where phone = $1', [other]));
+  });
+
+  test('proving the number signs the real owner in, and offers a password', async ({ page }) => {
+    await page.goto('/en/account');
+    await page.getByTestId('account-phone').fill(phone);
+    await page.getByTestId('account-continue').click();
+
+    // A code is sent because the number has history behind it.
+    await expect(page.getByTestId('account-code')).toBeVisible();
+    await seedCode(phone);
+
+    await page.getByTestId('account-code').fill(CODE);
+    await page.getByTestId('account-verify').click();
+
+    /**
+     * The code proved the number, so they are in — but they still have no
+     * password, and without being sent to set one the only way back would be
+     * another code every time.
+     */
+    await expect(page).toHaveURL(/\/account\/profile/);
+    await page.getByTestId('profile-password').fill(PASSWORD);
+    await page.getByTestId('profile-save').click();
+    await expect(page.getByTestId('profile-saved')).toBeVisible();
+
+    const hasPassword = await withDb(async (db) => {
+      const r = await db.query('select password_hash from customers where phone = $1', [phone]);
+      return Boolean(r.rows[0]?.password_hash);
+    });
+    expect(hasPassword).toBe(true);
+  });
+});
+
+test.describe('an account holds', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  const phone = normalisePhone('0785' + String(Date.now()).slice(-6));
+
+  test.beforeAll(async () => {
+    await withDb(async (db) =>
+      db.query(
+        `insert into customers (phone, name, password_hash, registered_at)
+         values ($1, 'Book Keeper', $2, now())`,
+        [phone, await hashPassword(PASSWORD)]
+      )
+    );
+  });
+
+  test.afterAll(async () => {
+    await withDb((db) => db.query('delete from customers where phone = $1', [phone]));
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/en/account');
+    if (await page.getByTestId('account-auth').isVisible().catch(() => false)) {
+      await page.getByTestId('account-phone').fill(phone);
+      await page.getByTestId('account-continue').click();
+      await page.getByTestId('account-password').fill(PASSWORD);
+      await page.getByTestId('account-signin').click();
+      await expect(page.getByTestId('account-page')).toBeVisible();
+    }
+  });
+
+  test('a saved address, and the first one is the default', async ({ page }) => {
+    await page.goto('/en/account/addresses');
+    await page.getByTestId('address-name').fill('Book Keeper');
+    await page.getByTestId('address-phone').fill(phone);
+    await page.getByTestId('address-governorate').selectOption('amman');
+    await page.getByTestId('address-city').fill('Amman');
+    await page.getByTestId('address-line').fill('Rainbow Street 12');
+    await page.getByTestId('address-save').click();
+
+    await expect(page.getByTestId('address-row')).toHaveCount(1);
+    // Default without ticking the box: there is nothing else it could be.
+    await expect(page.getByTestId('address-default')).toBeVisible();
+  });
+
+  test('that address prefills checkout', async ({ page }) => {
+    // The reason the address book exists: not retyping it every order.
+    // Checkout needs something IN the cart, or it renders an empty-cart page
+    // with no form to prefill.
+    // Seeded through the cart API rather than the product page: which variant
+    // a product needs is not the subject here, and an empty cart renders a
+    // page with no form at all.
+    await page.goto('/en/shop');
+    const variantId = await withDb(async (db) => {
+      const r = await db.query(
+        `select id from product_variants where is_active and stock > 0 order by sku limit 1`
+      );
+      return r.rows[0].id as string;
+    });
+    await page.evaluate(
+      async (id) => {
+        await fetch('/api/commerce/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ action: 'add', variantId: id, qty: 1 }),
+        });
+      },
+      variantId
+    );
+
+    await page.goto('/en/checkout');
+    await expect(page.getByTestId('checkout-city')).toHaveValue('Amman');
+    await expect(page.getByTestId('checkout-address')).toHaveValue('Rainbow Street 12');
+    await expect(page.getByTestId('checkout-address')).toBeEditable();
+  });
+
+  test('a saved product, which the wishlist then lists', async ({ page }) => {
+    await page.goto('/en/shop');
+    await page.locator('a[href^="/en/products/"]').first().click();
+
+    await page.getByTestId('wishlist-toggle').click();
+    await expect(page.getByTestId('wishlist-toggle')).toHaveAttribute('aria-pressed', 'true');
+
+    await page.goto('/en/account/wishlist');
+    await expect(page.getByTestId('wishlist-items').locator('li')).toHaveCount(1);
+
+    await page.getByTestId('wishlist-remove').click();
+    await expect(page.getByTestId('wishlist-empty')).toBeVisible();
+  });
+
+  test('editable details, but the phone is fixed', async ({ page }) => {
+    await page.goto('/en/account/profile');
+    await page.getByTestId('profile-name').fill('Renamed Keeper');
+    await page.getByTestId('profile-save').click();
+    await expect(page.getByTestId('profile-saved')).toBeVisible();
+
+    // The phone is the identity this session proves and the key orders hang
+    // off; changing it is the register flow, not a text field.
+    await expect(page.getByTestId('profile-phone')).toHaveAttribute('readonly', '');
+  });
+});
+
+test.describe('order privacy', () => {
+  test('an order number alone does not open an order', async ({ page }) => {
+    /**
+     * Numbers come from a sequence — ORD-1048, ORD-1049 — so this page used to
+     * hand anyone counting upward every customer's name, phone and address.
+     */
+    const order = await withDb(async (db) => {
+      const r = await db.query('select order_number, phone from orders limit 1');
+      return r.rows[0] as { order_number: string; phone: string } | undefined;
+    });
+    test.skip(!order, 'no orders in this database');
+
+    await page.goto(`/en/order/${order!.order_number}`);
+    await expect(page.getByTestId('order-lookup')).toBeVisible();
+  });
+
+  test('the right phone opens it', async ({ page }) => {
+    const order = await withDb(async (db) => {
+      const r = await db.query('select order_number, phone from orders limit 1');
+      return r.rows[0] as { order_number: string; phone: string } | undefined;
+    });
+    test.skip(!order, 'no orders in this database');
+
+    await page.goto(
+      `/en/order/${order!.order_number}?phone=${encodeURIComponent(order!.phone)}`
+    );
+    await expect(page.getByTestId('order-lookup')).toHaveCount(0);
+    await expect(page.locator('h1')).toContainText(order!.order_number);
+  });
+
+  test('a wrong phone does not', async ({ page }) => {
+    const order = await withDb(async (db) => {
+      const r = await db.query('select order_number from orders limit 1');
+      return r.rows[0] as { order_number: string } | undefined;
+    });
+    test.skip(!order, 'no orders in this database');
+
+    await page.goto(`/en/order/${order!.order_number}?phone=0790000000`);
+    await expect(page.getByTestId('order-lookup')).toBeVisible();
+  });
+});

@@ -49,29 +49,16 @@ test.describe('shopper accounts', () => {
 
   test('a signed-out visitor gets the sign-in form', async ({ page }) => {
     await page.goto('/en/account');
-    await expect(page.getByTestId('account-login')).toBeVisible();
+    await expect(page.getByTestId('account-auth')).toBeVisible();
     await expect(page.getByTestId('account-page')).toHaveCount(0);
   });
 
-  test('requesting a code says the same thing for an unknown number', async ({ page }) => {
-    /**
-     * Otherwise this endpoint becomes a way to test whether a given person
-     * shops here, and the customers table is names, numbers and addresses.
-     */
+  test('an unknown number is offered registration, not a dead end', async ({ page }) => {
+    // Accounts are no longer limited to people who have already ordered.
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill('0770000009');
-    await page.getByTestId('account-send').click();
-
-    // Advances to the code step exactly as it would for a real customer.
-    await expect(page.getByTestId('account-code')).toBeVisible();
-
-    const rows = await withDb(async (db) => {
-      const r = await db.query('select count(*)::int as n from customer_otp where phone = $1', [
-        normalisePhone('0770000009'),
-      ]);
-      return r.rows[0].n as number;
-    });
-    expect(rows).toBe(0);
+    await page.getByTestId('account-continue').click();
+    await expect(page.getByTestId('account-name')).toBeVisible();
   });
 
   test('a wrong code is refused and costs an attempt', async ({ page }) => {
@@ -89,7 +76,8 @@ test.describe('shopper accounts', () => {
 
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-send').click();
+    await page.getByTestId('account-continue').click();
+    await expect(page.getByTestId('account-code')).toBeVisible();
 
     // Re-seed: requesting through the UI replaced the code with a real one.
     await withDb(async (db) =>
@@ -121,7 +109,13 @@ test.describe('shopper accounts', () => {
 
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-send').click();
+    await page.getByTestId('account-continue').click();
+
+    // Wait for the UI's OWN code request to finish before re-seeding, or it
+    // lands after and overwrites the known code with a real one — the test
+    // then types a code that is no longer current and reads as a product bug.
+    await expect(page.getByTestId('account-code')).toBeVisible();
+
     await withDb(async (db) =>
       db.query(`update customer_otp set code_hash = $2, attempts_left = 5 where phone = $1`, [
         phone,
@@ -132,6 +126,14 @@ test.describe('shopper accounts', () => {
     await page.getByTestId('account-code').fill(CODE);
     await page.getByTestId('account-verify').click();
 
+    /**
+     * Where they LAND depends on whether they have a password yet — that
+     * branch is covered in customer-accounts.spec.ts. What this test is about
+     * is that the code signed them in and their own orders are there, so it
+     * goes to the account page and asserts that.
+     */
+    await expect(page.getByTestId('account-auth')).toHaveCount(0);
+    await page.goto('/en/account');
     await expect(page.getByTestId('account-page')).toBeVisible();
     await expect(page.getByTestId('account-orders')).toContainText('E2E-ACC-');
 
@@ -143,7 +145,7 @@ test.describe('shopper accounts', () => {
     expect(remaining).toBe(0);
 
     await page.getByTestId('account-signout').click();
-    await expect(page.getByTestId('account-login')).toBeVisible();
+    await expect(page.getByTestId('account-auth')).toBeVisible();
   });
 
   test('a shopper session cannot reach the admin', async ({ page, context }) => {

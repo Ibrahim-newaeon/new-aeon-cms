@@ -3,11 +3,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { orders, orderItems } from '@/lib/db/schema';
+import { orderItems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
 import { formatPrice } from '@/lib/money';
+import { accessOrder } from '@/lib/commerce/order-access';
+import { OrderLookup } from '@/components/site/order-lookup';
 import { locales, type Locale } from '@/lib/env';
 
 /**
@@ -40,17 +42,33 @@ const STATUS_LABEL: Record<string, { ar: string; en: string }> = {
 
 export default async function OrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; orderNumber: string }>;
+  searchParams: Promise<{ phone?: string }>;
 }) {
   const { locale, orderNumber } = await params;
   if (!locales.includes(locale as Locale)) notFound();
   if (!(await commerceEnabled())) notFound();
 
   const typedLocale = locale as Locale;
-  const rows = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber)).limit(1);
-  const order = rows[0];
-  if (!order) notFound();
+
+  /**
+   * Order numbers come from a sequence, so this page used to hand anyone
+   * counting upward every customer's name, phone and delivery address. Access
+   * now needs one of: this browser placed it, you are signed in and it is
+   * yours, or you supply the phone it was placed with.
+   */
+  const { phone } = await searchParams;
+  const access = await accessOrder(orderNumber, phone);
+
+  if (!access.allowed) {
+    // The same prompt whether or not the order exists, so this cannot be used
+    // to discover which numbers are real.
+    return <OrderLookup locale={typedLocale} orderNumber={orderNumber} notFound={!phone} />;
+  }
+
+  const order = access.order;
 
   const [items, settings] = await Promise.all([
     db.select().from(orderItems).where(eq(orderItems.orderId, order.id)),

@@ -10,6 +10,9 @@ import { formatPrice } from '@/lib/money';
 import { AddToCart } from '@/components/site/add-to-cart';
 import { ProductReviews } from '@/components/site/product-reviews';
 import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
+import { WishlistButton } from '@/components/site/wishlist-button';
+import { currentCustomer } from '@/lib/auth/customer-session';
+import { isWishlisted } from '@/lib/account/profile';
 import { locales, type Locale } from '@/lib/env';
 import { JsonLd } from '@/components/site/json-ld';
 import { productJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
@@ -49,9 +52,13 @@ export default async function ProductPage({ params }: Props) {
   // Only approved reviews reach the page, and the average is computed from the
   // same set rather than stored — a denormalised mean drifts the first time a
   // moderation path forgets to update it.
-  const [reviews, summary] = await Promise.all([
+  const shopper = await currentCustomer();
+
+  const [reviews, summary, saved] = await Promise.all([
     listApprovedReviews(product.id),
     reviewSummary(product.id),
+    // Only asked when there is somebody to ask about.
+    shopper ? isWishlisted(shopper.sub, product.id) : Promise.resolve(false),
   ]);
 
   /**
@@ -141,6 +148,13 @@ export default async function ProductPage({ params }: Props) {
           {/* C1 rendered these as read-only chips because there was no cart.
               Now they select a variant and add it. */}
           <AddToCart options={options} variants={selectable} locale={typedLocale} />
+
+          <WishlistButton
+            productId={product.id}
+            locale={typedLocale}
+            initial={saved}
+            signedIn={Boolean(shopper)}
+          />
 
           {product.description && (
             <p className="whitespace-pre-line text-site-ink-muted">{product.description}</p>

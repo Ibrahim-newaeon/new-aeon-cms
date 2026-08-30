@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { readCartCookie, writeCartCookie, addLine, setLineQty, addBundleLines } from '@/lib/commerce/cart';
+import { mirrorCart } from '@/lib/account/cart-sync';
 import { commerceEnabled } from '@/lib/commerce/guard';
 
 export const runtime = 'nodejs';
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
 
     if (body.action === 'clear') {
       await writeCartCookie({ lines: [] });
+      await mirrorCart({ lines: [] });
       return NextResponse.json({ success: true });
     }
 
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
       }
 
       await writeCartCookie(withBundle);
+      await mirrorCart(withBundle);
       return NextResponse.json({ success: true, data: { lines: withBundle.lines.length } });
     }
 
@@ -64,6 +67,8 @@ export async function POST(request: Request) {
         : setLineQty(cart, body.variantId, body.qty);
 
     await writeCartCookie(next);
+    // Mirrored for a signed-in shopper so the cart survives changing device.
+    await mirrorCart(next);
     return NextResponse.json({ success: true, data: { lines: next.lines.length } });
   } catch (error) {
     if (error instanceof z.ZodError) {

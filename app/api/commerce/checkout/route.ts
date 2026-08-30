@@ -5,6 +5,7 @@ import { readCartCookie, clearCart } from '@/lib/commerce/cart';
 import { placeOrder } from '@/lib/commerce/checkout';
 import { verifyCheckoutToken } from '@/lib/commerce/checkout-token';
 import { commerceEnabled } from '@/lib/commerce/guard';
+import { rememberOrder } from '@/lib/commerce/order-access';
 import { isValidMobile, isRegionOf, type ShippingRegion } from '@/lib/commerce/phone';
 import { getShippingRegions, getStoreCountry } from '@/lib/commerce/regions';
 import type { CountryCode } from 'libphonenumber-js';
@@ -147,6 +148,11 @@ export async function POST(request: Request) {
     if (!result.duplicate) {
       await notifyOrderPlaced(result.orderId, data.locale);
     }
+
+    // Lets the confirmation page open without an account: the order page no
+    // longer renders on the number alone, and a guest who just bought
+    // something must still be able to see what they bought.
+    await rememberOrder(result.orderNumber);
 
     return NextResponse.json({
       success: true,

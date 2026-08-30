@@ -479,6 +479,17 @@ export const customers = pgTable('customers', {
   phone: varchar('phone', { length: 32 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }),
+  /**
+   * Set only once someone REGISTERS. A row created by placing an order has
+   * none, which is the difference between "we know this buyer" and "this buyer
+   * has an account".
+   *
+   * Registering against a phone that already has orders therefore hands over
+   * that order history — so it requires proving the number by code first. See
+   * lib/account/register.ts.
+   */
+  passwordHash: text('password_hash'),
+  registeredAt: timestamp('registered_at'),
   governorate: varchar('governorate', { length: 100 }),
   city: varchar('city', { length: 100 }),
   addressLine: text('address_line'),
@@ -507,6 +518,63 @@ export const customerOtp = pgTable('customer_otp', {
   /** Counted down so a wrong guess costs something. */
   attemptsLeft: integer('attempts_left').notNull().default(5),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+/**
+ * A customer's saved addresses.
+ *
+ * Separate from the address fields on `customers`, which are a snapshot of
+ * wherever they last ordered. This is the book they choose from, so retyping a
+ * delivery address on every order stops being the default experience.
+ */
+export const customerAddresses = pgTable('customer_addresses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  label: varchar('label', { length: 100 }),
+  name: varchar('name', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 32 }).notNull(),
+  governorate: varchar('governorate', { length: 100 }).notNull(),
+  city: varchar('city', { length: 100 }).notNull(),
+  addressLine: text('address_line').notNull(),
+  landmark: text('landmark'),
+  /** Exactly one per customer, enforced by a partial unique index. */
+  isDefault: boolean('is_default').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  customerIdx: index('customer_addresses_customer_idx').on(table.customerId),
+  oneDefault: uniqueIndex('customer_addresses_one_default_idx')
+    .on(table.customerId)
+    .where(sql`is_default`),
+}));
+
+/**
+ * Saved products.
+ *
+ * Keyed on the PRODUCT, not a variant: a shopper saves "the amber oud", not
+ * "the 50ml in gold". Which variant they want is a decision for the product
+ * page, and pinning it here would break the moment that variant is retired.
+ */
+export const wishlistItems = pgTable('wishlist_items', {
+  customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.customerId, table.productId] }),
+  customerIdx: index('wishlist_customer_idx').on(table.customerId),
+}));
+
+/**
+ * A signed-in shopper's cart, so it survives changing device.
+ *
+ * The cookie remains the source of truth while browsing — it is what an
+ * anonymous visitor has, and reading it costs nothing. This is a mirror,
+ * written on change and merged back at sign-in, so a cart built on a phone is
+ * still there on a laptop.
+ */
+export const customerCarts = pgTable('customer_carts', {
+  customerId: uuid('customer_id').primaryKey().references(() => customers.id, { onDelete: 'cascade' }),
+  lines: jsonb('lines').$type<{ variantId: string; qty: number }[]>().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 export const shippingZones = pgTable('shipping_zones', {
