@@ -44,6 +44,7 @@ function buildNavigation(adminPath: string): NavItem[] {
     { key: 'nav.resources', href: `${adminPath}/content/resources`, icon: BookOpen },
     { key: 'nav.categories', href: `${adminPath}/content/categories`, icon: Tag },
     { key: 'nav.tags', href: `${adminPath}/content/tags`, icon: Layers },
+    { key: 'nav.contentTypes', href: `${adminPath}/content/types`, icon: Boxes },
     { key: 'nav.media', href: `${adminPath}/media`, icon: ImageIcon },
     { key: 'nav.navigation', href: `${adminPath}/navigation`, icon: Images },
     { key: 'nav.products', href: `${adminPath}/commerce/products`, icon: ShoppingBag, commerceOnly: true },

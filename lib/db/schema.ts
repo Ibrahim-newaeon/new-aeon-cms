@@ -101,6 +101,21 @@ export const contentTypes = pgTable('content_types', {
   hasCategories: boolean('has_categories').default(true),
   hasTags: boolean('has_tags').default(true),
   hasFeaturedImage: boolean('has_featured_image').default(true),
+  /**
+   * The URL segment this type's entries live under: /ar/{routePrefix}/{slug}.
+   *
+   * Null for `page`, whose entries sit at the site root, and for any type with
+   * no public presence. Everything else needs one, because /[locale]/[slug]
+   * already catches every bare path — which is why the table could hold a
+   * "Case study" type that had rows, an editor, and nowhere to live.
+   *
+   * Validated against the live route segments in lib/content/type-registry.ts.
+   * Next resolves a static segment ahead of a dynamic one, so a prefix of
+   * "shop" would not break the store; it would silently never resolve.
+   */
+  routePrefix: varchar('route_prefix', { length: 64 }).unique(),
+  /** page/post/resource, which own hand-built screens and cannot be deleted. */
+  isBuiltIn: boolean('is_built_in').default(false),
   customFields: jsonb('custom_fields'),
   isActive: boolean('is_active').default(true),
   sortOrder: integer('sort_order').default(0),
