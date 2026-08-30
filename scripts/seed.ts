@@ -9,7 +9,44 @@ import {
   variantOptionValues, shippingZones, tags,
 } from '../lib/db/schema';
 import { hashPassword } from '../lib/auth/password';
+import type { ContentBlock } from '../lib/blocks/types';
 import { eq, sql } from 'drizzle-orm';
+
+/**
+ * The placeholder paragraph, with "admin panel" as a real link.
+ *
+ * A `paragraph` block is plain text, so part of it cannot be a link — this is a
+ * `rich-text` block instead. The href comes from ADMIN_PATH rather than a
+ * hardcoded /admin: the panel is deliberately relocatable, and a seeded link
+ * pointing at the wrong place is worse than no link.
+ */
+function placeholderWithAdminLink(
+  before: string,
+  linkText: string,
+  after: string
+): ContentBlock {
+  const adminPath = process.env.ADMIN_PATH || '/admin';
+  return {
+    type: 'rich-text',
+    content: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: before },
+            {
+              type: 'text',
+              marks: [{ type: 'link', attrs: { href: adminPath } }],
+              text: linkText,
+            },
+            { type: 'text', text: after },
+          ],
+        },
+      ],
+    },
+  };
+}
 
 async function seed() {
   console.log('🌱 Seeding database...');
@@ -199,7 +236,7 @@ async function seed() {
               ],
             },
             { type: 'heading', level: 2, text: 'مرحباً بك' },
-            { type: 'paragraph', text: 'هذا محتوى تجريبي يمكنك تعديله من لوحة التحكم.' },
+            placeholderWithAdminLink('هذا محتوى تجريبي يمكنك تعديله من ', 'لوحة التحكم', '.'),
           ],
         },
         {
@@ -244,7 +281,7 @@ async function seed() {
               ],
             },
             { type: 'heading', level: 2, text: 'Welcome' },
-            { type: 'paragraph', text: 'This is placeholder content. Edit it from the admin panel.' },
+            placeholderWithAdminLink('This is placeholder content. Edit it from the ', 'admin panel', '.'),
           ],
         },
       ]);
