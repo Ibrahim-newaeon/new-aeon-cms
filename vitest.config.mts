@@ -27,6 +27,21 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    /**
+     * lib/env validates at import time and throws when these are missing, so a
+     * unit test could not import ANY module that transitively reaches it —
+     * lib/seo/json-ld needs the app URL to absolutise a link.
+     *
+     * Dummy values, not a relaxed schema: nothing here opens a connection or
+     * signs a token, and loosening the real validation to suit the tests would
+     * remove the check that a misconfigured deployment fails loudly at boot.
+     */
+    env: {
+      DATABASE_URL: 'postgres://test:test@localhost:5432/test',
+      JWT_ACCESS_SECRET: 'test-access-secret-not-used-for-anything-real',
+      JWT_REFRESH_SECRET: 'test-refresh-secret-not-used-for-anything-real',
+      NEXT_PUBLIC_APP_URL: 'https://example.test',
+    },
     coverage: {
       provider: 'v8',
       include: ['lib/**/*.ts'],

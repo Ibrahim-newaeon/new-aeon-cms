@@ -11,6 +11,8 @@ import { AddToCart } from '@/components/site/add-to-cart';
 import { ProductReviews } from '@/components/site/product-reviews';
 import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
 import { locales, type Locale } from '@/lib/env';
+import { JsonLd } from '@/components/site/json-ld';
+import { productJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
 
 interface Props {
   params: Promise<{ locale: string; slug: string }>;
@@ -41,7 +43,7 @@ export default async function ProductPage({ params }: Props) {
   if (!record) notFound();
 
   const currency = settings?.currency ?? 'JOD';
-  const { product, images, specs, options, selectable, inStock } = record;
+  const { product, images, specs, options, selectable, variants, inStock } = record;
   const ar = typedLocale === 'ar';
 
   // Only approved reviews reach the page, and the average is computed from the
@@ -52,8 +54,38 @@ export default async function ProductPage({ params }: Props) {
     reviewSummary(product.id),
   ]);
 
+  /**
+   * Structured data, built from the same values the page renders below rather
+   * than from a second query — Google flags a rich result whose price or
+   * availability disagrees with the visible page, and two queries are exactly
+   * how that disagreement gets in.
+   */
+  const productSchema = productJsonLd({
+    slug: product.slug,
+    name: product.name,
+    description: product.metaDescription || product.shortDesc || product.description,
+    // Only when the product IS one item. With several variants the page shows a
+    // selector, and no single SKU describes what is on offer.
+    sku: variants.length === 1 ? variants[0]!.sku : null,
+    images: images.map((img) => img.url),
+    basePrice: product.basePrice,
+    currency,
+    locale: typedLocale,
+    inStock,
+    variants: variants.map((v) => ({ price: v.price, stock: v.stock })),
+    rating: summary.count > 0 ? { average: summary.average, count: summary.count } : null,
+  });
+
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: ar ? 'المتجر' : 'Shop', path: `/${typedLocale}/shop` },
+    { name: product.name, path: `/${typedLocale}/products/${product.slug}` },
+  ]);
+
   return (
     <article className="mx-auto max-w-6xl px-4 py-16">
+      <JsonLd data={productSchema} />
+      <JsonLd data={breadcrumbs} />
+
       <div className="grid gap-10 lg:grid-cols-2">
         <div className="space-y-3">
           {/* The main product shot is the LCP element on this page. */}
