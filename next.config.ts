@@ -31,8 +31,18 @@ function mediaRemotePattern(): { protocol: 'http' | 'https'; hostname: string }[
 }
 
 const nextConfig: NextConfig = {
-  // Required by docker/Dockerfile, which copies .next/standalone.
-  output: 'standalone',
+  /**
+   * Required by docker/Dockerfile, which copies .next/standalone — so it stays
+   * the default and a plain `npm run build` is unchanged.
+   *
+   * `next start` refuses to serve a standalone build ("does not work with
+   * output: standalone"), and the browser suite's webServer is exactly that.
+   * It ran anyway on a warning, which is a bad thing to leave in a test
+   * harness: the next Next release could turn it into a hard failure and the
+   * suite would break for a reason unrelated to any change. `npm run test:e2e`
+   * sets NEXT_STANDALONE=0 so the build it tests is one `next start` supports.
+   */
+  output: process.env.NEXT_STANDALONE === '0' ? undefined : 'standalone',
 
   // NOTE: `experimental.ppr` and `experimental.dynamicIO` are canary-only.
   // They throw on the pinned stable release (next@15.1.0). Re-enable only

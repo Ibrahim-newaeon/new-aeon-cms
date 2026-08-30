@@ -3,12 +3,26 @@
 // NOTE: relative imports, not '@/...'. tsx does NOT resolve tsconfig `paths`
 // by default, so the alias form fails with "Cannot find module '@/lib/db'".
 import { db } from '../lib/db';
-import { users, settings, categories, categoryI18n, contentTypes, content, contentI18n } from '../lib/db/schema';
+import {
+  users, settings, categories, categoryI18n, contentTypes, content, contentI18n,
+  brands, products, productI18n, productImages, productOptions, productVariants,
+  variantOptionValues, shippingZones, tags,
+} from '../lib/db/schema';
 import { hashPassword } from '../lib/auth/password';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 async function seed() {
   console.log('🌱 Seeding database...');
+
+  /**
+   * Mirrors migration 0006. `drizzle-kit push` syncs the schema but never runs
+   * the SQL migration files, so a database built the documented dev way
+   * (db:push then db:seed) had no order_number_seq — and checkout died on
+   * `SELECT nextval('order_number_seq')` with a 500 that looked like a bug in
+   * pricing rather than a missing object. IF NOT EXISTS, so this is a no-op on
+   * a database built with db:migrate.
+   */
+  await db.execute(sql`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1000`);
 
   const [pageType] = await db
     .insert(contentTypes)
@@ -79,6 +93,28 @@ async function seed() {
     console.log('✅ Default settings created');
   }
 
+  /**
+   * Contact details, only when they are still empty.
+   *
+   * Two things depend on them: the footer's "contact us" column renders an
+   * empty list without them, and order alerts fall back to settings.contactEmail
+   * when MAIL_ADMIN_TO is unset — the source of "[mail] no store recipient
+   * configured" on every seeded order.
+   *
+   * Guarded on null rather than written unconditionally: this runs against
+   * databases that already have real values, and a seed must never overwrite
+   * the address a live store actually uses. The placeholder is an example.com
+   * address on purpose, so a misconfigured staging box cannot mail a person.
+   */
+  const [currentSettings] = await db.select().from(settings).limit(1);
+  if (currentSettings && !currentSettings.contactEmail && !currentSettings.contactPhone) {
+    await db
+      .update(settings)
+      .set({ contactEmail: 'store@example.com', contactPhone: '+962 7 9000 0000' })
+      .where(eq(settings.id, currentSettings.id));
+    console.log('✅ Placeholder contact details set');
+  }
+
   const existingCategory = await db
     .select()
     .from(categories)
@@ -143,6 +179,218 @@ async function seed() {
         },
       ]);
       console.log('✅ Home page created (ar + en)');
+    }
+  }
+
+  /**
+   * A second published page. The public-site specs read it, and more
+   * importantly a CMS seeded with exactly one page gives no way to see how a
+   * list of pages, a nav link or a slug route behaves.
+   */
+  const existingAbout = await db
+    .select()
+    .from(content)
+    .where(eq(content.slug, 'about-us'))
+    .limit(1);
+
+  if (!existingAbout.length && pageTypeRow) {
+    const [about] = await db
+      .insert(content)
+      .values({
+        typeId: pageTypeRow.id,
+        slug: 'about-us',
+        authorId: adminId,
+        status: 'published',
+        publishedAt: new Date(),
+      })
+      .returning();
+
+    if (about) {
+      await db.insert(contentI18n).values([
+        {
+          contentId: about.id,
+          locale: 'ar',
+          title: 'من نحن',
+          excerpt: 'تعرّف على القصة خلف نيو إيون.',
+          body: [
+            { type: 'heading', level: 2, text: 'قصتنا' },
+            { type: 'paragraph', text: 'نبني أدوات محتوى وتجارة تعمل بالعربية أولاً.' },
+          ],
+        },
+        {
+          contentId: about.id,
+          locale: 'en',
+          title: 'About us',
+          excerpt: 'The story behind New Aeon.',
+          body: [
+            { type: 'heading', level: 2, text: 'Our story' },
+            { type: 'paragraph', text: 'We build content and commerce tools that work in Arabic first.' },
+          ],
+        },
+      ]);
+      console.log('✅ About page created (ar + en)');
+    }
+  }
+
+  /**
+   * Deliberately left untranslated. tags.name is a reference name that renders
+   * when a locale has no tag_i18n row, and a seed where every tag is fully
+   * translated would never exercise that fallback.
+   */
+  const existingTag = await db.select().from(tags).where(eq(tags.slug, 'announcements')).limit(1);
+  if (!existingTag.length) {
+    await db.insert(tags).values({ slug: 'announcements', name: 'Announcements' });
+    console.log('✅ Sample tag created (untranslated, exercises the name fallback)');
+  }
+
+  /**
+   * Commerce fixtures.
+   *
+   * These were missing, which made the browser suite unrunnable from a clean
+   * database: e2e/global-setup.ts refuses to start without an active shipping
+   * zone covering "amman", and e2e/fixtures.ts points every commerce spec at a
+   * product slug that nothing created. The error message even said "Run
+   * npm run db:seed" — the command that did not create them.
+   *
+   * A shop with no catalogue is also a poor thing to develop against: /shop
+   * renders empty, so nothing about the storefront can be judged.
+   *
+   * Prices are in MINOR units (see lib/money.ts). Seed currency is JOD, whose
+   * minor unit is fils, so 129000 is 129.000 JOD.
+   */
+  const [generalCategory] = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.slug, 'general'))
+    .limit(1);
+
+  const existingZone = await db
+    .select()
+    .from(shippingZones)
+    .where(eq(shippingZones.name, 'Central'))
+    .limit(1);
+
+  if (!existingZone.length) {
+    await db.insert(shippingZones).values({
+      name: 'Central',
+      // Checkout refuses a governorate no active zone covers, and the browser
+      // suite selects "amman", so that value has to be in here verbatim.
+      governorates: ['amman', 'zarqa', 'balqa', 'madaba'],
+      flatRate: 3000,
+      freeOver: 100000,
+      etaDays: 2,
+      isActive: true,
+      sortOrder: 1,
+    });
+    console.log('✅ Shipping zone created (amman, zarqa, balqa, madaba)');
+  }
+
+  const existingProduct = await db
+    .select()
+    .from(products)
+    .where(eq(products.slug, 'amber-oud'))
+    .limit(1);
+
+  if (!existingProduct.length) {
+    const [brand] = await db
+      .insert(brands)
+      .values({ slug: 'aeon-atelier', name: 'Aeon Atelier', isActive: true, sortOrder: 1 })
+      .onConflictDoNothing()
+      .returning();
+
+    const [product] = await db
+      .insert(products)
+      .values({
+        slug: 'amber-oud',
+        brandId: brand?.id,
+        categoryId: generalCategory?.id,
+        basePrice: 129000,
+        isActive: true,
+        sortOrder: 1,
+      })
+      .returning();
+
+    if (product) {
+      // Both locales, so /ar/shop is not an empty grid on a site whose default
+      // locale is Arabic. The specs pin `en` for stable assertions.
+      await db.insert(productI18n).values([
+        {
+          productId: product.id,
+          locale: 'ar',
+          name: 'عنبر وعود',
+          shortDesc: 'عطر شرقي دافئ بالعنبر والعود.',
+          description: 'عطر شرقي دافئ يجمع العنبر والعود، بثبات طويل.',
+        },
+        {
+          productId: product.id,
+          locale: 'en',
+          name: 'Amber Oud',
+          shortDesc: 'A warm oriental blend of amber and oud.',
+          description: 'A warm oriental fragrance built on amber and oud, with long wear.',
+        },
+      ]);
+
+      const [sizeOption] = await db
+        .insert(productOptions)
+        .values({ productId: product.id, name: 'Size', position: 0 })
+        .returning();
+
+      // Two variants so the option picker on the product page has something to
+      // pick, which is what the add-to-cart spec drives.
+      const variantRows = await db
+        .insert(productVariants)
+        .values([
+          { productId: product.id, sku: 'AMBER-OUD-50', price: 129000, stock: 50, weightGrams: 220 },
+          { productId: product.id, sku: 'AMBER-OUD-100', price: 199000, stock: 50, weightGrams: 350 },
+        ])
+        .returning();
+
+      if (sizeOption) {
+        await db.insert(variantOptionValues).values(
+          variantRows.map((variant) => ({
+            variantId: variant.id,
+            optionId: sizeOption.id,
+            value: variant.sku.endsWith('-50') ? '50ml' : '100ml',
+          }))
+        );
+      }
+
+      console.log('✅ Sample product created: amber-oud (2 variants, ar + en)');
+    }
+  }
+
+  /**
+   * Keyed on the image rather than the product, so a database seeded before
+   * this existed picks it up too. Every block above guards on "does the parent
+   * row exist", which silently skips anything added to an existing branch
+   * later — this one has to stand on its own.
+   *
+   * A committed placeholder under public/seed, NOT public/uploads: that
+   * directory is gitignored user content, so anything referenced from there is
+   * missing on every other machine. The shop grid renders it through
+   * next/image, which is also what proves the optimiser is wired up.
+   */
+  const [seededProduct] = await db
+    .select()
+    .from(products)
+    .where(eq(products.slug, 'amber-oud'))
+    .limit(1);
+
+  if (seededProduct) {
+    const existingImages = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, seededProduct.id))
+      .limit(1);
+
+    if (!existingImages.length) {
+      await db.insert(productImages).values({
+        productId: seededProduct.id,
+        url: '/seed/amber-oud.png',
+        alt: 'Amber Oud',
+        sortOrder: 0,
+      });
+      console.log('✅ Product image attached: /seed/amber-oud.png');
     }
   }
 

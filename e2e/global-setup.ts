@@ -35,6 +35,24 @@ export default async function globalSetup() {
       );
     }
 
+    /**
+     * Checkout draws its order number from a sequence created by migration
+     * 0006, and `drizzle-kit push` does not run migration SQL. A database built
+     * with db:push therefore has no sequence, and every checkout spec failed as
+     * a 25-second navigation timeout — the slowest, least informative way to
+     * learn that one database object is missing. The seed now creates it; this
+     * says so plainly if someone arrives here another way.
+     */
+    const seq = await db.query(
+      `select count(*)::int as n from pg_class where relkind = 'S' and relname = 'order_number_seq'`
+    );
+    if (seq.rows[0].n === 0) {
+      throw new Error(
+        'order_number_seq is missing, so checkout cannot allocate an order number. ' +
+          'Run npm run db:seed (or npm run db:migrate).'
+      );
+    }
+
     const admin = await db.query(`select count(*)::int as n from users where email = $1`, [
       'admin@newaeon.com',
     ]);

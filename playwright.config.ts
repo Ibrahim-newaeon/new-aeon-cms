@@ -88,7 +88,10 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `npx next start --port ${PORT}`,
+    // NEXT_STANDALONE=0 here as well as in the build script: next.config is
+    // re-read by `next start`, and without it the server warns that it cannot
+    // serve a standalone build even though the build itself was not one.
+    command: `NEXT_STANDALONE=0 npx next start --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

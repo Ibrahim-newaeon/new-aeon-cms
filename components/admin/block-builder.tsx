@@ -27,12 +27,26 @@ interface BlockBuilderProps {
   onChange: (blocks: ContentBlock[]) => void;
   /** Set by NestedBlocksEditor. See the drag handle in BlockItem. */
   nested?: boolean;
+  /**
+   * Prefix for this builder's data-test-id values. Accordion and tabs recurse
+   * into another BlockBuilder, so without a prefix an inner list emits the same
+   * ids as the outer one — `block-drag-0` existed twice on the page and a
+   * selector could match either. Each nesting level extends the prefix, so a
+   * nested handle reads `block-0-0-drag-0`. Top level keeps the bare `block-`
+   * names.
+   */
+  testScope?: string;
 }
 
 let keyCounter = 0;
 const nextKey = () => `blk-${(keyCounter += 1)}`;
 
-export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderProps) {
+export function BlockBuilder({
+  blocks,
+  onChange,
+  nested = false,
+  testScope = 'block',
+}: BlockBuilderProps) {
   const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -138,7 +152,7 @@ export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderP
   };
 
   return (
-    <div className="space-y-4" data-test-id="block-builder">
+    <div className="space-y-4" data-test-id={`${testScope}-builder`}>
       {blocks.length === 0 && (
         <p className="rounded-lg border border-dashed border-[var(--admin-line)] p-8 text-center text-sm text-[var(--admin-text-muted)]">
           {t('blocks.empty')}
@@ -168,6 +182,7 @@ export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderP
                   total={blocks.length}
                   block={block}
                   nested={nested}
+                  testScope={testScope}
                   isExpanded={expanded === key}
                   onToggle={() => setExpanded(expanded === key ? null : key)}
                   onUpdate={(b) => updateBlock(idx, b)}
@@ -187,7 +202,7 @@ export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderP
           aria-expanded={showAddMenu}
           aria-haspopup="menu"
           className="admin-btn-primary w-full"
-          data-test-id="block-add"
+          data-test-id={`${testScope}-add`}
         >
           <Plus size={18} aria-hidden="true" />
           {t('blocks.add')}
@@ -220,7 +235,7 @@ export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderP
                     type="button"
                     role="menuitem"
                     onClick={() => addBlock(type)}
-                    data-test-id={`block-add-${type}`}
+                    data-test-id={`${testScope}-add-${type}`}
                     className="flex items-center justify-between gap-2 rounded px-3 py-2 text-start text-sm transition-colors hover:bg-white/5"
                   >
                     <span>{t(BLOCK_LABEL_KEYS[type])}</span>
@@ -245,6 +260,7 @@ function BlockItem({
   sortId,
   domId,
   nested,
+  testScope,
   index,
   total,
   block,
@@ -257,6 +273,7 @@ function BlockItem({
   sortId: string;
   domId: string;
   nested: boolean;
+  testScope: string;
   index: number;
   total: number;
   block: ContentBlock;
@@ -273,6 +290,10 @@ function BlockItem({
   return (
     <li
       ref={setNodeRef}
+      // The visible label is translated, so it cannot be asserted on without
+      // pinning the suite to one admin language. This exposes the type itself.
+      data-block-type={block.type}
+      data-test-id={`${testScope}-item-${index}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         'rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)]',
@@ -300,7 +321,7 @@ function BlockItem({
           {...listeners}
           tabIndex={nested ? -1 : attributes.tabIndex}
           aria-label={t('blocks.dragHandle', { n: index + 1 })}
-          data-test-id={`block-drag-${index}`}
+          data-test-id={`${testScope}-drag-${index}`}
           className="cursor-grab touch-none rounded p-1 text-[var(--admin-text-muted)] hover:bg-white/5 active:cursor-grabbing"
         >
           <GripVertical size={16} aria-hidden="true" />
@@ -320,7 +341,7 @@ function BlockItem({
           onClick={() => onMove(-1)}
           disabled={index === 0}
           aria-label={t('blocks.moveUp', { n: index + 1 })}
-          data-test-id={`block-up-${index}`}
+          data-test-id={`${testScope}-up-${index}`}
           className="rounded p-1.5 hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronUp size={16} aria-hidden="true" />
@@ -331,7 +352,7 @@ function BlockItem({
           onClick={() => onMove(1)}
           disabled={index === total - 1}
           aria-label={t('blocks.moveDown', { n: index + 1 })}
-          data-test-id={`block-down-${index}`}
+          data-test-id={`${testScope}-down-${index}`}
           className="rounded p-1.5 hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronDown size={16} aria-hidden="true" />
@@ -343,7 +364,7 @@ function BlockItem({
           aria-expanded={isExpanded}
           aria-controls={domId}
           aria-label={isExpanded ? t('blocks.collapse') : t('blocks.expand')}
-          data-test-id={`block-toggle-${index}`}
+          data-test-id={`${testScope}-toggle-${index}`}
           className="rounded p-1.5 hover:bg-white/5"
         >
           <ChevronDown
@@ -357,7 +378,7 @@ function BlockItem({
           type="button"
           onClick={onRemove}
           aria-label={t('blocks.deleteSection', { n: index + 1 })}
-          data-test-id={`block-remove-${index}`}
+          data-test-id={`${testScope}-remove-${index}`}
           className="rounded p-1.5 text-red-400 hover:bg-red-500/10"
         >
           <Trash2 size={16} aria-hidden="true" />
@@ -371,6 +392,7 @@ function BlockItem({
           ) : block.type === 'accordion' ? (
             <NestedBlocksEditor
               entries={block.items}
+              testScope={`${testScope}-${index}`}
               labelKey="title"
               labelText={t('blocks.itemTitle')}
               addLabel={t('blocks.addItem')}
@@ -379,6 +401,7 @@ function BlockItem({
           ) : block.type === 'tabs' ? (
             <NestedBlocksEditor
               entries={block.items}
+              testScope={`${testScope}-${index}`}
               labelKey="label"
               labelText={t('blocks.tabName')}
               addLabel={t('blocks.addTab')}
@@ -403,12 +426,14 @@ function BlockItem({
  */
 function NestedBlocksEditor<K extends 'title' | 'label'>({
   entries,
+  testScope,
   labelKey,
   labelText,
   addLabel,
   onChange,
 }: {
   entries: Array<{ content: ContentBlock[] } & Record<K, string>>;
+  testScope: string;
   labelKey: K;
   labelText: string;
   addLabel: string;
@@ -421,7 +446,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
   ) => onChange(entries.map((e, i) => (i === index ? { ...e, ...patch } : e)));
 
   return (
-    <div className="space-y-3" data-test-id="nested-blocks-editor">
+    <div className="space-y-3" data-test-id={`${testScope}-items`}>
       {entries.map((entry, index) => (
         <div
           key={index}
@@ -441,7 +466,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
                     { content: ContentBlock[] } & Record<K, string>
                   >)
                 }
-                data-test-id={`nested-label-${index}`}
+                data-test-id={`${testScope}-label-${index}`}
               />
             </label>
             <button
@@ -457,6 +482,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
           <div className="border-s-2 border-[var(--admin-line)] ps-3">
             <BlockBuilder
               nested
+              testScope={`${testScope}-${index}`}
               blocks={entry.content}
               onChange={(content) =>
                 update(index, { content } as Partial<
@@ -479,7 +505,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
           ])
         }
         className="admin-btn-ghost w-full justify-center border border-dashed border-[var(--admin-line)]"
-        data-test-id="nested-add"
+        data-test-id={`${testScope}-add-item`}
       >
         <Plus size={14} aria-hidden="true" />
         {addLabel}
