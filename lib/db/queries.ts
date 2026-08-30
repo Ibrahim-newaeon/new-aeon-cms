@@ -1,7 +1,7 @@
 // /lib/db/queries.ts
 import { db } from './index';
-import { content, contentI18n, categories, categoryI18n, navigation, navigationI18n, settings, tags, mediaAssets, users, contentTypes } from './schema';
-import { eq, and, desc, asc, sql, count } from 'drizzle-orm';
+import { content, contentI18n, categories, categoryI18n, navigation, navigationI18n, settings, users, contentTypes, contentStatusEnum } from './schema';
+import { eq, and, desc, asc, sql } from 'drizzle-orm';
 
 /** Row shape returned by getSettings(). */
 export type SiteSettings = typeof settings.$inferSelect;
@@ -10,10 +10,13 @@ export async function getUserByEmail(email: string) {
   return db.select().from(users).where(eq(users.email, email)).limit(1);
 }
 
-export async function getContentList(typeId?: string, status?: string, locale: 'ar' | 'en' = 'ar') {
+/** Narrower than `string`: the column is an enum, and `as any` was hiding that. */
+type ContentStatus = (typeof contentStatusEnum.enumValues)[number];
+
+export async function getContentList(typeId?: string, status?: ContentStatus, locale: 'ar' | 'en' = 'ar') {
   const conditions = [];
   if (typeId) conditions.push(eq(content.typeId, typeId));
-  if (status) conditions.push(eq(content.status, status as any));
+  if (status) conditions.push(eq(content.status, status));
   
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   
@@ -121,7 +124,7 @@ export async function updateSettings(data: Partial<typeof settings.$inferInsert>
       .where(eq(settings.id, 1))
       .returning();
   }
-  return db.insert(settings).values(data as any).returning();
+  return db.insert(settings).values(data).returning();
 }
 
 export async function getContentTypeBySlug(slug: string) {

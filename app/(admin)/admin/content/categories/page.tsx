@@ -1,7 +1,7 @@
 // app/(admin)/admin/content/categories/page.tsx
 import { db } from '@/lib/db';
 import { categories, categoryI18n } from '@/lib/db/schema';
-import { asc, eq } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import { CategoriesManager, type CategoryRow } from '@/components/admin/categories-manager';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';

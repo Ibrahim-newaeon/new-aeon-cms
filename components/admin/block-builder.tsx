@@ -8,10 +8,9 @@ import {
   useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, sortableKeyboardCoordinates, useSortable,
+  SortableContext, sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { RichTextBlockEditor } from './rich-text-block-editor';
 import { BlockEditor } from './block-editors';
@@ -44,9 +43,13 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
    */
   const [keys, setKeys] = useState<string[]>(() => blocks.map(nextKey));
 
+  // Deliberately keyed on the length alone: depending on `blocks` would re-run
+  // this on every keystroke in a block. The body is a no-op for equal lengths,
+  // so the extra runs would be harmless but pointless.
   useEffect(() => {
     // Resync if blocks are replaced wholesale (e.g. switching locale tab).
     setKeys((prev) => (prev.length === blocks.length ? prev : blocks.map(nextKey)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocks.length]);
 
   // Close the picker on outside click or Escape.
@@ -139,6 +142,12 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
         </p>
       )}
 
+      {/* Drag-and-drop is wired at the container only: the context, sensors and
+          onDragEnd reorder correctly, but no BlockItem calls useSortable, so
+          nothing is draggable and this does nothing yet. The grip in the header
+          is decorative for the same reason. Finishing it means making BlockItem
+          sortable on its key; the reorder handler is already correct. Until
+          then the up/down buttons are the only way to reorder. */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={keys} strategy={verticalListSortingStrategy}>
           <ul className="space-y-4" id={listId}>
@@ -147,7 +156,6 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
               return (
                 <BlockItem
                   key={key}
-                  sortId={key}
                   domId={`${listId}-${key}`}
                   index={idx}
                   total={blocks.length}
@@ -226,7 +234,6 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
 }
 
 function BlockItem({
-  sortId,
   domId,
   index,
   total,
@@ -237,7 +244,6 @@ function BlockItem({
   onRemove,
   onMove,
 }: {
-  sortId: string;
   domId: string;
   index: number;
   total: number;
@@ -252,8 +258,9 @@ function BlockItem({
   return (
     <li className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)]">
       <div className="flex items-center gap-2 p-3 border-b border-[var(--admin-line)]">
-        {/* Decorative only — there is no drag-and-drop yet, so it must not
-            look interactive (it previously had cursor-grab). */}
+        {/* Decorative only — see the note on DndContext above: nothing is
+            sortable yet, so it must not look interactive (it previously had
+            cursor-grab). */}
         <GripVertical size={16} aria-hidden="true" className="text-[var(--admin-text-muted)]" />
 
         <span className="flex-1 text-sm font-medium">

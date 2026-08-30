@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { navLocations, type NavLocation } from '@/lib/navigation-schema';
 import { useT } from './i18n-provider';
-import type { MessageKey, Translator } from '@/lib/admin-i18n';
+import type { MessageKey } from '@/lib/admin-i18n';
 
 export interface NavRow {
   id: string;

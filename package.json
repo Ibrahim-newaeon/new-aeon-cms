@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
@@ -36,7 +36,6 @@
     "argon2": "^0.41.0",
     "clsx": "^2.1.0",
     "drizzle-orm": "^0.45.2",
-    "eslint-config-next": "^15.5.24",
     "ioredis": "^6.0.0",
     "jose": "^5.9.0",
     "lucide-react": "^0.468.0",
@@ -54,6 +53,7 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.0.0",
@@ -65,6 +65,8 @@
     "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.0",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.24",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.19.0",

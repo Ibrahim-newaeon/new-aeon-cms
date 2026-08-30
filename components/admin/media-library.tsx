@@ -152,7 +152,7 @@ export function MediaLibrary({
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
-  }, []);
+  }, [t]);
 
   const remove = async (id: string) => {
     if (!window.confirm(t('media.deleteConfirm'))) return;

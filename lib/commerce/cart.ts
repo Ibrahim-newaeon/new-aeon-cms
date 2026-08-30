@@ -5,7 +5,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { products, productI18n, productImages, productVariants, productOptions, variantOptionValues, productBundles, bundleItems } from '@/lib/db/schema';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 export const CART_COOKIE = 'cart';
 export const MAX_LINES = 20;

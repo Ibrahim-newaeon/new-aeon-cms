@@ -34,7 +34,6 @@ describe('sanitizeRichHtml', () => {
     for (const href of [
       'javascript:alert(1)',
       'JaVaScRiPt:alert(1)',
-      // eslint-disable-next-line no-script-url
       'javascript:void(0)',
       'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==',
       'vbscript:msgbox(1)',

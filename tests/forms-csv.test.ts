@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   neutraliseFormula,
   csvField,
-  csvRow,
   buildCsv,
   csvFilename,
   submissionsToCsv,

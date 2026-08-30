@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import {
   LayoutGrid, Package, Tag, Layers, ShoppingBag, Images, ImageIcon,
-  Ticket, Truck, Settings, ShieldCheck, FileText, Link2, Users, LogOut, ExternalLink, Star, Boxes,
+  Ticket, Truck, Settings, ShieldCheck, FileText, Link2, LogOut, ExternalLink, Star, Boxes,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand-mark';
