@@ -109,17 +109,18 @@ export function SliderBlock({
       aria-label={copy.region}
       className={cn(
         'relative overflow-hidden bg-gray-100',
-        block.variant === 'main'
-          ? // Full bleed. Both pages wrap their blocks in `max-w-4xl mx-auto`,
-            // so a hero has to break out of that container to reach the edges.
-            // `calc(50% - 50vw)` on each side is the standard escape; the
-            // matching `overflow-x: clip` on <main> absorbs the scrollbar
-            // width that 100vw includes and the visible area does not, which
-            // would otherwise give the whole page a horizontal scrollbar.
-            'mx-[calc(50%-50vw)] w-screen max-w-[100vw]'
-          : // Inner sliders sit inside the text column, so they keep the
-            // container's width and its rounded corners.
-            'rounded-xl'
+        // Full bleed, both placements. Every page wraps its blocks in
+        // `max-w-4xl mx-auto`, so a slider has to break out of that container
+        // to reach the edges. `calc(50% - 50vw)` on each side is the escape;
+        // the matching `overflow-x: clip` on <main> absorbs the scrollbar
+        // width that 100vw includes and the visible area does not, which would
+        // otherwise give the whole page a horizontal scrollbar.
+        //
+        // No rounded corners either way: a shape that reaches the edges cannot
+        // have them without looking clipped. The variants still differ in what
+        // they accept and how many slides they take — see SLIDER_LIMITS — just
+        // no longer in width.
+        'mx-[calc(50%-50vw)] w-screen max-w-[100vw]'
       )}
       data-test-id="slider"
       data-variant={block.variant}

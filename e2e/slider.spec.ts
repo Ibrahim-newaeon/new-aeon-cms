@@ -162,17 +162,23 @@ test.describe('inner-page slider', () => {
     expect(order!.sliderBeforeBody).toBe(true);
   });
 
-  test('it stays inside the text column rather than going full bleed', async ({ page }) => {
+  test('it runs full bleed as well, without a horizontal scrollbar', async ({ page }) => {
     await page.goto('/en/about-us');
 
     const slider = page.getByTestId('slider');
     await expect(slider).toHaveAttribute('data-variant', 'inner');
 
-    // The opposite of the hero: an inner slider is part of the article, so it
-    // keeps the column width instead of escaping it.
+    // Both placements break out of the article's max-w-4xl column now. What
+    // still separates them is media and slide count, not width.
     const box = await slider.boundingBox();
     const viewport = await page.evaluate(() => document.documentElement.clientWidth);
-    expect(box!.width).toBeLessThan(viewport);
+    expect(Math.round(box!.width)).toBe(viewport);
+    expect(Math.round(box!.x)).toBe(0);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 
   test('it still rotates and stays inside a phone viewport', async ({ page }) => {
