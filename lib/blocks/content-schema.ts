@@ -1,5 +1,6 @@
 // lib/blocks/content-schema.ts
 import { z } from 'zod';
+import { ALL_BLOCK_TYPES, type BlockType } from './defaults';
 import type { ContentBlock } from './types';
 
 /**
@@ -11,13 +12,15 @@ import type { ContentBlock } from './types';
  * all 30 variants deeply here would duplicate those schemas and reject
  * content authored before a field was added.
  */
-const BLOCK_TYPES = [
-  'heading', 'paragraph', 'rich-text', 'image', 'gallery', 'video', 'quote',
-  'embed', 'button', 'divider', 'spacer', 'html', 'table', 'accordion', 'tabs',
-  'cta', 'feature-grid', 'testimonial', 'team', 'stats', 'timeline',
-  'comparison', 'pricing', 'map', 'contact-form', 'newsletter', 'social-links',
-  'recent-posts', 'product-grid', 'custom',
-] as const;
+/**
+ * Derived, not restated.
+ *
+ * This was a second hand-written list of the 30 block types, and the two drifted
+ * the moment one was added. The failure was silent and total: an unrecognised
+ * type fails the array parse, and asContentBlocks used to return [] for the
+ * whole body — one unknown block erased an entire page.
+ */
+const BLOCK_TYPES = ALL_BLOCK_TYPES as [BlockType, ...BlockType[]];
 
 export const blockSchema = z
   .object({ type: z.enum(BLOCK_TYPES) })
@@ -25,10 +28,21 @@ export const blockSchema = z
 
 export const blockArraySchema = z.array(blockSchema).max(200);
 
-/** Narrowing cast used where Zod's passthrough output meets the column type. */
+/**
+ * Reading stored content, which is a different job from validating a save.
+ *
+ * Per entry, not all-or-nothing. A body written by a newer deploy — or hand
+ * edited, or restored from an older dump — can contain a type this build does
+ * not know, and blanking the entire page over one bad block turns a cosmetic
+ * gap into a blank page. Unknown entries are dropped and the rest renders; the
+ * renderer's default arm already handles anything that slips through.
+ *
+ * Writes stay strict: translationSchema below uses blockArraySchema directly,
+ * so the API still rejects a bad block instead of quietly discarding it.
+ */
 export function asContentBlocks(value: unknown): ContentBlock[] {
-  const parsed = blockArraySchema.safeParse(value);
-  return parsed.success ? (parsed.data as unknown as ContentBlock[]) : [];
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry) => blockSchema.safeParse(entry).success) as ContentBlock[];
 }
 
 export const translationSchema = z.object({

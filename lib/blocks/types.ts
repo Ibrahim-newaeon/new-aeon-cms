@@ -53,6 +53,38 @@ export type ContentBlock =
    */
   | { type: 'rich-text'; content: Record<string, unknown> }
   | { type: 'table'; rows: number; cols: number; data: string[][]; headerRow?: boolean }
+  /**
+   * Rotating hero slider. Independent of commerce: a slide is an image plus
+   * optional words and one link, so it works on a content home page and on a
+   * shop home page, and a slide can point at a product URL without this block
+   * knowing what a product is.
+   */
+  | {
+      type: 'slider';
+      /**
+       * Which placement's rules apply. See SLIDER_LIMITS in lib/blocks/slider:
+       * `main` is the home hero (image or video, up to 5), `inner` is for
+       * ordinary pages (images only, up to 2).
+       */
+      variant: 'main' | 'inner';
+      slides: {
+        kind: 'image' | 'video';
+        /** Image URL, or a video file URL for kind: 'video'. */
+        src: string;
+        /** Still shown before a video paints, and instead of it when the
+         *  visitor has asked for reduced motion. */
+        poster?: string;
+        alt?: string;
+        title?: string;
+        text?: string;
+        buttonText?: string;
+        buttonUrl?: string;
+      }[];
+      autoplay: boolean;
+      /** Milliseconds per slide. Clamped by the editor and the component. */
+      intervalMs: number;
+      height: 'short' | 'medium' | 'tall';
+    }
   | { type: 'accordion'; items: { title: string; content: ContentBlock[] }[] }
   | { type: 'tabs'; items: { label: string; content: ContentBlock[] }[] }
   | { type: 'cta'; title: string; text: string; button: { text: string; url: string }; backgroundImage?: string; overlay?: boolean }

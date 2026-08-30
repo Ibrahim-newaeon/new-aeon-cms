@@ -17,6 +17,7 @@ export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
   paragraph: 'block.paragraph',
   image: 'block.image',
   gallery: 'block.gallery',
+  slider: 'block.slider',
   video: 'block.video',
   quote: 'block.quote',
   embed: 'block.embed',
@@ -63,7 +64,7 @@ export const EDITABLE_BLOCKS: ReadonlySet<BlockType> = new Set<BlockType>([
   'spacer', 'html', 'testimonial', 'cta', 'feature-grid', 'stats', 'gallery',
   'video', 'embed', 'team', 'timeline', 'social-links', 'recent-posts', 'map',
   'newsletter', 'contact-form', 'table', 'pricing', 'comparison',
-  'product-grid', 'custom', 'accordion', 'tabs',
+  'product-grid', 'custom', 'accordion', 'tabs', 'slider',
 ]);
 
 /**
@@ -79,6 +80,14 @@ const FACTORIES: { [K in BlockType]: () => Extract<ContentBlock, { type: K }> } 
   heading: () => ({ type: 'heading', level: 2, text: '' }),
   paragraph: () => ({ type: 'paragraph', text: '' }),
   image: () => ({ type: 'image', src: '', alt: '', layout: 'normal' }),
+  slider: () => ({
+    type: 'slider',
+    variant: 'main',
+    slides: [],
+    autoplay: true,
+    intervalMs: 6000,
+    height: 'medium',
+  }),
   gallery: () => ({ type: 'gallery', images: [], layout: 'grid' }),
   video: () => ({ type: 'video', url: '', provider: 'youtube' }),
   quote: () => ({ type: 'quote', text: '', style: 'bordered' }),

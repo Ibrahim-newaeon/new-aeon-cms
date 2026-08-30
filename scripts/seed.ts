@@ -163,6 +163,38 @@ async function seed() {
           excerpt: 'نظام إدارة محتوى متقدم',
           // Block array — matches what ContentRenderer expects.
           body: [
+            {
+              type: 'slider',
+              variant: 'main',
+              autoplay: true,
+              intervalMs: 6000,
+              height: 'medium',
+              slides: [
+                {
+                  kind: 'image',
+                  src: '/seed/slide-1.png',
+                  alt: 'عنبر وعود',
+                  title: 'عنبر وعود',
+                  text: 'عطر شرقي دافئ بثبات طويل.',
+                  buttonText: 'تسوّق الآن',
+                  buttonUrl: '/ar/shop',
+                },
+                {
+                  kind: 'image',
+                  src: '/seed/slide-2.png',
+                  alt: 'مجموعة جديدة',
+                  title: 'مجموعة جديدة',
+                  text: 'اكتشف الإصدارات الأحدث.',
+                },
+                {
+                  kind: 'image',
+                  src: '/seed/slide-3.png',
+                  alt: 'توصيل سريع',
+                  title: 'توصيل سريع',
+                  text: 'خلال يومَي عمل داخل المحافظات المركزية.',
+                },
+              ],
+            },
             { type: 'heading', level: 2, text: 'مرحباً بك' },
             { type: 'paragraph', text: 'هذا محتوى تجريبي يمكنك تعديله من لوحة التحكم.' },
           ],
@@ -173,6 +205,38 @@ async function seed() {
           title: 'Home',
           excerpt: 'An advanced content management system',
           body: [
+            {
+              type: 'slider',
+              variant: 'main',
+              autoplay: true,
+              intervalMs: 6000,
+              height: 'medium',
+              slides: [
+                {
+                  kind: 'image',
+                  src: '/seed/slide-1.png',
+                  alt: 'Amber Oud',
+                  title: 'Amber Oud',
+                  text: 'A warm oriental blend with long wear.',
+                  buttonText: 'Shop now',
+                  buttonUrl: '/en/shop',
+                },
+                {
+                  kind: 'image',
+                  src: '/seed/slide-2.png',
+                  alt: 'New arrivals',
+                  title: 'New arrivals',
+                  text: 'See the latest releases.',
+                },
+                {
+                  kind: 'image',
+                  src: '/seed/slide-3.png',
+                  alt: 'Fast delivery',
+                  title: 'Fast delivery',
+                  text: 'Two working days across the central governorates.',
+                },
+              ],
+            },
             { type: 'heading', level: 2, text: 'Welcome' },
             { type: 'paragraph', text: 'This is placeholder content. Edit it from the admin panel.' },
           ],

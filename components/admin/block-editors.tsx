@@ -2,12 +2,13 @@
 'use client';
 
 import { TestimonialEditor } from './blocks/testimonial-editor';
-import { ItemsEditor, MiniField, ChipSelect } from './blocks/items-editor';
+import { ItemsEditor, MiniField, MiniSelect, ChipSelect } from './blocks/items-editor';
 import { MediaField } from './media-field';
 import {
   TableEditor, PricingEditor, ComparisonEditor, ProductGridEditor, CustomEditor,
 } from './blocks/grid-editors';
 import { BLOCK_LABEL_KEYS, isSafeUrl } from '@/lib/blocks/defaults';
+import { sliderLimits } from '@/lib/blocks/slider';
 import type { ContentBlock } from '@/lib/blocks/types';
 import { useT } from './i18n-provider';
 
@@ -366,6 +367,183 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
           )}
         />
       );
+
+    case 'slider': {
+      // Both limits come from lib/blocks/slider, the same table the renderer
+      // enforces — so an author cannot build something the page will refuse to
+      // show, and neither side can drift from the other.
+      const limits = sliderLimits(block.variant);
+      return (
+        <div className="space-y-3">
+          <Field label={t('be.sliderVariant')} htmlFor="sl-variant">
+            <select
+              id="sl-variant"
+              className="admin-input"
+              value={block.variant}
+              onChange={(e) => {
+                const variant = e.target.value as typeof block.variant;
+                const next = sliderLimits(variant);
+                onChange({
+                  ...block,
+                  variant,
+                  // Switching to a stricter placement has to bring the slides
+                  // with it, or the editor would keep showing slides the page
+                  // silently drops.
+                  slides: block.slides
+                    .slice(0, next.maxSlides)
+                    .map((slide) =>
+                      slide.kind === 'video' && !next.allowVideo
+                        ? { ...slide, kind: 'image' as const }
+                        : slide
+                    ),
+                });
+              }}
+              data-test-id="slider-variant"
+            >
+              <option value="main">{t('be.sliderMain')}</option>
+              <option value="inner">{t('be.sliderInner')}</option>
+            </select>
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label={t('be.height')} htmlFor="sl-height">
+              <select
+                id="sl-height"
+                className="admin-input"
+                value={block.height}
+                onChange={(e) =>
+                  onChange({ ...block, height: e.target.value as typeof block.height })
+                }
+              >
+                <option value="short">{t('be.heightShort')}</option>
+                <option value="medium">{t('be.heightMedium')}</option>
+                <option value="tall">{t('be.heightTall')}</option>
+              </select>
+            </Field>
+
+            <Field label={t('be.interval')} htmlFor="sl-interval">
+              <input
+                id="sl-interval"
+                type="number"
+                min={2}
+                max={30}
+                className="admin-input"
+                value={Math.round(block.intervalMs / 1000)}
+                onChange={(e) => {
+                  const seconds = Math.min(30, Math.max(2, Number(e.target.value) || 6));
+                  onChange({ ...block, intervalMs: seconds * 1000 });
+                }}
+                data-test-id="slider-interval"
+              />
+            </Field>
+
+            <Field label={t('be.autoplay')}>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={block.autoplay}
+                  onChange={(e) => onChange({ ...block, autoplay: e.target.checked })}
+                  data-test-id="slider-autoplay"
+                />
+                <span className="text-[var(--admin-text-secondary)]">{t('be.autoplayHint')}</span>
+              </label>
+            </Field>
+          </div>
+
+          <ItemsEditor
+            items={block.slides}
+            testId="slider"
+            max={limits.maxSlides}
+            addLabel={t('be.addSlide')}
+            emptyLabel={t('be.noSlides')}
+            createItem={() => ({ kind: 'image' as const, src: '', alt: '' })}
+            onChange={(slides) => onChange({ ...block, slides })}
+            renderItem={(slide, update) => (
+              <div className="space-y-2">
+                {limits.allowVideo && (
+                  <MiniSelect
+                    label={t('be.slideKind')}
+                    value={slide.kind}
+                    options={[
+                      { value: 'image', label: t('be.slideKindImage') },
+                      { value: 'video', label: t('be.slideKindVideo') },
+                    ]}
+                    onChange={(kind) =>
+                      // src is cleared on switch: an .mp4 left in an <img> is a
+                      // broken slide, and the reverse is worse.
+                      update({ kind: kind as typeof slide.kind, src: '' })
+                    }
+                  />
+                )}
+
+                {slide.kind === 'video' && limits.allowVideo ? (
+                  <>
+                    <MediaField
+                      label={t('be.slideVideo')}
+                      hint={t('be.slideVideoHint')}
+                      value={slide.src}
+                      onChange={(url) => update({ src: url })}
+                      testId="slider-video"
+                      preview={false}
+                    />
+                    <MediaField
+                      label={t('be.slidePoster')}
+                      hint={t('be.slidePosterHint')}
+                      value={slide.poster ?? ''}
+                      onChange={(url) => update({ poster: url || undefined })}
+                      testId="slider-poster"
+                    />
+                  </>
+                ) : (
+                  <MediaField
+                    label={t('be.slideImage')}
+                    hint={t('be.slideImageHint')}
+                    value={slide.src}
+                    onChange={(url) => update({ src: url })}
+                    testId="slider-image"
+                  />
+                )}
+
+                <MiniField
+                  label={t('be.altShort')}
+                  value={slide.alt ?? ''}
+                  onChange={(v) => update({ alt: v })}
+                />
+                <MiniField
+                  label={t('be.title')}
+                  value={slide.title ?? ''}
+                  onChange={(v) => update({ title: v || undefined })}
+                />
+                <MiniField
+                  label={t('be.description')}
+                  value={slide.text ?? ''}
+                  onChange={(v) => update({ text: v || undefined })}
+                />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <MiniField
+                    label={t('be.buttonText')}
+                    value={slide.buttonText ?? ''}
+                    onChange={(v) => update({ buttonText: v || undefined })}
+                  />
+                  <MiniField
+                    label={t('be.buttonUrl')}
+                    ltr
+                    value={slide.buttonUrl ?? ''}
+                    onChange={(v) => update({ buttonUrl: v || undefined })}
+                  />
+                </div>
+              </div>
+            )}
+          />
+
+          {block.slides.length >= limits.maxSlides && (
+            <p className="text-xs text-[var(--admin-text-muted)]" data-test-id="slider-full">
+              {t('be.slidesFull')}
+            </p>
+          )}
+        </div>
+      );
+    }
 
     case 'gallery':
       return (

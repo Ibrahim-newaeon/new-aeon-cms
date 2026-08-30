@@ -173,6 +173,36 @@ export function MiniField({
   );
 }
 
+/** Single-choice sibling of MiniField, for a one-of-N field inside an item. */
+export function MiniSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">{label}</span>
+      <select
+        className="admin-input py-2 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /** Multi-select rendered as toggle chips — clearer than a native multiple. */
 export function ChipSelect<T extends string>({
   label,
