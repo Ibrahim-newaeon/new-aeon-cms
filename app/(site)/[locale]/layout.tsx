@@ -103,8 +103,10 @@ export default async function SiteLayout({
         <NextIntlClientProvider messages={messages} locale={typedLocale}>
           <div className="min-h-screen flex flex-col">
             {staffPreview && (
-                <p className="bg-[var(--admin-accent,#ffc619)] px-4 py-2 text-center text-sm font-medium text-[#130c0e]">
-                  وضع «قريباً» مفعّل — أنت ترى الموقع لأنك مسجّل الدخول. الزوار يرون صفحة الانتظار.
+                <p className="bg-[var(--site-accent)] px-4 py-2 text-center text-sm font-medium text-[var(--site-accent-ink)]">
+                  {typedLocale === 'ar'
+                    ? 'وضع «قريباً» مفعّل — أنت ترى الموقع لأنك مسجّل الدخول. الزوار يرون صفحة الانتظار.'
+                    : 'Coming-soon mode is on. You can see the site because you are signed in; visitors get the holding page.'}
                 </p>
               )}
             <Navbar

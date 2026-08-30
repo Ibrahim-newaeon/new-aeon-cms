@@ -28,6 +28,14 @@
     --admin-info: #3b82f6;
     --sidebar-width: 16rem;
     --header-height: 4rem;
+
+    /* Public-site tokens.
+       Separate from --admin-* on purpose: the storefront was reading
+       --admin-accent, so restyling the panel silently restyled the public
+       banner. Same value today, different owners — the admin is New Aeon's
+       tool, the storefront belongs to whoever runs the shop. */
+    --site-accent: #ffc619;
+    --site-accent-ink: #130c0e;
   }
 
   html {
