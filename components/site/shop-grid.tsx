@@ -48,7 +48,7 @@ export function ShopGrid({
                 <p className="line-clamp-2 text-sm text-site-ink-muted">{item.shortDesc}</p>
               )}
               <p className="mt-auto flex items-baseline gap-2">
-                <span className="font-semibold text-site-ink" dir="ltr">
+                <span className="font-semibold text-site-ink" dir="ltr" data-test-id="shop-price">
                   {formatPrice(item.basePrice, currency, locale)}
                 </span>
                 {item.compareAtPrice != null && item.compareAtPrice > item.basePrice && (

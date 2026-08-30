@@ -273,7 +273,21 @@ export async function getShopFacets(
   filters: ShopFilters = {}
 ): Promise<ShopFacets> {
   const conditions = filterConditions(filters);
-  const active = eq(products.isActive, true);
+
+  /**
+   * The grid INNER JOINs product_i18n, so a product with no name in this locale
+   * is not on it. The counts have to agree, or the bar says "52 products" over
+   * a grid of 50 — which is this catalogue exactly: two products have no
+   * English name. A count that disagrees with what is on screen is worse than
+   * no count.
+   */
+  const translated = sql`exists (
+    select 1 from ${productI18n}
+    where ${productI18n.productId} = ${products.id}
+      and ${productI18n.locale}::text = ${locale}
+  )`;
+
+  const active = and(eq(products.isActive, true), translated);
 
   /** Every condition except the named one. */
   const without = (key: keyof typeof conditions) =>

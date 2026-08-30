@@ -183,6 +183,19 @@
     background: var(--site-surface-raised);
   }
 
+  /**
+   * The scrim behind a modal or bottom sheet.
+   *
+   * Deliberately NOT a theme slot. A scrim's job is to darken whatever is
+   * behind it, so it is dark under a light theme and dark under a dark one —
+   * deriving it from --site-ink would turn it white on the Night preset and
+   * make the sheet unreadable. Kept here as a named class so the decision
+   * lives in one place instead of a bare bg-black/40 in a component.
+   */
+  .site-scrim {
+    background: rgb(0 0 0 / 0.45);
+  }
+
   .admin-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
     background: var(--admin-accent);
