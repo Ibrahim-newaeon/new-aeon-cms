@@ -94,6 +94,11 @@ export function ImportExport({
           {t('ie.exportCsv')}
         </a>
 
+        <a href={`${base}?format=md`} className="admin-btn-ghost" data-test-id="ie-export-md">
+          <Download size={16} aria-hidden="true" />
+          {t('ie.exportMd')}
+        </a>
+
         {canImport && (
           <>
             <a
@@ -118,7 +123,7 @@ export function ImportExport({
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".csv,.xlsx,.md,.markdown,text/csv,text/markdown,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
               data-test-id="ie-file"
               onChange={(e) => {

@@ -1,6 +1,6 @@
 // tests/import-export.test.ts
 import { describe, it, expect } from 'vitest';
-import { parseCsv, toCsv, toXlsx, parseXlsx, cellRef } from '@/lib/import-export/table';
+import { parseCsv, toCsv, toXlsx, parseXlsx, toMarkdown, parseMarkdown, cellRef } from '@/lib/import-export/table';
 import { ENTITIES, findEntity, templateFor, headersFor } from '@/lib/import-export/registry';
 import { planImport, keyOf, toMinorUnits, fromMinorUnits, parseBoolean } from '@/lib/import-export/plan';
 
@@ -194,5 +194,50 @@ describe('parseBoolean', () => {
   it('treats an empty cell as the default rather than as false', () => {
     // A blank "active" column should not deactivate a catalogue.
     expect(parseBoolean('', true)).toBe(true);
+  });
+});
+
+
+describe('markdown tables', () => {
+  it('round-trips a simple table', () => {
+    const original = { headers: ['sku', 'name'], rows: [['A-1', 'Amber Oud'], ['B-2', 'عنبر']] };
+    expect(parseMarkdown(toMarkdown(original))).toEqual(original);
+  });
+
+  it('escapes a pipe inside a cell rather than splitting on it', () => {
+    // An unescaped pipe would silently become an extra column, shifting every
+    // value after it by one.
+    const original = { headers: ['sku', 'note'], rows: [['A-1', 'small | large']] };
+    const md = toMarkdown(original);
+    expect(md).toContain('small \\| large');
+    expect(parseMarkdown(md)).toEqual(original);
+  });
+
+  it('carries a newline across as <br>', () => {
+    // A Markdown row IS a line, so a raw newline would end the row early.
+    const original = { headers: ['sku', 'body'], rows: [['A-1', 'line one\nline two']] };
+    const md = toMarkdown(original);
+    expect(md.split('\n').filter((l) => l.startsWith('|'))).toHaveLength(3);
+    expect(parseMarkdown(md)).toEqual(original);
+  });
+
+  it('ignores the divider row and any prose above the table', () => {
+    const md = [
+      '# Products',
+      '',
+      'Fill this in and upload it.',
+      '',
+      '| sku | price |',
+      '| --- | ----: |',
+      '| A-1 | 10 |',
+    ].join('\n');
+    const table = parseMarkdown(md);
+    expect(table.headers).toEqual(['sku', 'price']);
+    expect(table.rows).toEqual([['A-1', '10']]);
+  });
+
+  it('drops blank rows', () => {
+    const table = parseMarkdown('| sku |\n| --- |\n| A-1 |\n|  |\n| B-2 |\n');
+    expect(table.rows).toEqual([['A-1'], ['B-2']]);
   });
 });

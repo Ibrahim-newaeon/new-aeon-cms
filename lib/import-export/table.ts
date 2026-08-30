@@ -169,10 +169,87 @@ export async function toXlsx(table: Table, sheetName = 'Sheet1'): Promise<Buffer
   return Buffer.from(out);
 }
 
-export type TableFormat = 'csv' | 'xlsx';
+
+/**
+ * Markdown pipe tables.
+ *
+ * Readable in a pull request, a wiki or a plain text editor, which is why it is
+ * worth having alongside the spreadsheet formats.
+ *
+ * One real constraint: a Markdown cell cannot contain a raw newline, because
+ * the row IS the line. Multi-line values are written as `<br>` and read back
+ * as newlines, so a product description survives a round trip — but a value
+ * that genuinely contains the text "<br>" would come back as a line break.
+ * That is the trade Markdown forces; CSV and XLSX carry newlines properly and
+ * are the better choice for long text.
+ */
+const escapeCell = (value: string) =>
+  value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+
+const unescapeCell = (value: string) =>
+  value
+    .trim()
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/\\\|/g, '|')
+    .replace(/\\\\/g, '\\');
+
+export function toMarkdown(table: Table): string {
+  const header = `| ${table.headers.map(escapeCell).join(' | ')} |`;
+  const divider = `| ${table.headers.map(() => '---').join(' | ')} |`;
+  const body = table.rows.map(
+    (row) => `| ${table.headers.map((_, i) => escapeCell(row[i] ?? '')).join(' | ')} |`
+  );
+  return [header, divider, ...body].join('\n') + '\n';
+}
+
+/** Splits one table line, honouring `\|` inside a cell. */
+function splitMarkdownRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = '';
+  let escaped = false;
+
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  for (const char of trimmed) {
+    if (escaped) {
+      cell += char === '|' ? '\\|' : `\\${char}`;
+      escaped = false;
+    } else if (char === '\\') {
+      escaped = true;
+    } else if (char === '|') {
+      cells.push(cell);
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell);
+  return cells.map(unescapeCell);
+}
+
+export function parseMarkdown(text: string): Table {
+  // Only the pipe lines matter: a file may carry a title or a paragraph of
+  // instructions above the table, and refusing it over that would be pedantic.
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('|'));
+
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  const headers = splitMarkdownRow(lines[0]!).map((h) => h.trim());
+  const rest = lines.slice(1).filter((line) => !/^\|[\s|:-]+\|?$/.test(line));
+
+  const rows = rest
+    .map(splitMarkdownRow)
+    .filter((row) => row.some((cell) => cell.trim() !== ''));
+
+  return { headers, rows };
+}
+
+export type TableFormat = 'csv' | 'xlsx' | 'md';
 
 export function isTableFormat(value: string | null): value is TableFormat {
-  return value === 'csv' || value === 'xlsx';
+  return value === 'csv' || value === 'xlsx' || value === 'md';
 }
 
 /** Reads whichever format was uploaded, chosen by content rather than by name. */
@@ -192,9 +269,18 @@ export async function parseUpload(file: {
 
   if (/\.(docx?|odt)$/i.test(file.name)) {
     throw new Error(
-      'Word documents are not supported. Save the table as CSV or Excel (.xlsx) and upload that.'
+      'Word documents are not supported. Save the table as CSV, Excel (.xlsx) or Markdown and upload that.'
     );
   }
 
-  return parseCsv(new TextDecoder('utf-8').decode(buffer));
+  const text = new TextDecoder('utf-8').decode(buffer);
+
+  // Markdown by shape as well as by extension: the first non-empty line of a
+  // pipe table starts with `|`, which no CSV export of ours ever does.
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim() !== '')?.trim() ?? '';
+  if (/\.(md|markdown)$/i.test(file.name) || firstLine.startsWith('|')) {
+    return parseMarkdown(text);
+  }
+
+  return parseCsv(text);
 }

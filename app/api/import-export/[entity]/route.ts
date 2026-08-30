@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { findEntity, isImportable, templateFor } from '@/lib/import-export/registry';
-import { isTableFormat, parseUpload, toCsv, toXlsx, type Table } from '@/lib/import-export/table';
+import { isTableFormat, parseUpload, toCsv, toMarkdown, toXlsx, type Table } from '@/lib/import-export/table';
 import { planImport } from '@/lib/import-export/plan';
 import { applyPlan, existingKeys, exportTable } from '@/lib/import-export/entities';
 import { db } from '@/lib/db';
@@ -61,6 +61,16 @@ export async function GET(request: Request, context: { params: Promise<{ entity:
       return new NextResponse(new Uint8Array(buffer), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
+    if (format === 'md') {
+      return new NextResponse(toMarkdown(table), {
+        headers: {
+          'Content-Type': 'text/markdown; charset=utf-8',
           'Content-Disposition': `attachment; filename="${filename}"`,
           'Cache-Control': 'no-store',
         },

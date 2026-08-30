@@ -777,6 +777,7 @@ export const ar = {
 
   'ie.exportXlsx': 'تصدير Excel',
   'ie.exportCsv': 'تصدير CSV',
+  'ie.exportMd': 'تصدير Markdown',
   'ie.template': 'تنزيل نموذج',
   'ie.import': 'استيراد ملف',
   'ie.failed': 'تعذّرت قراءة الملف.',
@@ -1568,6 +1569,7 @@ export const en: Partial<Record<MessageKey, string>> = {
 
   'ie.exportXlsx': 'Export Excel',
   'ie.exportCsv': 'Export CSV',
+  'ie.exportMd': 'Export Markdown',
   'ie.template': 'Download template',
   'ie.import': 'Import file',
   'ie.failed': 'Could not read that file.',
