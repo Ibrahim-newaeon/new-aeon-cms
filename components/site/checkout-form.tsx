@@ -185,7 +185,7 @@ export function CheckoutForm({
 
         <div className="flex justify-between border-t border-site-line pt-4 text-sm">
           <span className="text-site-ink-muted">{copy.subtotal}</span>
-          <span className="font-semibold text-site-ink" dir="ltr">
+          <span className="font-semibold text-site-ink" dir={locale === 'ar' ? undefined : 'ltr'}>
             {formatPrice(subtotal, currency, locale)}
           </span>
         </div>

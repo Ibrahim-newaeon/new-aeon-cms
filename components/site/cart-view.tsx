@@ -113,7 +113,7 @@ export function CartViewClient({
               {!line.available ? (
                 <p className="mt-1 text-sm text-site-danger">{copy.unavailable[line.reason ?? 'missing']}</p>
               ) : (
-                <p className="mt-1 text-sm text-site-ink-muted" dir="ltr">
+                <p className="mt-1 text-sm text-site-ink-muted" dir={locale === 'ar' ? undefined : 'ltr'}>
                   {formatPrice(line.unitPrice, currency, locale)}
                 </p>
               )}
