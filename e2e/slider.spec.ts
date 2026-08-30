@@ -93,6 +93,26 @@ test.describe('home page slider', () => {
     await expect(page.getByTestId('slider-dot-1')).toBeVisible();
   });
 
+  test('replaces the static banner and sits at the top of the page', async ({ page }) => {
+    await page.goto('/en');
+
+    // The generic hero band must not render above the slider — that put a
+    // static banner in front of the thing built to be the banner.
+    await expect(page.getByTestId('hero-section')).toHaveCount(0);
+
+    // Nothing of substance between the navbar and the slider. A tolerance,
+    // not zero: the sticky navbar's own height is legitimately above it.
+    const gap = await page.evaluate(() => {
+      const slider = document.querySelector('[data-test-id="slider"]');
+      const nav = document.querySelector('header, nav');
+      if (!slider) return null;
+      const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
+      return slider.getBoundingClientRect().top - navBottom;
+    });
+    expect(gap).not.toBeNull();
+    expect(Math.abs(gap!)).toBeLessThan(24);
+  });
+
   test('the hero spans the full viewport width', async ({ page }) => {
     await page.goto('/en');
 

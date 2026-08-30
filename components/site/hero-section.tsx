@@ -11,7 +11,12 @@ interface HeroSectionProps {
 
 export function HeroSection({ title, subtitle, cta, backgroundImage, overlay = true }: HeroSectionProps) {
   return (
-    <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+    <section
+      className="relative min-h-[60vh] flex items-center justify-center overflow-hidden"
+      // So a spec can assert this is ABSENT when a slider leads the page.
+      // Without an id, "the banner did not render" is unfalsifiable.
+      data-test-id="hero-section"
+    >
       {backgroundImage ? (
         <>
           {/* priority: this is the LCP element on almost every page it appears
