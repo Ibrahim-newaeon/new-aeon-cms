@@ -136,6 +136,32 @@ test.describe('inner-page slider', () => {
     await expect(page.locator('[data-test-id^="slider-youtube-"]')).toHaveCount(0);
   });
 
+  test('sits under the page title and above the body text', async ({ page }) => {
+    await page.goto('/en/about-us');
+
+    // Document order, not pixel positions: the page title is rendered by the
+    // page's own <header> and the slider is the first block, so "between the
+    // two" is a structural claim rather than a visual one.
+    const order = await page.evaluate(() => {
+      const title = document.querySelector('h1');
+      const slider = document.querySelector('[data-test-id="slider"]');
+      const body = [...document.querySelectorAll('h2')].find((h) =>
+        h.textContent?.includes('Our story')
+      );
+      if (!title || !slider || !body) return null;
+      const precedes = (a: Element, b: Element) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return {
+        titleBeforeSlider: precedes(title, slider),
+        sliderBeforeBody: precedes(slider, body),
+      };
+    });
+
+    expect(order).not.toBeNull();
+    expect(order!.titleBeforeSlider).toBe(true);
+    expect(order!.sliderBeforeBody).toBe(true);
+  });
+
   test('it stays inside the text column rather than going full bleed', async ({ page }) => {
     await page.goto('/en/about-us');
 

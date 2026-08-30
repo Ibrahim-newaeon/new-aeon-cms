@@ -277,8 +277,11 @@ async function seed() {
           title: 'من نحن',
           excerpt: 'تعرّف على القصة خلف نيو إيون.',
           body: [
-            { type: 'heading', level: 2, text: 'قصتنا' },
-            { type: 'paragraph', text: 'نبني أدوات محتوى وتجارة تعمل بالعربية أولاً.' },
+            // First block, so it sits directly under the page title and above
+            // the prose. The page's own <header> renders the title, and blocks
+            // start below it — putting the slider first is what places it
+            // between the two.
+            //
             // The inner-page placement: images only, two slides. Seeded so the
             // difference between the two variants is visible without building
             // one by hand.
@@ -293,6 +296,8 @@ async function seed() {
                 { kind: 'image', src: '/seed/slide-3.png', alt: 'الفريق', title: 'الفريق' },
               ],
             },
+            { type: 'heading', level: 2, text: 'قصتنا' },
+            { type: 'paragraph', text: 'نبني أدوات محتوى وتجارة تعمل بالعربية أولاً.' },
           ],
         },
         {
@@ -301,8 +306,6 @@ async function seed() {
           title: 'About us',
           excerpt: 'The story behind New Aeon.',
           body: [
-            { type: 'heading', level: 2, text: 'Our story' },
-            { type: 'paragraph', text: 'We build content and commerce tools that work in Arabic first.' },
             {
               type: 'slider',
               variant: 'inner',
@@ -314,6 +317,8 @@ async function seed() {
                 { kind: 'image', src: '/seed/slide-3.png', alt: 'The team', title: 'The team' },
               ],
             },
+            { type: 'heading', level: 2, text: 'Our story' },
+            { type: 'paragraph', text: 'We build content and commerce tools that work in Arabic first.' },
           ],
         },
       ]);
