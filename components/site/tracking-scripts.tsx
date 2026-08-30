@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import type { SiteSettings } from '@/lib/db/queries';
 
 /**
- * Injects the tracking snippets configured in Settings > أكواد التتبع.
+ * Injects the tracking snippets configured in Settings > tracking codes.
  *
  * CSP: middleware sets `script-src 'self' 'nonce-…' 'strict-dynamic'`. Every tag
  * below carries that nonce, and 'strict-dynamic' then extends trust to whatever

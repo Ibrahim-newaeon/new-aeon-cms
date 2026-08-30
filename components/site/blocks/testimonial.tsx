@@ -8,6 +8,7 @@ import { parseTestimonialBlock, type TestimonialItemInput } from '@/lib/blocks/t
 interface TestimonialBlockProps {
   /** Raw block JSON straight out of `contentI18n.body`. Validated here. */
   block: unknown;
+  locale?: 'ar' | 'en';
 }
 
 const COLUMN_CLASSES: Record<1 | 2 | 3, string> = {
@@ -16,7 +17,7 @@ const COLUMN_CLASSES: Record<1 | 2 | 3, string> = {
   3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
 };
 
-export function TestimonialBlock({ block }: TestimonialBlockProps) {
+export function TestimonialBlock({ block, locale = 'ar' }: TestimonialBlockProps) {
   const data = parseTestimonialBlock(block);
 
   // Malformed or legacy JSON degrades silently rather than breaking the page.
@@ -28,19 +29,27 @@ export function TestimonialBlock({ block }: TestimonialBlockProps) {
       data-test-id="testimonial-block"
     >
       {data.items.map((item, idx) => (
-        <TestimonialCard key={`${item.author}-${idx}`} item={item} index={idx} />
+        <TestimonialCard key={`${item.author}-${idx}`} item={item} index={idx} locale={locale} />
       ))}
     </section>
   );
 }
 
-function TestimonialCard({ item, index }: { item: TestimonialItemInput; index: number }) {
+function TestimonialCard({
+  item,
+  index,
+  locale,
+}: {
+  item: TestimonialItemInput;
+  index: number;
+  locale: 'ar' | 'en';
+}) {
   return (
     <figure
       className="flex flex-col gap-4 h-full rounded-lg border border-gray-200 bg-white p-6 text-start shadow-sm"
       data-test-id={`testimonial-item-${index}`}
     >
-      {item.rating !== undefined && <StarRating rating={item.rating} />}
+      {item.rating !== undefined && <StarRating rating={item.rating} locale={locale} />}
 
       {/* border-s-4 / ps-4 are logical — they flip automatically under dir="rtl". */}
       <blockquote className="flex-1 border-s-4 border-indigo-500 ps-4 text-gray-700 leading-relaxed">
@@ -77,13 +86,13 @@ function TestimonialCard({ item, index }: { item: TestimonialItemInput; index: n
   );
 }
 
-function StarRating({ rating }: { rating: number }) {
+function StarRating({ rating, locale }: { rating: number; locale: 'ar' | 'en' }) {
   return (
     <div
       role="img"
       // Digits inside Arabic copy scramble without an explicit LTR context,
       // hence the isolate + the dir="ltr" wrapper on the star row.
-      aria-label={`التقييم: ${rating} من 5`}
+      aria-label={locale === 'ar' ? `التقييم: ${rating} من 5` : `Rating: ${rating} out of 5`}
       dir="ltr"
       className="flex items-center gap-0.5 self-start"
       data-test-id="testimonial-rating"

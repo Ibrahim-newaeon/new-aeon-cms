@@ -174,7 +174,18 @@ export function PricingBlock({ block }: { block: Pick_<'pricing'> }) {
   );
 }
 
-export function ComparisonBlock({ block }: { block: Pick_<'comparison'> }) {
+export function ComparisonBlock({
+  block,
+  locale = 'ar',
+}: {
+  block: Pick_<'comparison'>;
+  locale?: 'ar' | 'en';
+}) {
+  // The tick and dash carry the meaning; the label is what a screen reader
+  // hears, so it has to be in the reader's language.
+  const yes = locale === 'ar' ? 'نعم' : 'Yes';
+  const no = locale === 'ar' ? 'لا' : 'No';
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
@@ -203,7 +214,7 @@ export function ComparisonBlock({ block }: { block: Pick_<'comparison'> }) {
                 return (
                   <td key={col} className="border border-gray-200 px-3 py-2">
                     {typeof v === 'boolean' ? (
-                      <span aria-label={v ? 'نعم' : 'لا'}>{v ? '✓' : '—'}</span>
+                      <span aria-label={v ? yes : no}>{v ? '✓' : '—'}</span>
                     ) : (
                       (v ?? '—')
                     )}
@@ -218,7 +229,13 @@ export function ComparisonBlock({ block }: { block: Pick_<'comparison'> }) {
   );
 }
 
-export function MapBlock({ block }: { block: Pick_<'map'> }) {
+export function MapBlock({
+  block,
+  locale = 'ar',
+}: {
+  block: Pick_<'map'>;
+  locale?: 'ar' | 'en';
+}) {
   const { lat, lng } = block.location;
   const zoom = block.zoom ?? 13;
   // Static link rather than an embedded map: an iframe would need a third-party
@@ -230,7 +247,7 @@ export function MapBlock({ block }: { block: Pick_<'map'> }) {
       rel="noopener noreferrer"
       className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
     >
-      <span className="text-sm font-medium text-gray-900">{block.marker ?? 'الموقع على الخريطة'}</span>
+      <span className="text-sm font-medium text-gray-900">{block.marker ?? (locale === 'ar' ? 'الموقع على الخريطة' : 'Location on the map')}</span>
       <span className="text-sm text-gray-500" dir="ltr">
         {lat.toFixed(4)}, {lng.toFixed(4)}
       </span>

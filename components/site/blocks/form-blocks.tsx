@@ -8,13 +8,45 @@ import type { ContentBlock } from '@/lib/blocks/types';
 type ContactBlock = Extract<ContentBlock, { type: 'contact-form' }>;
 type NewsletterBlockType = Extract<ContentBlock, { type: 'newsletter' }>;
 
-const FIELD_LABEL: Record<string, string> = {
-  name: 'الاسم',
-  email: 'البريد الإلكتروني',
-  phone: 'رقم الهاتف',
-  subject: 'الموضوع',
-  message: 'الرسالة',
-};
+/**
+ * These were Arabic-only, so the contact and newsletter blocks rendered Arabic
+ * labels and error text on the English site. Both components already receive
+ * `locale`; nothing was reading it.
+ */
+const COPY = {
+  ar: {
+    fields: {
+      name: 'الاسم',
+      email: 'البريد الإلكتروني',
+      phone: 'رقم الهاتف',
+      subject: 'الموضوع',
+      message: 'الرسالة',
+    } as Record<string, string>,
+    sent: 'تم إرسال رسالتك بنجاح.',
+    sendFailed: 'تعذّر الإرسال. حاول مرة أخرى.',
+    submit: 'إرسال',
+    subscribed: 'تم تسجيل اشتراكك.',
+    subscribeFailed: 'تعذّر الاشتراك. حاول مرة أخرى.',
+    subscribe: 'اشتراك',
+    emailLabel: 'البريد الإلكتروني',
+  },
+  en: {
+    fields: {
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
+      subject: 'Subject',
+      message: 'Message',
+    } as Record<string, string>,
+    sent: 'Your message has been sent.',
+    sendFailed: 'Could not send. Please try again.',
+    submit: 'Send',
+    subscribed: 'You are subscribed.',
+    subscribeFailed: 'Could not subscribe. Please try again.',
+    subscribe: 'Subscribe',
+    emailLabel: 'Email',
+  },
+} as const;
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
@@ -64,6 +96,7 @@ export function ContactFormBlock({
   block: ContactBlock;
   locale?: 'ar' | 'en';
 }) {
+  const copy = COPY[locale];
   const [values, setValues] = useState<Record<string, string>>({});
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -83,7 +116,7 @@ export function ContactFormBlock({
   if (status === 'sent') {
     return (
       <p role="status" className="rounded-lg bg-green-50 p-4 text-sm text-green-800">
-        {block.successMessage ?? 'تم إرسال رسالتك بنجاح.'}
+        {block.successMessage ?? copy.sent}
       </p>
     );
   }
@@ -94,7 +127,7 @@ export function ContactFormBlock({
 
       {block.fields.map((field) => (
         <label key={field} className="block">
-          <span className="mb-1 block text-sm text-gray-700">{FIELD_LABEL[field] ?? field}</span>
+          <span className="mb-1 block text-sm text-gray-700">{copy.fields[field] ?? field}</span>
           {field === 'message' ? (
             <textarea
               required
@@ -118,7 +151,7 @@ export function ContactFormBlock({
 
       {status === 'error' && (
         <p role="alert" className="text-sm text-red-600">
-          تعذّر الإرسال. حاول مرة أخرى.
+          {copy.sendFailed}
         </p>
       )}
 
@@ -128,7 +161,7 @@ export function ContactFormBlock({
         className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
       >
         {status === 'sending' && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-        {block.submitLabel ?? 'إرسال'}
+        {block.submitLabel ?? copy.submit}
       </button>
     </form>
   );
@@ -141,6 +174,7 @@ export function NewsletterBlock({
   block: NewsletterBlockType;
   locale?: 'ar' | 'en';
 }) {
+  const copy = COPY[locale];
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -164,7 +198,7 @@ export function NewsletterBlock({
 
       {status === 'sent' ? (
         <p role="status" className="mt-4 text-sm text-green-700">
-          تم تسجيل اشتراكك.
+          {copy.subscribed}
         </p>
       ) : (
         <form onSubmit={handle} className="relative mt-4 flex flex-wrap gap-2">
@@ -173,7 +207,7 @@ export function NewsletterBlock({
             required
             type="email"
             dir="ltr"
-            aria-label="البريد الإلكتروني"
+            aria-label={copy.emailLabel}
             className="min-w-0 flex-1 rounded-lg border border-gray-300 p-3 text-sm"
             placeholder="you@example.com"
             value={email}
@@ -184,14 +218,14 @@ export function NewsletterBlock({
             disabled={status === 'sending'}
             className="rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {block.buttonText ?? 'اشتراك'}
+            {block.buttonText ?? copy.subscribe}
           </button>
         </form>
       )}
 
       {status === 'error' && (
         <p role="alert" className="mt-2 text-sm text-red-600">
-          تعذّر الاشتراك. حاول مرة أخرى.
+          {copy.subscribeFailed}
         </p>
       )}
 

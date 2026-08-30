@@ -255,7 +255,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       );
 
     case 'testimonial':
-      return <TestimonialBlock block={block} />;
+      return <TestimonialBlock block={block} locale={locale} />;
 
     case 'stats':
       return (
@@ -324,10 +324,10 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       return <PricingBlock block={block} />;
 
     case 'comparison':
-      return <ComparisonBlock block={block} />;
+      return <ComparisonBlock block={block} locale={locale} />;
 
     case 'map':
-      return <MapBlock block={block} />;
+      return <MapBlock block={block} locale={locale} />;
 
     case 'social-links':
       return <SocialLinksBlock block={block} />;
