@@ -51,7 +51,17 @@ function buildCsp(nonce: string, isDev: boolean): string {
     `connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://connect.facebook.net https://analytics.tiktok.com https://tr.snapchat.com https://sc-static.net${isDev ? ' ws: wss:' : ''}`,
     // Video blocks embed these hosts; default-src 'self' would block them.
     `frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://www.googletagmanager.com`,
-    `frame-ancestors 'none'`,
+    /**
+     * 'self', not 'none': the Settings theme editor previews the real
+     * storefront in an iframe, and 'none' blocks that as surely as it blocks a
+     * hostile site.
+     *
+     * The clickjacking protection this exists for is unchanged — every OTHER
+     * origin is still refused. Framing ourselves is not an attack: it would
+     * require already controlling a page on this origin, at which point the
+     * attacker has more than framing.
+     */
+    `frame-ancestors 'self'`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

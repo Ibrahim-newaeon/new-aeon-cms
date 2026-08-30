@@ -109,7 +109,15 @@ export function hexToChannels(hex: string): string {
  * Only known slots and validated values reach this function, so nothing here
  * can carry arbitrary CSS into the page.
  */
-export function themeToCss(theme: Theme | null | undefined): string {
+export function themeToCss(
+  theme: Theme | null | undefined,
+  /**
+   * `:root:root` is used by the admin preview. Same element, double the
+   * specificity, so a draft wins over the site's own saved-theme rule without
+   * depending on which appears later in the document.
+   */
+  selector: ':root' | ':root:root' = ':root'
+): string {
   if (!theme) return '';
 
   const lines: string[] = [];
@@ -123,7 +131,7 @@ export function themeToCss(theme: Theme | null | undefined): string {
     lines.push(`--site-radius:${theme.radius};`);
   }
 
-  return lines.length ? `:root{${lines.join('')}}` : '';
+  return lines.length ? `${selector}{${lines.join('')}}` : '';
 }
 
 /**

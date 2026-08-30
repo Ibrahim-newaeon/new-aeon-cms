@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { COLOR_SLOTS, themeSchema, themeToCss, themeToFile, hexToChannels } from '@/lib/theme/slots';
 import { parseThemeFile, contrastRatio, checkContrast } from '@/lib/theme/import';
+import { PRESETS, findPreset } from '@/lib/theme/presets';
 
 describe('theme slots', () => {
   it('every slot has a valid hex fallback', () => {
@@ -154,5 +155,40 @@ describe('contrast', () => {
 
   it('passes a readable pairing', () => {
     expect(checkContrast({ accent: '#0f7b5a', 'accent-ink': '#ffffff' })).toEqual([]);
+  });
+});
+
+
+describe('presets', () => {
+  it('every preset fills every slot', () => {
+    // A partial preset would leave the previous choice showing through the
+    // gaps, so switching would half-apply.
+    for (const preset of PRESETS) {
+      for (const slot of COLOR_SLOTS) {
+        expect(preset.theme[slot.name], `${preset.id}.${slot.name}`).toMatch(/^#[0-9a-f]{6}$/);
+      }
+      expect(preset.theme.radius, `${preset.id}.radius`).toBeTruthy();
+    }
+  });
+
+  it('every preset passes the validator the API uses', () => {
+    for (const preset of PRESETS) {
+      const parsed = themeSchema.safeParse(preset.theme);
+      expect(parsed.success, `${preset.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
+    }
+  });
+
+  it('every preset is readable', () => {
+    // Shipping a preset whose buttons cannot be read is worse than shipping
+    // none: a business reasonably assumes the built-in choices are safe.
+    for (const preset of PRESETS) {
+      expect(checkContrast(preset.theme), preset.id).toEqual([]);
+    }
+  });
+
+  it('has unique ids', () => {
+    expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length);
+    expect(findPreset('forest')?.nameEn).toBe('Forest');
+    expect(findPreset('nope')).toBeUndefined();
   });
 });
