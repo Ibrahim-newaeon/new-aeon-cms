@@ -82,10 +82,15 @@ export default async function OrderPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
-      <p className="text-sm text-site-success">
-        {ar ? 'تم استلام طلبك.' : 'Your order has been received.'}
-      </p>
-      <h1 className="mt-2 text-3xl font-bold text-site-ink" dir="ltr">{order.orderNumber}</h1>
+      {/* Only for someone who just placed it. Revisiting a delivered order
+          from the account and being told it "has been received" reads as a
+          system that has lost track of it. */}
+      {access.via === 'placed' && (
+        <p className="text-sm text-site-success" data-test-id="order-confirmed">
+          {ar ? 'تم استلام طلبك.' : 'Your order has been received.'}
+        </p>
+      )}
+      <h1 className="text-3xl font-bold text-site-ink" dir="ltr">{order.orderNumber}</h1>
       <p className="mt-1 text-sm text-site-ink-muted">
         {ar ? 'الحالة: ' : 'Status: '}{ar ? status.ar : status.en}
       </p>

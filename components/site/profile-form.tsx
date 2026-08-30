@@ -9,13 +9,17 @@ const COPY = {
     name: 'الاسم', email: 'البريد الإلكتروني', phone: 'رقم الهاتف',
     phoneNote: 'رقم الهاتف هو هويتك هنا ولا يمكن تغييره — به تُربط طلباتك.',
     password: 'كلمة مرور جديدة', passwordNote: 'اتركها فارغة إن لم ترد تغييرها. ٨ أحرف على الأقل.',
-    setPassword: 'أنشئ كلمة مرور', save: 'حفظ', saved: 'تم الحفظ', failed: 'تعذّر الحفظ.',
+    setPassword: 'أنشئ كلمة مرور',
+    setPasswordNote: 'أنشئ كلمة مرور لتدخل بها لاحقاً بدل طلب رمز في كل مرة. ٨ أحرف على الأقل.',
+    save: 'حفظ', saved: 'تم الحفظ', failed: 'تعذّر الحفظ.',
   },
   en: {
     name: 'Name', email: 'Email', phone: 'Phone number',
     phoneNote: 'Your phone is your identity here and cannot be changed — it is what your orders are tied to.',
     password: 'New password', passwordNote: 'Leave blank to keep the current one. At least 8 characters.',
-    setPassword: 'Set a password', save: 'Save', saved: 'Saved', failed: 'Could not save.',
+    setPassword: 'Set a password',
+    setPasswordNote: 'Set one so you can sign in without asking for a code every time. At least 8 characters.',
+    save: 'Save', saved: 'Saved', failed: 'Could not save.',
   },
 } as const;
 
@@ -87,7 +91,12 @@ export function ProfileForm({
         {initial.hasPassword ? c.password : c.setPassword}
         <input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
           className={field} autoComplete="new-password" data-test-id="profile-password" />
-        <span className="text-xs text-site-ink-muted">{c.passwordNote}</span>
+        {/* Different hint when there is no current password: "leave blank to
+            keep the current one" is nonsense to someone who has none, and this
+            page is exactly where a code sign-in sends them. */}
+        <span className="text-xs text-site-ink-muted">
+          {initial.hasPassword ? c.passwordNote : c.setPasswordNote}
+        </span>
       </label>
 
       {error && <p className="text-sm text-site-danger" data-test-id="profile-error">{error}</p>}

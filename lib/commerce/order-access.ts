@@ -62,7 +62,13 @@ async function placedHere(orderNumber: string): Promise<boolean> {
 }
 
 export type OrderAccess =
-  | { allowed: true; order: typeof orders.$inferSelect }
+  /**
+   * `via` is how they got in, which the page uses for wording: only somebody
+   * who JUST placed an order should be told it "has been received". Revisiting
+   * a delivered order from the account and being congratulated on placing it
+   * reads as a system that has lost track.
+   */
+  | { allowed: true; order: typeof orders.$inferSelect; via: 'placed' | 'account' | 'phone' }
   /** The order exists but this visitor has not shown they may see it. */
   | { allowed: false; exists: true }
   | { allowed: false; exists: false };
@@ -79,15 +85,15 @@ export async function accessOrder(
 
   if (!order) return { allowed: false, exists: false };
 
-  if (await placedHere(orderNumber)) return { allowed: true, order };
+  if (await placedHere(orderNumber)) return { allowed: true, order, via: 'placed' };
 
   const session = await currentCustomer();
-  if (session && order.customerId === session.sub) return { allowed: true, order };
+  if (session && order.customerId === session.sub) return { allowed: true, order, via: 'account' };
 
   if (suppliedPhone?.trim()) {
     // Normalised on both sides, so `07…` matches an order stored as `+962…`.
     const given = normalisePhone(suppliedPhone, await getStoreCountry());
-    if (given && given === order.phone) return { allowed: true, order };
+    if (given && given === order.phone) return { allowed: true, order, via: 'phone' };
   }
 
   // "Exists but not yours" is not leaked to the caller's UI — see the page,

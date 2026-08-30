@@ -304,6 +304,23 @@ test.describe('order privacy', () => {
     await expect(page.getByTestId('order-lookup')).toBeVisible();
   });
 
+  test('revisiting an order does not congratulate you on placing it', async ({ page }) => {
+    // "Your order has been received" belongs to the moment of checkout. On a
+    // delivered order reached from the account it reads as a system that has
+    // lost track.
+    const order = await withDb(async (db) => {
+      const r = await db.query('select order_number, phone from orders limit 1');
+      return r.rows[0] as { order_number: string; phone: string } | undefined;
+    });
+    test.skip(!order, 'no orders in this database');
+
+    await page.goto(
+      `/en/order/${order!.order_number}?phone=${encodeURIComponent(order!.phone)}`
+    );
+    await expect(page.getByTestId('order-confirmed')).toHaveCount(0);
+    await expect(page.locator('h1')).toContainText(order!.order_number);
+  });
+
   test('the right phone opens it', async ({ page }) => {
     const order = await withDb(async (db) => {
       const r = await db.query('select order_number, phone from orders limit 1');
