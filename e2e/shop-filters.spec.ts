@@ -179,3 +179,59 @@ test.describe('shop filters', () => {
     expect(sidebar!.x).toBeGreaterThan(grid!.x);
   });
 });
+
+test.describe('shop filters on a phone', () => {
+  // Most of this shop's traffic is a phone, and a 260px column of checkboxes
+  // on a 390px screen leaves no room for the grid it is meant to filter.
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('the sidebar is replaced by a Filter button and a sheet', async ({ page }) => {
+    await page.goto(shop);
+
+    await expect(page.getByTestId('shop-sidebar')).toBeHidden();
+    await expect(page.getByTestId('shop-filter-open')).toBeVisible();
+    await expect(page.getByTestId('shop-filter-sheet')).toHaveCount(0);
+
+    await page.getByTestId('shop-filter-open').click();
+    const sheet = page.getByTestId('shop-filter-sheet');
+    await expect(sheet).toBeVisible();
+
+    // It is a dialog, and it is anchored to the bottom of the screen.
+    const dialog = sheet.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box!.y + box!.height).toBeGreaterThan(844 * 0.9);
+  });
+
+  test('Escape closes the sheet', async ({ page }) => {
+    await page.goto(shop);
+    await page.getByTestId('shop-filter-open').click();
+    await expect(page.getByTestId('shop-filter-sheet')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('shop-filter-sheet')).toHaveCount(0);
+  });
+
+  test('picking a filter closes the sheet and filters the grid', async ({ page }) => {
+    /**
+     * The sheet must not survive the navigation it triggered — otherwise the
+     * shopper taps a category and stares at the sheet instead of the results
+     * they just asked for.
+     */
+    await page.goto(shop);
+    const all = await cards(page).count();
+
+    await page.getByTestId('shop-filter-open').click();
+    await page.getByTestId('shop-filter-sheet').locator('a[href*="/shop/"]').first().click();
+
+    await expect(page).toHaveURL(/\/shop\/[a-z0-9-]+/);
+    await expect(page.getByTestId('shop-filter-sheet')).toHaveCount(0);
+    expect(await cards(page).count()).toBeLessThan(all);
+  });
+
+  test('the button shows how many filters are on, while the sheet is shut', async ({ page }) => {
+    await page.goto(`${shop}?sale=1&min=100`);
+    // Two applied, and the shopper can see that without opening anything.
+    await expect(page.getByTestId('shop-filter-open')).toContainText('2');
+  });
+});
