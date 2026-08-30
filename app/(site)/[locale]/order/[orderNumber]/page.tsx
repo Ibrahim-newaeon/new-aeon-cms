@@ -108,7 +108,7 @@ export default async function OrderPage({
                 {item.skuSnapshot} × {item.qty}
               </p>
             </div>
-            <p className="shrink-0 text-sm text-site-ink" dir="ltr">
+            <p className="shrink-0 text-sm text-site-ink" dir={typedLocale === 'ar' ? undefined : 'ltr'}>
               {formatPrice(item.priceSnapshot * item.qty, currency, typedLocale)}
             </p>
           </li>
@@ -126,7 +126,7 @@ export default async function OrderPage({
         <Row label={ar ? 'التوصيل' : 'Delivery'} value={formatPrice(order.shipping, currency, typedLocale)} />
         <div className="flex justify-between border-t border-site-line pt-2 text-base font-semibold">
           <dt>{ar ? 'الإجمالي' : 'Total'}</dt>
-          <dd dir="ltr">{formatPrice(order.total, currency, typedLocale)}</dd>
+          <dd dir={typedLocale === 'ar' ? undefined : 'ltr'}>{formatPrice(order.total, currency, typedLocale)}</dd>
         </div>
       </dl>
 
@@ -141,11 +141,16 @@ export default async function OrderPage({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+/**
+ * `ltr` only when the value is a Latin run. An Arabic-formatted price already
+ * carries its own U+200F marks, and overriding the direction makes the bidi
+ * algorithm reorder a string that was already ordered.
+ */
+function Row({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
   return (
     <div className="flex justify-between">
       <dt className="text-site-ink-muted">{label}</dt>
-      <dd className="text-site-ink" dir="ltr">{value}</dd>
+      <dd className="text-site-ink" dir={ltr ? 'ltr' : undefined}>{value}</dd>
     </div>
   );
 }

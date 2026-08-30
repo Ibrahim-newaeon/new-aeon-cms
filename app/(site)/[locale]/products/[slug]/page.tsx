@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getShopProduct } from '@/lib/commerce/storefront';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
-import { formatPrice } from '@/lib/money';
+import { Price } from '@/components/site/price';
 import { AddToCart } from '@/components/site/add-to-cart';
 import { ProductReviews } from '@/components/site/product-reviews';
 import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
@@ -131,13 +131,11 @@ export default async function ProductPage({ params }: Props) {
           <h1 className="text-3xl font-bold text-site-ink">{product.name}</h1>
 
           <p className="flex items-baseline gap-3">
-            <span className="text-2xl font-semibold text-site-ink" dir="ltr">
-              {formatPrice(product.basePrice, currency, typedLocale)}
-            </span>
+            <Price amount={product.basePrice} currency={currency} locale={typedLocale}
+              className="text-2xl font-semibold text-site-ink" />
             {product.compareAtPrice != null && product.compareAtPrice > product.basePrice && (
-              <span className="text-lg text-site-ink-muted line-through" dir="ltr">
-                {formatPrice(product.compareAtPrice, currency, typedLocale)}
-              </span>
+              <Price amount={product.compareAtPrice} currency={currency} locale={typedLocale}
+                strike className="text-lg text-site-ink-muted" />
             )}
           </p>
 

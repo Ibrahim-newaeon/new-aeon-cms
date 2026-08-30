@@ -152,7 +152,7 @@ export function CartViewClient({
               </div>
 
               {line.available && (
-                <p className="font-medium text-site-ink" dir="ltr">
+                <p className="font-medium text-site-ink" dir={locale === 'ar' ? undefined : 'ltr'}>
                   {formatPrice(line.lineTotal, currency, locale)}
                 </p>
               )}
@@ -164,7 +164,7 @@ export function CartViewClient({
       <aside className="h-fit rounded-lg border border-site-line p-5">
         <div className="flex justify-between text-sm">
           <span className="text-site-ink-muted">{copy.subtotal}</span>
-          <span className="font-semibold text-site-ink" dir="ltr">
+          <span className="font-semibold text-site-ink" dir={locale === 'ar' ? undefined : 'ltr'}>
             {formatPrice(cart.subtotal, currency, locale)}
           </span>
         </div>
@@ -174,7 +174,7 @@ export function CartViewClient({
             data-test-id="cart-bundle-saving"
           >
             <span>{copy.bundleSaving}</span>
-            <span dir="ltr">− {formatPrice(cart.bundleDiscount, currency, locale)}</span>
+            <span dir={locale === 'ar' ? undefined : 'ltr'}>− {formatPrice(cart.bundleDiscount, currency, locale)}</span>
           </div>
         )}
 

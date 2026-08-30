@@ -1,7 +1,7 @@
 // components/site/shop-grid.tsx
 import Image from 'next/image';
 import Link from 'next/link';
-import { formatPrice } from '@/lib/money';
+import { Price } from '@/components/site/price';
 import type { ShopCard } from '@/lib/commerce/storefront';
 
 export function ShopGrid({
@@ -48,13 +48,11 @@ export function ShopGrid({
                 <p className="line-clamp-2 text-sm text-site-ink-muted">{item.shortDesc}</p>
               )}
               <p className="mt-auto flex items-baseline gap-2">
-                <span className="font-semibold text-site-ink" dir="ltr" data-test-id="shop-price">
-                  {formatPrice(item.basePrice, currency, locale)}
-                </span>
+                <Price amount={item.basePrice} currency={currency} locale={locale}
+                  className="font-semibold text-site-ink" testId="shop-price" />
                 {item.compareAtPrice != null && item.compareAtPrice > item.basePrice && (
-                  <span className="text-sm text-site-ink-muted line-through" dir="ltr">
-                    {formatPrice(item.compareAtPrice, currency, locale)}
-                  </span>
+                  <Price amount={item.compareAtPrice} currency={currency} locale={locale}
+                    strike className="text-sm text-site-ink-muted" />
                 )}
               </p>
             </div>

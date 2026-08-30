@@ -95,7 +95,7 @@ export default async function AccountPage({
                 <span className="text-sm text-site-ink-muted">
                   {STATUS_LABEL[order.status][typedLocale]}
                 </span>
-                <span className="text-sm text-site-ink" dir="ltr">
+                <span className="text-sm text-site-ink" dir={typedLocale === 'ar' ? undefined : 'ltr'}>
                   {formatPrice(order.total, currency, typedLocale)}
                 </span>
                 <span className="text-sm text-site-ink-muted">

@@ -90,11 +90,11 @@ export async function ProductGridBlock({
                 <p className="mt-1 line-clamp-2 text-sm text-site-ink-muted">{product.shortDesc}</p>
               )}
               <p className="mt-2 flex items-baseline gap-2">
-                <span className="font-semibold text-site-ink" dir="ltr">
+                <span className="font-semibold text-site-ink" dir={locale === 'ar' ? undefined : 'ltr'}>
                   {formatPrice(product.basePrice, currency, locale)}
                 </span>
                 {product.compareAtPrice != null && product.compareAtPrice > product.basePrice && (
-                  <span className="text-sm text-site-ink-muted line-through" dir="ltr">
+                  <span className="text-sm text-site-ink-muted line-through" dir={locale === 'ar' ? undefined : 'ltr'}>
                     {formatPrice(product.compareAtPrice, currency, locale)}
                   </span>
                 )}

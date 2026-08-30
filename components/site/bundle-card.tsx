@@ -99,16 +99,16 @@ export function BundleCard({
         {bundle.description && <p className="text-sm text-site-ink-muted">{bundle.description}</p>}
 
         <p className="mt-auto flex flex-wrap items-baseline gap-2">
-          <span className="text-lg font-semibold text-site-ink" dir="ltr">
+          <span className="text-lg font-semibold text-site-ink" dir={locale === 'ar' ? undefined : 'ltr'}>
             {formatPrice(bundle.price, currency, locale)}
           </span>
 
           {saving > 0 && (
             <>
-              <span className="text-sm text-site-ink-muted line-through" dir="ltr">
+              <span className="text-sm text-site-ink-muted line-through" dir={locale === 'ar' ? undefined : 'ltr'}>
                 {formatPrice(bundle.partsTotal, currency, locale)}
               </span>
-              <span className="text-sm font-medium text-site-success" dir="ltr">
+              <span className="text-sm font-medium text-site-success" dir={locale === 'ar' ? undefined : 'ltr'}>
                 {copy.save} {formatPrice(saving, currency, locale)}
               </span>
             </>

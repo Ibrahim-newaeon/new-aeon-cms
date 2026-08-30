@@ -63,7 +63,7 @@ export default async function WishlistPage({
                 )}
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-site-ink">{item.name}</span>
-                  <span className="mt-1 block text-sm text-site-ink-muted" dir="ltr">
+                  <span className="mt-1 block text-sm text-site-ink-muted" dir={typedLocale === 'ar' ? undefined : 'ltr'}>
                     {formatPrice(item.basePrice, currency, typedLocale)}
                   </span>
                   {/* A saved product can be withdrawn from sale; saying so beats

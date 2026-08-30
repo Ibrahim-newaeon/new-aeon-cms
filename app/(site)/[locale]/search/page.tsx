@@ -135,7 +135,7 @@ export default async function SearchPage({ params, searchParams }: Props) {
                         )}
                         <span className="min-w-0">
                           <span className="block truncate font-semibold text-site-ink">{hit.name}</span>
-                          <span className="mt-1 block text-sm text-site-ink-muted" dir="ltr">
+                          <span className="mt-1 block text-sm text-site-ink-muted" dir={typedLocale === 'ar' ? undefined : 'ltr'}>
                             {formatPrice(hit.price, currency, typedLocale)}
                           </span>
                         </span>
