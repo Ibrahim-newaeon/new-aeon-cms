@@ -45,21 +45,25 @@ export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
 };
 
 /**
- * Which blocks have a real editor. The rest are addable but stubbed, and the
- * picker marks them so.
+ * Which blocks have a real editor. The picker badges the rest as "Soon".
  *
- * This set is hand-maintained and therefore drifts — table, pricing,
- * comparison, product-grid and custom all sat here as "Soon" for as long as
- * their editors had been working. tests/block-editors-coverage.test.ts now
- * pins it against the editor's actual dispatch, so a new editor that is not
- * listed here fails the suite instead of being hidden behind a false badge.
+ * Every block type currently has one, so the badge renders nowhere. The set
+ * stays because it is the seam a block type added without an editor must pass
+ * through, and tests/block-editors-coverage.test.ts fails if one appears.
+ *
+ * This set is hand-maintained and drifted badly: table, pricing, comparison,
+ * product-grid and custom were badged "Soon" while their editors worked, and
+ * so were accordion and tabs — those two dispatch from BlockBuilder rather
+ * than BlockEditor, which made them easy to read as unbuilt. The test now
+ * parses BOTH dispatch sites rather than trusting a hand-written list, because
+ * a hand-written list is exactly what failed here.
  */
 export const EDITABLE_BLOCKS: ReadonlySet<BlockType> = new Set<BlockType>([
   'rich-text', 'heading', 'paragraph', 'image', 'quote', 'button', 'divider',
   'spacer', 'html', 'testimonial', 'cta', 'feature-grid', 'stats', 'gallery',
   'video', 'embed', 'team', 'timeline', 'social-links', 'recent-posts', 'map',
   'newsletter', 'contact-form', 'table', 'pricing', 'comparison',
-  'product-grid', 'custom',
+  'product-grid', 'custom', 'accordion', 'tabs',
 ]);
 
 /**
