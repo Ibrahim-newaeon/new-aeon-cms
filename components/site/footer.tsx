@@ -3,6 +3,24 @@ import Link from 'next/link';
 import type { NavItem } from './navbar';
 import type { SiteSettings } from '@/lib/db/queries';
 
+/**
+ * The `locale` prop was already threaded in and never read, so these three
+ * strings rendered Arabic on the English site — on every page, since the
+ * footer is in the site layout.
+ */
+const COPY = {
+  ar: {
+    quickLinks: 'روابط سريعة',
+    contact: 'تواصل معنا',
+    rights: 'جميع الحقوق محفوظة.',
+  },
+  en: {
+    quickLinks: 'Quick links',
+    contact: 'Contact us',
+    rights: 'All rights reserved.',
+  },
+} as const;
+
 interface FooterProps {
   navigation: NavItem[];
   settings: SiteSettings | null;
@@ -11,6 +29,7 @@ interface FooterProps {
 
 export function Footer({ navigation, settings, locale }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const copy = COPY[locale];
 
   return (
     <footer className="bg-gray-900 text-gray-300">
@@ -26,7 +45,7 @@ export function Footer({ navigation, settings, locale }: FooterProps) {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">روابط سريعة</h4>
+            <h4 className="text-sm font-semibold text-white mb-4">{copy.quickLinks}</h4>
             <ul className="space-y-2">
               {navigation.map((item) => (
                 <li key={item.id}>
@@ -39,7 +58,7 @@ export function Footer({ navigation, settings, locale }: FooterProps) {
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">تواصل معنا</h4>
+            <h4 className="text-sm font-semibold text-white mb-4">{copy.contact}</h4>
             <ul className="space-y-2 text-sm">
               {settings?.contactEmail && (
                 <li><a href={`mailto:${settings.contactEmail}`} className="hover:text-white">{settings.contactEmail}</a></li>
@@ -52,7 +71,7 @@ export function Footer({ navigation, settings, locale }: FooterProps) {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-500">
-          © {currentYear} {settings?.siteName ?? ''}. جميع الحقوق محفوظة.
+          © {currentYear} {settings?.siteName ?? ''}. {copy.rights}
         </div>
       </div>
     </footer>

@@ -7,10 +7,22 @@ import { getSettings } from '@/lib/db/queries';
 import { CartViewClient } from '@/components/site/cart-view';
 import { locales, type Locale } from '@/lib/env';
 
-export const metadata: Metadata = {
-  title: 'السلة',
-  robots: { index: false, follow: false },
-};
+/**
+ * Locale-aware because static `metadata` is not: Next evaluates it once,
+ * without route params, so a hardcoded title renders on BOTH locales. That is
+ * why /en/cart served an Arabic <title>.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: locale === 'ar' ? 'السلة' : 'Cart',
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function CartPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

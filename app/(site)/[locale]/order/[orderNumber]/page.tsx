@@ -10,11 +10,23 @@ import { getSettings } from '@/lib/db/queries';
 import { formatPrice } from '@/lib/money';
 import { locales, type Locale } from '@/lib/env';
 
-export const metadata: Metadata = {
-  title: 'تفاصيل الطلب',
-  // Reachable by order number alone, so it must never be indexed.
-  robots: { index: false, follow: false },
-};
+/**
+ * Locale-aware because static `metadata` is not: Next evaluates it once,
+ * without route params, so a hardcoded title renders on BOTH locales. That is
+ * why /en/order/… served an Arabic <title>.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; orderNumber: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: locale === 'ar' ? 'تفاصيل الطلب' : 'Order details',
+    // Reachable by order number alone, so it must never be indexed.
+    robots: { index: false, follow: false },
+  };
+}
 
 const STATUS_LABEL: Record<string, { ar: string; en: string }> = {
   pending: { ar: 'قيد المراجعة', en: 'Pending' },
