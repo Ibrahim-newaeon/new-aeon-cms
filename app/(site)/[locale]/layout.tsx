@@ -118,6 +118,7 @@ export default async function SiteLayout({
               logo={settings?.logo ?? null}
               siteName={settings?.siteName ?? 'CMS'}
               locale={typedLocale}
+              commerceOn={Boolean(settings?.eCommerceEnabled)}
             />
             {/* clip, not hidden: `hidden` would make this a scroll container
                 and break any position: sticky inside it. This absorbs the few

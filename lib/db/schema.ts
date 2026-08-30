@@ -488,6 +488,27 @@ export const customers = pgTable('customers', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+/**
+ * One-time codes for shopper sign-in.
+ *
+ * Hashed at rest with the same argon2 used for staff passwords. A six-digit
+ * code is guessable in a million tries, so what actually protects it is the
+ * attempt counter and the short expiry, not the hash — but storing it in clear
+ * would mean a read of this table hands over every live session.
+ *
+ * One row per phone: requesting a new code replaces the old one, so a code
+ * read from an SMS is always the current one and an abandoned request cannot
+ * be used later.
+ */
+export const customerOtp = pgTable('customer_otp', {
+  phone: varchar('phone', { length: 32 }).primaryKey(),
+  codeHash: text('code_hash').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  /** Counted down so a wrong guess costs something. */
+  attemptsLeft: integer('attempts_left').notNull().default(5),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const shippingZones = pgTable('shipping_zones', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),

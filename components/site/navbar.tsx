@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Search } from 'lucide-react';
+import { Menu, X, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** Shape returned by getNavigation(). Was `any[]`. */
@@ -22,9 +22,11 @@ interface NavbarProps {
   /** From settings — never a hardcoded brand string. */
   siteName: string;
   locale: 'ar' | 'en';
+  /** Whether the shop is switched on; hides the account link when it is not. */
+  commerceOn?: boolean;
 }
 
-export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
+export function Navbar({ navigation, logo, siteName, locale, commerceOn = false }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -95,6 +97,19 @@ export function Navbar({ navigation, logo, siteName, locale }: NavbarProps) {
             >
               <Search size={20} aria-hidden="true" />
             </Link>
+
+            {/* Only when there is a shop: an account here exists to show order
+                history, so it is meaningless on a content-only site. */}
+            {commerceOn && (
+              <Link
+                href={`/${locale}/account`}
+                aria-label={locale === 'ar' ? 'حسابي' : 'My account'}
+                data-test-id="navbar-account"
+                className="rounded-full p-2 hover:bg-site-surface-raised"
+              >
+                <User size={20} aria-hidden="true" />
+              </Link>
+            )}
 
             <Link
               href={swappedPath}
