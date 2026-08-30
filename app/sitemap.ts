@@ -72,25 +72,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }))
     : [];
 
-  // Only the locales a product actually has a translation for. A product with
-  // no English name 404s on /en, and a sitemap entry for it asks a crawler to
-  // fetch a page we know is missing.
-  const productPages: MetadataRoute.Sitemap = productRows.flatMap((row) => {
-    const available = locales.filter((l) => row.locales?.includes(l));
-    return available.map((locale) => ({
+  const productPages: MetadataRoute.Sitemap = productRows.flatMap((row) =>
+    locales.map((locale) => ({
       url: `${base}/${locale}/products/${row.slug}`,
       lastModified: row.updatedAt ? new Date(row.updatedAt) : new Date(),
       changeFrequency: 'weekly' as const,
       priority: 0.8,
-      // Alternates are narrowed too: pointing hreflang at a 404 tells a crawler
-      // the translation exists.
-      alternates: {
-        languages: Object.fromEntries(
-          available.map((l) => [l, `${base}/${l}/products/${row.slug}`])
-        ),
-      },
-    }));
-  });
+      alternates: { languages: languages(`/products/${row.slug}`) },
+    }))
+  );
 
   // The homepage is served at /[locale] and also stored as the 'home' slug —
   // listing both would be a duplicate.

@@ -133,6 +133,40 @@ test.describe('shop filters', () => {
     await expect(page.getByTestId('shop-clear-all').first()).toBeVisible();
   });
 
+  test('a product with no English name still appears, under its other name', async ({ page }) => {
+    /**
+     * These queries used to INNER JOIN the translation, so a product with no
+     * English name vanished from the English shop and 404'd on its own page.
+     * The failure was silent both ways: nothing errored, the product simply
+     * was not there.
+     */
+    const untranslated = await withDb(async (db) => {
+      const r = await db.query(
+        `select p.slug,
+                (select i.name from product_i18n i
+                  where i.product_id = p.id order by i.locale limit 1) as fallback_name
+         from products p
+         where p.is_active
+           and not exists (
+             select 1 from product_i18n i
+             where i.product_id = p.id and i.locale = 'en' and i.name <> ''
+           )
+         limit 1`
+      );
+      return r.rows[0] as { slug: string; fallback_name: string } | undefined;
+    });
+
+    test.skip(!untranslated, 'every product has an English name');
+
+    await page.goto(`/${SHOP_LOCALE}/products/${untranslated!.slug}`);
+    await expect(page.locator('h1')).toHaveText(untranslated!.fallback_name);
+
+    await page.goto(shop);
+    await expect(
+      cards(page).filter({ hasText: untranslated!.fallback_name })
+    ).toHaveCount(1);
+  });
+
   test('the Arabic shop puts the sidebar on the right', async ({ page }) => {
     await page.goto('/ar/shop');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');

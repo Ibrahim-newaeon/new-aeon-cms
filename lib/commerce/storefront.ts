@@ -93,13 +93,59 @@ function orderFor(sort: ShopSort | undefined) {
   }
 }
 
+/** Active products for the shop grid, in the requested locale where it exists. */
+
 /**
- * Active products for the shop grid.
+ * A product's text in the requested locale, falling back to whatever other
+ * translation exists.
  *
- * innerJoin on productI18n: a product with no translation for this locale has
- * no name to show, so it is omitted rather than rendered as its slug — the same
- * rule the content archives use.
+ * These queries used to INNER JOIN product_i18n on the locale, so a product
+ * with no English name did not merely lose its name on /en — it vanished from
+ * the shop grid, 404'd on its own page, and dropped out of search. Two products
+ * in the imported catalogue had a blank nameEn, so that is exactly what
+ * happened to them.
+ *
+ * Content already behaves this way: lib/db/queries.ts LEFT JOINs its
+ * translations and renders regardless. A missing translation is a content gap
+ * to fill in, not grounds for hiding a product a shop is trying to sell.
+ *
+ * The outer column is written as raw `products.id`, NOT as an interpolated
+ * ${products.id}. In a SELECT list with a single table in scope, drizzle emits
+ * a column unqualified — `"id"` — which inside this subquery binds to
+ * product_i18n's OWN id instead of the product's. The subquery then matches
+ * nothing, coalesce falls through, and every product renders as its slug: no
+ * error, no empty result, just quietly wrong text. It only appeared here
+ * because removing the join left one table in scope; the same expression was
+ * fine while the join existed. Qualifying explicitly makes it correct either
+ * way, which is the point.
  */
+type I18nColumn = 'name' | 'short_description' | 'description' | 'meta_title' | 'meta_description';
+
+/**
+ * The name, which must never be null — a nameless card is not a thing the grid
+ * can render. Falls through translations to the slug as a last resort, the same
+ * way an untitled page shows its path.
+ */
+function nameField(locale: 'ar' | 'en') {
+  return sql<string>`coalesce(
+    (select i.name from product_i18n i
+      where i.product_id = products.id and i.locale::text = ${locale}),
+    (select i.name from product_i18n i
+      where i.product_id = products.id order by i.locale limit 1),
+    products.slug
+  )`;
+}
+
+function i18nField(column: I18nColumn, locale: 'ar' | 'en') {
+  return sql<string | null>`coalesce(
+    (select i.${sql.raw(column)} from product_i18n i
+      where i.product_id = products.id and i.locale::text = ${locale}),
+    (select i.${sql.raw(column)} from product_i18n i
+      where i.product_id = products.id and i.${sql.raw(column)} is not null
+      order by i.locale limit 1)
+  )`;
+}
+
 export async function listShopProducts(
   locale: 'ar' | 'en',
   filters: ShopFilters = {},
@@ -117,14 +163,10 @@ export async function listShopProducts(
       slug: products.slug,
       basePrice: products.basePrice,
       compareAtPrice: products.compareAtPrice,
-      name: productI18n.name,
-      shortDesc: productI18n.shortDesc,
+      name: nameField(locale),
+      shortDesc: i18nField('short_description', locale),
     })
     .from(products)
-    .innerJoin(
-      productI18n,
-      and(eq(productI18n.productId, products.id), eq(productI18n.locale, locale))
-    )
     .where(where)
     .orderBy(...orderFor(filters.sort))
     .limit(limit);
@@ -159,17 +201,13 @@ export async function getShopProduct(slug: string, locale: 'ar' | 'en') {
       basePrice: products.basePrice,
       compareAtPrice: products.compareAtPrice,
       isActive: products.isActive,
-      name: productI18n.name,
-      shortDesc: productI18n.shortDesc,
-      description: productI18n.description,
-      metaTitle: productI18n.metaTitle,
-      metaDescription: productI18n.metaDescription,
+      name: nameField(locale),
+      shortDesc: i18nField('short_description', locale),
+      description: i18nField('description', locale),
+      metaTitle: i18nField('meta_title', locale),
+      metaDescription: i18nField('meta_description', locale),
     })
     .from(products)
-    .innerJoin(
-      productI18n,
-      and(eq(productI18n.productId, products.id), eq(productI18n.locale, locale))
-    )
     .where(eq(products.slug, slug))
     .limit(1);
 
@@ -282,9 +320,7 @@ export async function getShopFacets(
    * no count.
    */
   const translated = sql`exists (
-    select 1 from ${productI18n}
-    where ${productI18n.productId} = ${products.id}
-      and ${productI18n.locale}::text = ${locale}
+    select 1 from ${productI18n} where ${productI18n.productId} = ${products.id}
   )`;
 
   const active = and(eq(products.isActive, true), translated);
