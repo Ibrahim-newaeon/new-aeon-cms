@@ -44,12 +44,22 @@ export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
   custom: 'block.custom',
 };
 
-/** Which blocks currently have a real editor. The rest are addable but stubbed. */
+/**
+ * Which blocks have a real editor. The rest are addable but stubbed, and the
+ * picker marks them so.
+ *
+ * This set is hand-maintained and therefore drifts — table, pricing,
+ * comparison, product-grid and custom all sat here as "Soon" for as long as
+ * their editors had been working. tests/block-editors-coverage.test.ts now
+ * pins it against the editor's actual dispatch, so a new editor that is not
+ * listed here fails the suite instead of being hidden behind a false badge.
+ */
 export const EDITABLE_BLOCKS: ReadonlySet<BlockType> = new Set<BlockType>([
   'rich-text', 'heading', 'paragraph', 'image', 'quote', 'button', 'divider',
   'spacer', 'html', 'testimonial', 'cta', 'feature-grid', 'stats', 'gallery',
   'video', 'embed', 'team', 'timeline', 'social-links', 'recent-posts', 'map',
-  'newsletter', 'contact-form',
+  'newsletter', 'contact-form', 'table', 'pricing', 'comparison',
+  'product-grid', 'custom',
 ]);
 
 /**

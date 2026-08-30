@@ -25,10 +25,11 @@ into an exhaustive, checked switch:
 import type { ContentBlock } from '@/lib/blocks/types';
 ```
 
-Doing so will surface pre-existing type errors in the `gallery` case
-(`block.images?.map((img: any, ...)`) and in the `heading` case
-(`` `h${block.level}` `` needs a `const` map to narrow properly). Those are
-separate cleanups — worth doing, but they are not blockers here.
+**Both follow-up cleanups are now done too.** Swapping in the union surfaced
+type errors in the `gallery` case (`block.images?.map((img: any, ...)`) and the
+`heading` case (`` `h${block.level}` `` needing a `const` map to narrow); the
+renderer now uses `HEADING_TAG[block.level]`, carries no `any`, and compiles
+under `strict`.
 
 ---
 

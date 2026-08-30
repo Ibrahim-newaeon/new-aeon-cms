@@ -523,9 +523,6 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             onChange={(v) => onChange({ ...block, description: v || undefined })} />
           <MiniField label={t('be.buttonText')} value={block.buttonText ?? ''}
             onChange={(v) => onChange({ ...block, buttonText: v || undefined })} />
-          <p className="text-xs text-[var(--admin-warning)]">
-            {t('be.newsletterTodo')}
-          </p>
         </div>
       );
 
@@ -541,9 +538,6 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
           />
           <MiniField label={t('be.submitLabel')} value={block.submitLabel ?? ''}
             onChange={(v) => onChange({ ...block, submitLabel: v || undefined })} />
-          <p className="text-xs text-[var(--admin-warning)]">
-            {t('be.contactTodo')}
-          </p>
         </div>
       );
 
