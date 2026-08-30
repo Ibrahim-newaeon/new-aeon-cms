@@ -426,6 +426,7 @@ export const ar = {
   'blocks.deleteN': 'حذف {n}',
   'blocks.moveUpN': 'تحريك {n} لأعلى',
   'blocks.moveDownN': 'تحريك {n} لأسفل',
+  'blocks.dragHandle': 'اسحب القسم {n} لإعادة الترتيب',
 
   // Section type names for the block picker and the collapsed section
   // header. Keyed to match BlockType in lib/blocks/types.
@@ -1143,6 +1144,7 @@ export const en: Partial<Record<MessageKey, string>> = {
   'blocks.deleteN': 'Delete {n}',
   'blocks.moveUpN': 'Move {n} up',
   'blocks.moveDownN': 'Move {n} down',
+  'blocks.dragHandle': 'Drag section {n} to reorder',
 
   // Section type names for the block picker and the collapsed section
   // header. Keyed to match BlockType in lib/blocks/types.

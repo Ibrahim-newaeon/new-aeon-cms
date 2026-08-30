@@ -8,9 +8,10 @@ import {
   useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, sortableKeyboardCoordinates,
+  SortableContext, sortableKeyboardCoordinates, useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { RichTextBlockEditor } from './rich-text-block-editor';
 import { BlockEditor } from './block-editors';
@@ -24,12 +25,14 @@ import { useT } from './i18n-provider';
 interface BlockBuilderProps {
   blocks: ContentBlock[];
   onChange: (blocks: ContentBlock[]) => void;
+  /** Set by NestedBlocksEditor. See the drag handle in BlockItem. */
+  nested?: boolean;
 }
 
 let keyCounter = 0;
 const nextKey = () => `blk-${(keyCounter += 1)}`;
 
-export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
+export function BlockBuilder({ blocks, onChange, nested = false }: BlockBuilderProps) {
   const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -142,12 +145,15 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
         </p>
       )}
 
-      {/* Drag-and-drop is wired at the container only: the context, sensors and
-          onDragEnd reorder correctly, but no BlockItem calls useSortable, so
-          nothing is draggable and this does nothing yet. The grip in the header
-          is decorative for the same reason. Finishing it means making BlockItem
-          sortable on its key; the reorder handler is already correct. Until
-          then the up/down buttons are the only way to reorder. */}
+      {/* Nested builders (accordion/tabs) create their own DndContext inside
+          this one. Verified: dragging an inner block with the pointer reorders
+          only the inner list and leaves this one untouched, because the
+          listeners useSortable hands to a handle belong to the nearest
+          context. Ids are unique across every builder on the page (the key
+          counter is module-level) and handleDragEnd bails on an id it does not
+          own, so a stray event cannot corrupt the wrong list either.
+
+          The keyboard sensor does NOT survive nesting — see the handle. */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={keys} strategy={verticalListSortingStrategy}>
           <ul className="space-y-4" id={listId}>
@@ -156,10 +162,12 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
               return (
                 <BlockItem
                   key={key}
+                  sortId={key}
                   domId={`${listId}-${key}`}
                   index={idx}
                   total={blocks.length}
                   block={block}
+                  nested={nested}
                   isExpanded={expanded === key}
                   onToggle={() => setExpanded(expanded === key ? null : key)}
                   onUpdate={(b) => updateBlock(idx, b)}
@@ -234,7 +242,9 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
 }
 
 function BlockItem({
+  sortId,
   domId,
+  nested,
   index,
   total,
   block,
@@ -244,7 +254,9 @@ function BlockItem({
   onRemove,
   onMove,
 }: {
+  sortId: string;
   domId: string;
+  nested: boolean;
   index: number;
   total: number;
   block: ContentBlock;
@@ -255,13 +267,44 @@ function BlockItem({
   onMove: (direction: -1 | 1) => void;
 }) {
   const t = useT();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: sortId });
+
   return (
-    <li className="rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)]">
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        'rounded-lg border border-[var(--admin-line)] bg-[var(--admin-surface)]',
+        // The row being dragged has to sit above its siblings, or it slides
+        // underneath the ones it is passing and looks like it vanished.
+        isDragging && 'relative z-10 opacity-80 shadow-lg'
+      )}
+    >
       <div className="flex items-center gap-2 p-3 border-b border-[var(--admin-line)]">
-        {/* Decorative only — see the note on DndContext above: nothing is
-            sortable yet, so it must not look interactive (it previously had
-            cursor-grab). */}
-        <GripVertical size={16} aria-hidden="true" className="text-[var(--admin-text-muted)]" />
+        {/* A real handle now. It must be a button at the top level: the
+            keyboard sensor needs a focusable element to receive space/arrow
+            keys, and `attributes` carries the roledescription and instructions
+            a screen reader reads out. `touch-none` stops the browser scrolling
+            the page instead of starting a drag on touch.
+
+            Inside a nested builder the keyboard sensor never fires — the
+            surrounding DndContext takes the key first, so pick-up never
+            happens. Pointer drag there works fine. Rather than leave a tab
+            stop that does nothing when activated, the nested handle is taken
+            out of the tab order: keyboard users reorder with the up/down
+            buttons, which are labelled and work at every depth. */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          tabIndex={nested ? -1 : attributes.tabIndex}
+          aria-label={t('blocks.dragHandle', { n: index + 1 })}
+          data-test-id={`block-drag-${index}`}
+          className="cursor-grab touch-none rounded p-1 text-[var(--admin-text-muted)] hover:bg-white/5 active:cursor-grabbing"
+        >
+          <GripVertical size={16} aria-hidden="true" />
+        </button>
 
         <span className="flex-1 text-sm font-medium">
           {t(BLOCK_LABEL_KEYS[block.type])}
@@ -413,6 +456,7 @@ function NestedBlocksEditor<K extends 'title' | 'label'>({
 
           <div className="border-s-2 border-[var(--admin-line)] ps-3">
             <BlockBuilder
+              nested
               blocks={entry.content}
               onChange={(content) =>
                 update(index, { content } as Partial<

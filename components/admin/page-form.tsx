@@ -57,6 +57,16 @@ export function PageForm({
   const router = useRouter();
   const [value, setValue] = useState<PageFormValue>(initial);
   const [activeLocale, setActiveLocale] = useState<'ar' | 'en'>('ar');
+  /**
+   * Bumped whenever the section list is replaced wholesale rather than edited.
+   * BlockBuilder keeps per-block React keys so a TipTap editor stays attached
+   * to its own document across reorders, and it only regenerates them when the
+   * block COUNT changes. Copying a structure of the same length therefore left
+   * the old keys pointing at brand-new blocks, and the editors kept rendering
+   * the documents they were already holding. Folding this into the key forces
+   * the remount that the count heuristic misses.
+   */
+  const [structureEpoch, setStructureEpoch] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +94,7 @@ export function PageForm({
     if (!source) return;
     if (active.body.length > 0 && !window.confirm(t('form.replaceSections'))) return;
     patchTranslation({ body: structuredClone(source.body) });
+    setStructureEpoch((n) => n + 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -329,9 +340,10 @@ export function PageForm({
           ))}
         </div>
 
-        {/* Remounted per locale so BlockBuilder's internal keys reset cleanly. */}
+        {/* Remounted per locale, and again on any wholesale replacement, so
+            BlockBuilder's internal keys reset cleanly. */}
         <BlockBuilder
-          key={activeLocale}
+          key={`${activeLocale}:${structureEpoch}`}
           blocks={active.body}
           onChange={(body) => patchTranslation({ body })}
         />
