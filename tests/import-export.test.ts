@@ -115,8 +115,12 @@ describe('planImport', () => {
     const plan = planImport(products, sheet([row({ price: 'free' })]), new Set());
     expect(plan.create).toHaveLength(0);
     expect(plan.rejected[0]?.column).toBe('price');
-    // Column G, second row of the file.
-    expect(plan.rejected[0]?.cell).toBe('G2');
+
+    // Derived, not hard-coded: this asserted "G2" and broke the moment four
+    // description columns were added ahead of price. The property is that the
+    // reported cell points at the price column, whichever letter that is.
+    const expected = cellRef(0, headersFor(products).indexOf('price'));
+    expect(plan.rejected[0]?.cell).toBe(expected);
   });
 
   it('rejects one bad row without losing the good ones', () => {

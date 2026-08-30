@@ -94,18 +94,35 @@ async function exportRows(entity: EntityDef): Promise<Record<string, string>[]> 
       }
 
       const names = await db
-        .select({ productId: productI18n.productId, locale: productI18n.locale, name: productI18n.name })
+        .select({
+          productId: productI18n.productId,
+          locale: productI18n.locale,
+          name: productI18n.name,
+          shortDesc: productI18n.shortDesc,
+          description: productI18n.description,
+        })
         .from(productI18n)
         .where(inArray(productI18n.productId, productIds));
 
       const nameOf = new Map<string, string>();
-      for (const n of names) nameOf.set(`${n.productId}|${n.locale}`, n.name);
+      const shortOf = new Map<string, string>();
+      const descOf = new Map<string, string>();
+      for (const n of names) {
+        const key = `${n.productId}|${n.locale}`;
+        nameOf.set(key, n.name);
+        if (n.shortDesc) shortOf.set(key, n.shortDesc);
+        if (n.description) descOf.set(key, n.description);
+      }
 
       return rows.map((row) => ({
         sku: row.sku,
         slug: row.slug,
         name_en: nameOf.get(`${row.productId}|en`) ?? '',
         name_ar: nameOf.get(`${row.productId}|ar`) ?? '',
+        short_desc_en: shortOf.get(`${row.productId}|en`) ?? '',
+        short_desc_ar: shortOf.get(`${row.productId}|ar`) ?? '',
+        description_en: descOf.get(`${row.productId}|en`) ?? '',
+        description_ar: descOf.get(`${row.productId}|ar`) ?? '',
         brand: row.brand ?? '',
         category: row.category ?? '',
         price: fromMinorUnits(row.price, exponent),
@@ -402,16 +419,36 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
   // must not silently unfile a product.
   if (categorySlugs.length > 0) await setProductCategories(productId, categoryIds);
 
-  for (const [locale, name] of [['en', row.name_en], ['ar', row.name_ar]] as const) {
-    if (!name) continue;
+  const perLocale = [
+    { locale: 'en' as const, name: row.name_en, shortDesc: row.short_desc_en, description: row.description_en },
+    { locale: 'ar' as const, name: row.name_ar, shortDesc: row.short_desc_ar, description: row.description_ar },
+  ];
+
+  for (const t of perLocale) {
+    if (!t.name) continue;
+
     const [existing] = await db
       .select({ id: productI18n.id })
       .from(productI18n)
-      .where(and(eq(productI18n.productId, productId), eq(productI18n.locale, locale)))
+      .where(and(eq(productI18n.productId, productId), eq(productI18n.locale, t.locale)))
       .limit(1);
 
-    if (existing) await db.update(productI18n).set({ name }).where(eq(productI18n.id, existing.id));
-    else await db.insert(productI18n).values({ productId, locale, name });
+    /**
+     * A blank cell leaves the stored value alone rather than erasing it.
+     *
+     * The opposite of the compare-at rule, and deliberately so: a price is a
+     * fact with one current value, while a description someone wrote in the
+     * admin should not be wiped by a stock-update sheet that simply has no
+     * column for it. `undefined` here means "not mentioned".
+     */
+    const values = {
+      name: t.name,
+      shortDesc: t.shortDesc || undefined,
+      description: t.description || undefined,
+    };
+
+    if (existing) await db.update(productI18n).set(values).where(eq(productI18n.id, existing.id));
+    else await db.insert(productI18n).values({ productId, locale: t.locale, ...values });
   }
 
   if (row.image_url) {

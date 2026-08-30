@@ -69,6 +69,32 @@ export const ENTITIES: readonly EntityDef[] = [
       { key: 'slug', labelEn: 'Slug', labelAr: 'الرابط', required: true, example: 'amber-oud' },
       { key: 'name_en', labelEn: 'Name (EN)', labelAr: 'الاسم (إنجليزي)', example: 'Amber Oud' },
       { key: 'name_ar', labelEn: 'Name (AR)', labelAr: 'الاسم (عربي)', example: 'عنبر وعود' },
+      /**
+       * The catalogue's own words. Absent from this template until now, so a
+       * 51-product import arrived with no descriptions at all even though the
+       * source file carried them — the same silent drop as image_url and
+       * compare_at_price before it.
+       *
+       * Not cosmetic: this text is the Product schema's `description`, which
+       * is what a search engine or an answer engine quotes. A product with an
+       * empty one is a weaker citation.
+       */
+      {
+        key: 'short_desc_en',
+        labelEn: 'Short description (EN)',
+        labelAr: 'وصف مختصر (إنجليزي)',
+        example: 'A warm amber and oud blend.',
+        hintEn: 'One line, shown on the shop card',
+      },
+      { key: 'short_desc_ar', labelEn: 'Short description (AR)', labelAr: 'وصف مختصر (عربي)', example: 'مزيج دافئ من العنبر والعود.' },
+      {
+        key: 'description_en',
+        labelEn: 'Description (EN)',
+        labelAr: 'الوصف (إنجليزي)',
+        example: '',
+        hintEn: 'The full text on the product page, and what search engines quote',
+      },
+      { key: 'description_ar', labelEn: 'Description (AR)', labelAr: 'الوصف (عربي)', example: '' },
       { key: 'brand', labelEn: 'Brand', labelAr: 'العلامة', example: 'Aeon Atelier' },
       {
         key: 'category',
@@ -103,6 +129,10 @@ export const ENTITIES: readonly EntityDef[] = [
       slug: text().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'lowercase letters, numbers and dashes'),
       name_en: optionalText(),
       name_ar: optionalText(),
+      short_desc_en: optionalText(500),
+      short_desc_ar: optionalText(500),
+      description_en: optionalText(20000),
+      description_ar: optionalText(20000),
       brand: optionalText(),
       category: optionalText(),
       price: decimal,
@@ -169,6 +199,10 @@ export const ENTITIES: readonly EntityDef[] = [
       slug: text().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'lowercase letters, numbers and dashes'),
       name_en: optionalText(),
       name_ar: optionalText(),
+      short_desc_en: optionalText(500),
+      short_desc_ar: optionalText(500),
+      description_en: optionalText(20000),
+      description_ar: optionalText(20000),
       parent: optionalText(),
       sort_order: integer.optional().or(z.literal('')),
       active: boolean.optional().or(z.literal('')),
@@ -212,6 +246,10 @@ export const ENTITIES: readonly EntityDef[] = [
       name: text(),
       name_en: optionalText(),
       name_ar: optionalText(),
+      short_desc_en: optionalText(500),
+      short_desc_ar: optionalText(500),
+      description_en: optionalText(20000),
+      description_ar: optionalText(20000),
     }),
   },
 
