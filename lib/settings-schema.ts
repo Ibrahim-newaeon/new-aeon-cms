@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { themeSchema } from './theme/slots';
 
-const SOCIAL_PLATFORMS = [
+export const SOCIAL_PLATFORMS = [
   'facebook',
   'instagram',
   'twitter',
@@ -43,6 +43,13 @@ export const settingsSchema = z.object({
   contactEmail: z.union([z.literal(''), z.string().email('بريد غير صالح').max(255)]).optional(),
   contactPhone: z.string().trim().max(50).optional(),
   socialLinks: z.record(z.enum(SOCIAL_PLATFORMS), assetUrl).optional(),
+  /**
+   * Two sentences written to be QUOTED by an answer engine — who you are,
+   * where, and what you sell. Capped so it stays quotable: a paragraph is not
+   * what gets lifted into an answer.
+   */
+  brandAnswer: z.string().trim().max(400).optional().or(z.literal('')),
+  allowAiCrawlers: z.boolean().optional(),
 
   analyticsId: trackingId.optional(),
   gtmId: trackingId.optional(),

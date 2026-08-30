@@ -5,6 +5,8 @@ import { getShopCategory } from '@/lib/commerce/storefront';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { ShopPageBody } from '../shop-page';
 import type { SearchParams } from '@/lib/commerce/shop-query';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 
 interface Props {
@@ -16,7 +18,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, category } = await params;
   if (!locales.includes(locale as Locale)) return {};
   const row = await getShopCategory(category, locale as Locale);
-  return { title: row?.name ?? category };
+  if (!row) return {};
+
+  const settings = await getSettings();
+  return buildMetadata({
+    locale: locale as Locale,
+    path: `/shop/${category}`,
+    title: row.name ?? category,
+    description: settings?.siteDescription,
+    image: settings?.logo,
+    siteName: settings?.siteName,
+  });
 }
 
 /**

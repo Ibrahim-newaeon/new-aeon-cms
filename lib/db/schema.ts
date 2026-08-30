@@ -332,6 +332,26 @@ export const settings = pgTable('settings', {
    * read this one list rather than sharing a constant.
    */
   shippingRegions: jsonb('shipping_regions').$type<ShippingRegion[]>(),
+  /**
+   * Two sentences a language model can lift verbatim: who this shop is, where,
+   * and what it sells.
+   *
+   * Separate from siteDescription, which is the meta description a search
+   * engine truncates at ~155 characters. This one is written to be QUOTED, and
+   * it is the single most valuable field for being cited by an answer engine —
+   * which is also why it is a field rather than something inferred: nobody but
+   * the shop can write it.
+   */
+  brandAnswer: text('brand_answer'),
+  /**
+   * Whether AI crawlers may read the site.
+   *
+   * Default TRUE, which is also what robots.txt already did by accident — the
+   * `*` rule matched GPTBot and the rest. The value of making it explicit is
+   * the ability to say NO for a client who does not want their content in a
+   * training set, which was previously impossible without editing code.
+   */
+  allowAiCrawlers: boolean('allow_ai_crawlers').default(true),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

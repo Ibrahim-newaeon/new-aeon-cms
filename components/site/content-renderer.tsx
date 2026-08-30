@@ -3,6 +3,8 @@
 // contentI18n.body. See lib/blocks/types.ts for why body is an array of our
 // blocks rather than a TipTap document.
 import Image from 'next/image';
+import { JsonLd } from './json-ld';
+import { faqJsonLd } from '@/lib/seo/json-ld';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapImage from '@tiptap/extension-image';
@@ -340,6 +342,33 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
 
     case 'recent-posts':
       return <RecentPostsBlock block={block} locale={locale} />;
+
+    /**
+     * FAQ. Rendered as visible text AND emitted as FAQPage schema from the
+     * same items, so the two cannot disagree.
+     *
+     * That matters more than it looks: schema that claims an answer the page
+     * does not show is the thing search engines penalise, and keeping one
+     * source makes it impossible here.
+     */
+    case 'faq': {
+      const faq = faqJsonLd(block.items);
+      return (
+        <section className="space-y-2" data-test-id="faq-block">
+          {faq && <JsonLd data={faq} />}
+          {block.items
+            .filter((item) => item.question.trim())
+            .map((item, idx) => (
+              <details key={idx} className="rounded-lg border border-site-line p-4">
+                <summary className="cursor-pointer font-medium text-site-ink">
+                  {item.question}
+                </summary>
+                <p className="mt-3 whitespace-pre-line text-site-ink-muted">{item.answer}</p>
+              </details>
+            ))}
+        </section>
+      );
+    }
 
     // accordion and tabs nest ContentBlock[], so they recurse through
     // BlockRenderer. Rendered as native <details> / static sections: both stay

@@ -28,6 +28,7 @@ export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
   table: 'block.table',
   downloads: 'block.downloads',
   accordion: 'block.accordion',
+  faq: 'block.faq',
   tabs: 'block.tabs',
   cta: 'block.cta',
   'feature-grid': 'block.feature-grid',
@@ -65,7 +66,7 @@ export const EDITABLE_BLOCKS: ReadonlySet<BlockType> = new Set<BlockType>([
   'spacer', 'html', 'testimonial', 'cta', 'feature-grid', 'stats', 'gallery',
   'video', 'embed', 'team', 'timeline', 'social-links', 'recent-posts', 'map',
   'newsletter', 'contact-form', 'table', 'pricing', 'comparison',
-  'product-grid', 'custom', 'accordion', 'tabs', 'slider', 'downloads',
+  'product-grid', 'custom', 'accordion', 'faq', 'tabs', 'slider', 'downloads',
 ]);
 
 /**
@@ -100,6 +101,7 @@ const FACTORIES: { [K in BlockType]: () => Extract<ContentBlock, { type: K }> } 
   table: () => ({ type: 'table', rows: 2, cols: 2, data: [['', ''], ['', '']], headerRow: true }),
   downloads: () => ({ type: 'downloads', items: [] }),
   accordion: () => ({ type: 'accordion', items: [] }),
+  faq: () => ({ type: 'faq', items: [{ question: '', answer: '' }] }),
   tabs: () => ({ type: 'tabs', items: [] }),
   cta: () => ({ type: 'cta', title: '', text: '', button: { text: '', url: '' } }),
   'feature-grid': () => ({ type: 'feature-grid', items: [], columns: 3 }),

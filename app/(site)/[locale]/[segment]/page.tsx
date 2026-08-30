@@ -4,6 +4,8 @@ import type { Metadata } from 'next';
 import { getContentBySlug } from '@/lib/db/queries';
 import { ContentRenderer } from '@/components/site/content-renderer';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 import { TypeArchive, archiveMetadata } from './type-archive';
 
@@ -42,12 +44,19 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!loaded) return archiveMetadata(locale, segment);
 
   const { i18n } = loaded.record;
-  return {
+  const settings = await getSettings();
+
+  return buildMetadata({
+    locale: loaded.locale,
+    path: `/${segment}`,
     title: i18n?.metaTitle || i18n?.title || segment,
-    description: i18n?.metaDescription || i18n?.excerpt || undefined,
-    robots: i18n?.noIndex ? { index: false, follow: false } : undefined,
-    openGraph: i18n?.ogImage ? { images: [i18n.ogImage] } : undefined,
-  };
+    description: i18n?.metaDescription || i18n?.excerpt,
+    image: i18n?.ogImage ?? settings?.logo,
+    // Editorial content, so a share renders as an article rather than a site.
+    type: 'article',
+    noIndex: i18n?.noIndex ?? false,
+    siteName: settings?.siteName,
+  });
 }
 
 export default async function ContentPage({ params }: Params) {

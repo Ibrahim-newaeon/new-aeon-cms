@@ -108,6 +108,16 @@ export type ContentBlock =
       }[];
     }
   | { type: 'accordion'; items: { title: string; content: ContentBlock[] }[] }
+  /**
+   * Questions and answers, as plain text.
+   *
+   * Separate from `accordion`, which nests a block tree. FAQPage schema needs a
+   * STRING answer, and extracting one from arbitrary blocks is lossy — but the
+   * deeper reason is that a good FAQ answer is one or two sentences, and a
+   * field that only accepts text is the one that produces them. An accordion
+   * stays the right tool for collapsible sections that are not questions.
+   */
+  | { type: 'faq'; items: { question: string; answer: string }[] }
   | { type: 'tabs'; items: { label: string; content: ContentBlock[] }[] }
   | { type: 'cta'; title: string; text: string; button: { text: string; url: string }; backgroundImage?: string; overlay?: boolean }
   | { type: 'feature-grid'; items: { icon?: string; title: string; description: string }[]; columns: 2 | 3 | 4 }

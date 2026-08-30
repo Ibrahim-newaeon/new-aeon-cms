@@ -153,6 +153,37 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
               />
             </Field>
 
+            {/* Distinct from the description above, which a search engine
+                truncates. This one is written to be lifted verbatim into an
+                AI answer, which is why it asks for two full sentences. */}
+            <Field label={t('settings.brandAnswer')} hint={t('settings.brandAnswerHint')}>
+              <textarea
+                rows={3}
+                maxLength={400}
+                className="admin-input resize-y"
+                placeholder={t('settings.brandAnswerPlaceholder')}
+                value={value.brandAnswer ?? ''}
+                onChange={(e) => patch({ brandAnswer: e.target.value })}
+                data-test-id="settings-brand-answer"
+              />
+            </Field>
+
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={value.allowAiCrawlers !== false}
+                onChange={(e) => patch({ allowAiCrawlers: e.target.checked })}
+                data-test-id="settings-allow-ai"
+              />
+              <span>
+                {t('settings.allowAiCrawlers')}
+                <span className="block text-xs text-[var(--admin-text-muted)]">
+                  {t('settings.allowAiCrawlersHint')}
+                </span>
+              </span>
+            </label>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <MediaField
                 label={t('settings.logo')}

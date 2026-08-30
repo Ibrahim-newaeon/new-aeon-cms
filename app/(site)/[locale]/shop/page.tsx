@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { ShopPageBody } from './shop-page';
 import type { SearchParams } from '@/lib/commerce/shop-query';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 
 /**
@@ -17,9 +19,15 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return {
+  const settings = await getSettings();
+  return buildMetadata({
+    locale: locale as Locale,
+    path: '/shop',
     title: locale === 'ar' ? 'المتجر' : 'Shop',
-  };
+    description: settings?.siteDescription,
+    image: settings?.logo,
+    siteName: settings?.siteName,
+  });
 }
 
 export default async function ShopPage({

@@ -13,6 +13,7 @@ import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
 import { WishlistButton } from '@/components/site/wishlist-button';
 import { currentCustomer } from '@/lib/auth/customer-session';
 import { isWishlisted } from '@/lib/account/profile';
+import { buildMetadata } from '@/lib/seo/metadata';
 import { locales, type Locale } from '@/lib/env';
 import { JsonLd } from '@/components/site/json-ld';
 import { productJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
@@ -26,10 +27,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!locales.includes(locale as Locale)) return {};
   const record = await getShopProduct(slug, locale as Locale);
   if (!record) return {};
-  return {
+
+  const settings = await getSettings();
+  return buildMetadata({
+    locale: locale as Locale,
+    path: `/products/${slug}`,
     title: record.product.metaTitle || record.product.name,
-    description: record.product.metaDescription || record.product.shortDesc || undefined,
-  };
+    // Falls through short then long: a product page that shares as a bare URL
+    // is a lost sale on WhatsApp, which is how this shop's links travel.
+    description:
+      record.product.metaDescription || record.product.shortDesc || record.product.description,
+    image: record.images[0]?.url ?? settings?.logo,
+    siteName: settings?.siteName,
+  });
 }
 
 export default async function ProductPage({ params }: Props) {

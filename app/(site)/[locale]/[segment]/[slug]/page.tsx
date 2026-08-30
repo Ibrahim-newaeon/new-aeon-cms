@@ -7,6 +7,8 @@ import { and, eq } from 'drizzle-orm';
 import { ContentRenderer } from '@/components/site/content-renderer';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
 import { typeByPrefix } from '@/lib/content/types-admin';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 
 interface Params {
@@ -64,12 +66,18 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!loaded) return {};
 
   const { row } = loaded;
-  return {
+  const settings = await getSettings();
+
+  return buildMetadata({
+    locale: loaded.locale,
+    path: `/${segment}/${slug}`,
     title: row.metaTitle || row.title || slug,
-    description: row.metaDescription || row.excerpt || undefined,
-    robots: row.noIndex ? { index: false, follow: false } : undefined,
-    openGraph: row.ogImage ? { images: [row.ogImage] } : undefined,
-  };
+    description: row.metaDescription || row.excerpt,
+    image: row.ogImage ?? settings?.logo,
+    type: 'article',
+    noIndex: row.noIndex ?? false,
+    siteName: settings?.siteName,
+  });
 }
 
 export default async function CustomTypeEntry({ params }: Params) {

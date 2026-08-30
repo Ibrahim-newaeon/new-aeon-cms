@@ -19,6 +19,34 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     return { rules: [{ userAgent: '*', disallow: '/' }] };
   }
 
+  /**
+   * The AI crawlers, named explicitly.
+   *
+   * They already passed under the `*` rule — allowing them was the default by
+   * accident rather than by decision. Naming them means a client who does not
+   * want their content in a training set can actually say so, and a client who
+   * does gets an unambiguous yes rather than silence.
+   */
+  const aiAgents = [
+    'GPTBot',
+    'OAI-SearchBot',
+    'ChatGPT-User',
+    'ClaudeBot',
+    'Claude-User',
+    'PerplexityBot',
+    'Google-Extended',
+    'Applebot-Extended',
+    'CCBot',
+    'meta-externalagent',
+  ];
+
+  let allowAi = true;
+  try {
+    allowAi = (await getSettings())?.allowAiCrawlers ?? true;
+  } catch {
+    // Same reasoning as above: a DB blip must not silently change policy.
+  }
+
   return {
     rules: [
       {
@@ -35,6 +63,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
          */
         disallow: ['/api/'],
       },
+      // Listed either way, so the answer is explicit rather than inferred.
+      { userAgent: aiAgents, ...(allowAi ? { allow: '/' } : { disallow: '/' }) },
     ],
     sitemap: `${base}/sitemap.xml`,
     host: base,

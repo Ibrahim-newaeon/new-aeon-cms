@@ -350,6 +350,41 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
         </div>
       );
 
+    /**
+     * FAQ. Plain text on both sides, because the answer becomes a schema
+     * string — and because a field that only takes a sentence or two is the
+     * one that produces the short answers an answer engine can quote.
+     */
+    case 'faq':
+      return (
+        <div className="space-y-2">
+          <p className="text-xs text-[var(--admin-text-muted)]">{t('faq.hint')}</p>
+          <ItemsEditor
+            items={block.items} testId="faq" addLabel={t('faq.addItem')}
+            emptyLabel={t('faq.addItem')}
+            createItem={() => ({ question: '', answer: '' })}
+            onChange={(items) => onChange({ ...block, items })}
+            renderItem={(item, update) => (
+              <div className="space-y-2">
+                <MiniField
+                  label={t('faq.question')} value={item.question}
+                  onChange={(v) => update({ question: v })}
+                />
+                <label className="block">
+                  <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
+                    {t('faq.answer')}
+                  </span>
+                  <textarea
+                    rows={3} className="admin-input resize-y" value={item.answer}
+                    onChange={(e) => update({ answer: e.target.value })}
+                  />
+                </label>
+              </div>
+            )}
+          />
+        </div>
+      );
+
     case 'stats':
       return (
         <ItemsEditor

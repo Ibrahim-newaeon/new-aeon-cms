@@ -99,3 +99,70 @@ describe('breadcrumbJsonLd', () => {
     expect(items[0]!.item).toMatch(/^https?:\/\/.+\/en\/shop$/);
   });
 });
+
+import { organizationJsonLd, webSiteJsonLd, faqJsonLd } from '@/lib/seo/json-ld';
+
+describe('organizationJsonLd', () => {
+  it('omits sameAs when there are no profiles', () => {
+    // An empty array is a claim of no profiles, not an absence of information.
+    expect(organizationJsonLd({ name: 'New Aeon', sameAs: [] }).sameAs).toBeUndefined();
+  });
+
+  it('carries the profiles that tie a name to one entity', () => {
+    const node = organizationJsonLd({
+      name: 'New Aeon',
+      sameAs: ['https://instagram.com/x', 'https://facebook.com/x'],
+    });
+    expect(node.sameAs).toHaveLength(2);
+  });
+
+  it('builds a contact point only when there is something to contact', () => {
+    expect(organizationJsonLd({ name: 'X' }).contactPoint).toBeUndefined();
+    expect(organizationJsonLd({ name: 'X', phone: '+962790000000' }).contactPoint)
+      .toMatchObject({ telephone: '+962790000000' });
+  });
+
+  it('invents nothing when settings are empty', () => {
+    // A confident description nobody wrote is worse than a missing one.
+    const node = organizationJsonLd({ name: 'X' });
+    expect(node.description).toBeUndefined();
+    expect(node.logo).toBeUndefined();
+    expect(node).toMatchObject({ '@type': 'Organization', name: 'X' });
+  });
+});
+
+describe('webSiteJsonLd', () => {
+  it('declares every language the site serves', () => {
+    expect(webSiteJsonLd({ name: 'X', locales: ['ar', 'en'] }).inLanguage).toEqual(['ar', 'en']);
+  });
+
+  it('adds a search action only when there is a search page', () => {
+    expect(webSiteJsonLd({ name: 'X', locales: ['ar'] }).potentialAction).toBeUndefined();
+    const withSearch = webSiteJsonLd({ name: 'X', locales: ['ar'], searchPath: '/ar/search' });
+    expect(JSON.stringify(withSearch.potentialAction)).toContain('{search_term_string}');
+  });
+});
+
+describe('faqJsonLd', () => {
+  it('pairs each question with its answer', () => {
+    const node = faqJsonLd([{ question: 'Do you deliver to Irbid?', answer: 'Yes, in 2–3 days.' }])!;
+    expect(node['@type']).toBe('FAQPage');
+    const first = (node.mainEntity as Record<string, unknown>[])[0]!;
+    expect(first.name).toBe('Do you deliver to Irbid?');
+    expect((first.acceptedAnswer as Record<string, string>).text).toBe('Yes, in 2–3 days.');
+  });
+
+  it('returns null rather than an empty FAQPage', () => {
+    // mainEntity: [] is invalid, and an empty node invalidates the page.
+    expect(faqJsonLd([])).toBeNull();
+    expect(faqJsonLd([{ question: '  ', answer: '  ' }])).toBeNull();
+  });
+
+  it('drops a half-filled row instead of publishing a blank answer', () => {
+    const node = faqJsonLd([
+      { question: 'Real question?', answer: 'Real answer.' },
+      { question: 'Unfinished?', answer: '' },
+    ])!;
+    expect(node.mainEntity).toHaveLength(1);
+  });
+});

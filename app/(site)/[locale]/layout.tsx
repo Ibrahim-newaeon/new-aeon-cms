@@ -17,7 +17,9 @@ import { getNavigation, getSettings } from '@/lib/db/queries';
 import { TrackingScripts, TrackingNoScript } from '@/components/site/tracking-scripts';
 import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/session';
-import { locales, type Locale } from '@/lib/env';
+import { env, locales, type Locale } from '@/lib/env';
+import { buildMetadata } from '@/lib/seo/metadata';
+import { SiteSchema } from '@/components/site/site-schema';
 import '../../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -28,11 +30,39 @@ export function generateStaticParams() {
 }
 
 // Site name comes from settings, never a hardcoded brand string.
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
   const settings = await getSettings();
+  const siteName = settings?.siteName ?? 'CMS';
+  const typed = (locales.includes(locale as Locale) ? locale : env.DEFAULT_LOCALE) as Locale;
+
+  const base = buildMetadata({
+    locale: typed,
+    path: '',
+    title: siteName,
+    description: settings?.siteDescription,
+    siteName,
+    image: settings?.logo,
+  });
+
   return {
-    title: settings?.siteName ?? 'CMS',
-    description: settings?.siteDescription ?? undefined,
+    ...base,
+    /**
+     * metadataBase makes every relative URL — here and in every page that
+     * inherits from this layout — resolve against the real origin. Without it
+     * Next emits a relative og:image, which no scraper follows.
+     */
+    metadataBase: new URL(env.NEXT_PUBLIC_APP_URL),
+    /**
+     * Overrides the plain string buildMetadata returns: a child page that sets
+     * its own title gets "Page · Site", and one that sets none gets the site
+     * name on its own.
+     */
+    title: { default: siteName, template: `%s · ${siteName}` },
   };
 }
 
@@ -113,6 +143,11 @@ export default async function SiteLayout({
                     : 'Coming-soon mode is on. You can see the site because you are signed in; visitors get the holding page.'}
                 </p>
               )}
+            {/* Organization + WebSite, once per page, built from Settings. This
+                is what lets an answer engine treat the name, the site and the
+                social profiles as one entity rather than unrelated pages. */}
+            <SiteSchema locale={typedLocale} />
+
             <Navbar
               navigation={headerNav}
               logo={settings?.logo ?? null}

@@ -135,3 +135,108 @@ export function breadcrumbJsonLd(
     })),
   };
 }
+
+/**
+ * Who this shop is, as a machine-readable fact.
+ *
+ * This is the node an answer engine reads to decide that a name, a website, a
+ * logo and half a dozen social profiles are ONE organisation rather than
+ * unrelated pages. `sameAs` is what does that work — it is the reason the
+ * social links in Settings are worth filling in.
+ */
+export function organizationJsonLd(input: {
+  name: string;
+  description?: string | null;
+  logo?: string | null;
+  sameAs?: string[];
+  email?: string | null;
+  phone?: string | null;
+  /** Where the shop is. A local business without a country is a weak entity. */
+  country?: string | null;
+}): Record<string, unknown> {
+  const node: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: input.name,
+    url: absoluteUrl('/'),
+  };
+
+  if (input.description) node.description = input.description;
+  if (input.logo) node.logo = absoluteUrl(input.logo);
+
+  // Omitted when empty rather than emitted as []: an empty sameAs says nothing
+  // and reads to a validator as a claim of no profiles.
+  if (input.sameAs && input.sameAs.length > 0) node.sameAs = input.sameAs;
+
+  if (input.email || input.phone) {
+    node.contactPoint = {
+      '@type': 'ContactPoint',
+      contactType: 'customer service',
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.phone ? { telephone: input.phone } : {}),
+      ...(input.country ? { areaServed: input.country } : {}),
+    };
+  }
+
+  if (input.country) node.address = { '@type': 'PostalAddress', addressCountry: input.country };
+
+  return node;
+}
+
+/** The site itself, and how to search it. */
+export function webSiteJsonLd(input: {
+  name: string;
+  description?: string | null;
+  locales: readonly string[];
+  /** Omit to leave out the search action entirely. */
+  searchPath?: string;
+}): Record<string, unknown> {
+  const node: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: input.name,
+    url: absoluteUrl('/'),
+    inLanguage: [...input.locales],
+  };
+
+  if (input.description) node.description = input.description;
+
+  if (input.searchPath) {
+    node.potentialAction = {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${absoluteUrl(input.searchPath)}?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    };
+  }
+
+  return node;
+}
+
+/**
+ * Questions and answers, as a machine can read them.
+ *
+ * Answers are plain text on purpose. FAQPage wants a string, and the exercise
+ * of writing one or two sentences is the same exercise that makes a good
+ * answer for a person — which is why the block that feeds this holds text
+ * rather than a nested block tree.
+ */
+export function faqJsonLd(
+  items: { question: string; answer: string }[]
+): Record<string, unknown> | null {
+  const usable = items.filter((i) => i.question.trim() && i.answer.trim());
+  // No node at all beats an empty mainEntity, which is invalid.
+  if (usable.length === 0) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: usable.map((i) => ({
+      '@type': 'Question',
+      name: i.question.trim(),
+      acceptedAnswer: { '@type': 'Answer', text: i.answer.trim() },
+    })),
+  };
+}
