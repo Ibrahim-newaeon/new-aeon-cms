@@ -3,6 +3,8 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { StatCard } from '@/components/admin/stat-card';
+import { CommerceStatsPanel } from '@/components/admin/commerce-stats';
+import { getCommerceStats } from '@/lib/commerce/dashboard';
 import { db } from '@/lib/db';
 import { content, contentI18n, mediaAssets, formSubmissions } from '@/lib/db/schema';
 import { count, eq, and, desc, gte, lt } from 'drizzle-orm';
@@ -52,6 +54,14 @@ export default async function AdminDashboard() {
 
   const siteName = settings?.siteName ?? 'New Aeon';
 
+  /**
+   * Only when the shop is on. A content-only site should not be shown four
+   * commerce tiles reading zero, and the queries behind them should not run.
+   */
+  const commerceStats = settings?.eCommerceEnabled
+    ? await getCommerceStats(await getAdminLocale())
+    : null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -90,6 +100,16 @@ export default async function AdminDashboard() {
           newLabel={newLabel}
         />
       </div>
+
+      {commerceStats && (
+        <CommerceStatsPanel
+          stats={commerceStats}
+          currency={settings?.currency ?? 'JOD'}
+          locale={await getAdminLocale()}
+          adminPath={ADMIN_PATH}
+          t={t}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Suspense fallback={<div className="admin-card h-64 animate-pulse" />}>

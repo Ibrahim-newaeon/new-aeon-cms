@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import {
   LayoutGrid, Package, BookOpen, Tag, Layers, ShoppingBag, Images, ImageIcon,
-  Ticket, Truck, Settings, ShieldCheck, FileText, Link2, LogOut, ExternalLink, Star, Boxes,
+  Ticket, Truck, Settings, ShieldCheck, FileText, Link2, LogOut, ExternalLink, Star, Boxes, Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandMark } from './brand-mark';
@@ -49,6 +49,7 @@ function buildNavigation(adminPath: string): NavItem[] {
     { key: 'nav.products', href: `${adminPath}/commerce/products`, icon: ShoppingBag, commerceOnly: true },
     { key: 'nav.brands', href: `${adminPath}/commerce/brands`, icon: Tag, commerceOnly: true },
     { key: 'nav.orders', href: `${adminPath}/commerce/orders`, icon: Package, commerceOnly: true },
+    { key: 'nav.customers', href: `${adminPath}/commerce/customers`, icon: Users, commerceOnly: true },
     { key: 'nav.reviews', href: `${adminPath}/commerce/reviews`, icon: Star, commerceOnly: true },
     { key: 'nav.bundles', href: `${adminPath}/commerce/bundles`, icon: Boxes, commerceOnly: true },
     { key: 'nav.coupons', href: `${adminPath}/commerce/coupons`, icon: Ticket, commerceOnly: true },
