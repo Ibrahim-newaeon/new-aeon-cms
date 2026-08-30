@@ -4,6 +4,7 @@ import { and, asc, count, eq, inArray, sql, sum } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
   brands,
+  productImages,
   categories,
   categoryI18n,
   coupons,
@@ -68,6 +69,20 @@ async function exportRows(entity: EntityDef): Promise<Record<string, string>[]> 
       if (rows.length === 0) return [];
 
       const productIds = [...new Set(rows.map((r) => r.productId))];
+
+      const images = await db
+        .select({ productId: productImages.productId, url: productImages.url })
+        .from(productImages)
+        .where(inArray(productImages.productId, productIds))
+        .orderBy(asc(productImages.sortOrder));
+
+      // First image only: the sheet has one column, and exporting the second
+      // into it would round-trip as a reordering nobody asked for.
+      const imageOf = new Map<string, string>();
+      for (const image of images) {
+        if (!imageOf.has(image.productId)) imageOf.set(image.productId, image.url);
+      }
+
       const names = await db
         .select({ productId: productI18n.productId, locale: productI18n.locale, name: productI18n.name })
         .from(productI18n)
@@ -91,6 +106,7 @@ async function exportRows(entity: EntityDef): Promise<Record<string, string>[]> 
         // silent data loss.
         option_name: '',
         option_value: '',
+        image_url: imageOf.get(row.productId) ?? '',
         active: yesNo(row.active),
       }));
     }
@@ -340,6 +356,30 @@ async function upsertProduct(row: Record<string, string>): Promise<boolean> {
 
     if (existing) await db.update(productI18n).set({ name }).where(eq(productI18n.id, existing.id));
     else await db.insert(productI18n).values({ productId, locale, name });
+  }
+
+  if (row.image_url) {
+    // One primary image per product, replaced rather than appended: re-running
+    // an import would otherwise stack a duplicate on every pass.
+    const [existingImage] = await db
+      .select({ id: productImages.id })
+      .from(productImages)
+      .where(and(eq(productImages.productId, productId), eq(productImages.sortOrder, 0)))
+      .limit(1);
+
+    if (existingImage) {
+      await db
+        .update(productImages)
+        .set({ url: row.image_url, alt: row.name_en || row.name_ar || null })
+        .where(eq(productImages.id, existingImage.id));
+    } else {
+      await db.insert(productImages).values({
+        productId,
+        url: row.image_url,
+        alt: row.name_en || row.name_ar || null,
+        sortOrder: 0,
+      });
+    }
   }
 
   const [existingVariant] = await db

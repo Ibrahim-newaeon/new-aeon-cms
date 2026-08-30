@@ -83,6 +83,13 @@ export const ENTITIES: readonly EntityDef[] = [
       { key: 'stock', labelEn: 'Stock', labelAr: 'المخزون', required: true, example: '50' },
       { key: 'option_name', labelEn: 'Option name', labelAr: 'اسم الخيار', example: 'Size' },
       { key: 'option_value', labelEn: 'Option value', labelAr: 'قيمة الخيار', example: '50ml' },
+      {
+        key: 'image_url',
+        labelEn: 'Image URL',
+        labelAr: 'رابط الصورة',
+        example: '/uploads/2026/08/amber.webp',
+        hintEn: 'A path from the media library, or an absolute URL',
+      },
       { key: 'active', labelEn: 'Active', labelAr: 'مفعّل', example: 'yes' },
     ],
     rowSchema: z.object({
@@ -97,6 +104,7 @@ export const ENTITIES: readonly EntityDef[] = [
       stock: integer,
       option_name: optionalText(100),
       option_value: optionalText(),
+      image_url: optionalText(2048),
       active: boolean.optional().or(z.literal('')),
     }),
   },
