@@ -113,6 +113,40 @@ test.describe('home page slider', () => {
     expect(Math.abs(gap!)).toBeLessThan(24);
   });
 
+  test('uses the showcase layout: a centred card with neighbours peeking', async ({ page }) => {
+    await page.goto('/en');
+
+    const slider = page.getByTestId('slider');
+    await expect(slider).toHaveAttribute('data-layout', 'showcase');
+
+    // The counter the showcase is built around — where you are, and how many.
+    await expect(page.getByTestId('slider-counter')).toHaveText('01/03');
+
+    // Every non-centre slide carries a click target, which is what makes
+    // "click a neighbour to bring it forward" true rather than decorative.
+    await expect(page.getByTestId('slider-peek-1')).toBeVisible();
+    await expect(page.getByTestId('slider-peek-2')).toBeVisible();
+    await expect(page.getByTestId('slider-peek-0')).toHaveCount(0);
+
+    // The card is inset — that gap is where the neighbours show through.
+    const band = await slider.boundingBox();
+    const card = await page.getByTestId('slider-slide-0').boundingBox();
+    expect(card!.width).toBeLessThan(band!.width);
+  });
+
+  test('clicking a peeking neighbour brings it to the centre', async ({ page }) => {
+    await page.goto('/en');
+    await page.getByTestId('slider').hover();
+
+    await page.getByTestId('slider-peek-2').click();
+    await expect.poll(() => activeSlide(page)).toBe(2);
+
+    // Once centred it is no longer a click target, and it is the one the
+    // counter reports.
+    await expect(page.getByTestId('slider-peek-2')).toHaveCount(0);
+    await expect(page.getByTestId('slider-counter')).toHaveText('03/03');
+  });
+
   test('the hero spans the full viewport width', async ({ page }) => {
     await page.goto('/en');
 
@@ -154,6 +188,16 @@ test.describe('inner-page slider', () => {
     await expect(page.locator('[data-test-id^="slider-slide-"]')).toHaveCount(2);
     await expect(page.locator('[data-test-id^="slider-video-"]')).toHaveCount(0);
     await expect(page.locator('[data-test-id^="slider-youtube-"]')).toHaveCount(0);
+  });
+
+  test('keeps the plain crossfade rather than the showcase layout', async ({ page }) => {
+    await page.goto('/en/about-us');
+
+    // The showcase is the home hero's presentation only. Partway down an
+    // article it would compete with the article.
+    await expect(page.getByTestId('slider')).toHaveAttribute('data-layout', 'crossfade');
+    await expect(page.getByTestId('slider-counter')).toHaveCount(0);
+    await expect(page.locator('[data-test-id^="slider-peek-"]')).toHaveCount(0);
   });
 
   test('sits under the page title and above the body text', async ({ page }) => {

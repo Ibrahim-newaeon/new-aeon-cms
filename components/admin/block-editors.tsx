@@ -548,6 +548,11 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
                   onChange={(v) => update({ alt: v })}
                 />
                 <MiniField
+                  label={t('be.slideEyebrow')}
+                  value={slide.eyebrow ?? ''}
+                  onChange={(v) => update({ eyebrow: v || undefined })}
+                />
+                <MiniField
                   label={t('be.title')}
                   value={slide.title ?? ''}
                   onChange={(v) => update({ title: v || undefined })}

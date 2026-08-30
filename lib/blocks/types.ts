@@ -79,6 +79,8 @@ export type ContentBlock =
          *  visitor has asked for reduced motion. */
         poster?: string;
         alt?: string;
+        /** Small label above the heading. */
+        eyebrow?: string;
         title?: string;
         text?: string;
         buttonText?: string;
