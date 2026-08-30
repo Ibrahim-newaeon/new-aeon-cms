@@ -29,6 +29,13 @@ const seedCode = (phone: string) =>
 
 test.describe('registering', () => {
   test.describe.configure({ mode: 'serial' });
+  /**
+   * Its own client IP. Sending a code is rate limited per client — correctly,
+   * since each one costs money and reaches somebody's phone — and every
+   * browser test otherwise shares 127.0.0.1, so one spec's codes exhaust
+   * another's budget and the failure looks like a broken form.
+   */
+  test.use({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.31' } });
 
   const phone = normalisePhone('0788' + String(Date.now()).slice(-6));
 
@@ -39,12 +46,19 @@ test.describe('registering', () => {
     });
   });
 
-  test('a brand-new number can open an account', async ({ page }) => {
-    // The point of the change: accounts are not limited to people who have
-    // already ordered.
+  test('a brand-new number can open an account, via a code', async ({ page }) => {
+    // Accounts are not limited to people who have already ordered — and every
+    // registration goes through a code, so nothing before that point has to
+    // reveal whether the number is known.
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-continue').click();
+    await page.getByTestId('account-send-code').click();
+
+    await expect(page.getByTestId('account-code')).toBeVisible();
+    await seedCode(phone);
+
+    await page.getByTestId('account-code').fill(CODE);
+    await page.getByTestId('account-verify').click();
 
     await expect(page.getByTestId('account-name')).toBeVisible();
     await page.getByTestId('account-name').fill('New Shopper');
@@ -62,10 +76,9 @@ test.describe('registering', () => {
     await page.goto('/en/account');
     await expect(page.getByTestId('account-auth')).toBeVisible();
 
+    // Straight in with the password — no SMS for a returning shopper, which is
+    // what the password path is for.
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-continue').click();
-    // The number is registered now, so it asks for the password rather than
-    // offering to create an account.
     await page.getByTestId('account-password').fill(PASSWORD);
     await page.getByTestId('account-signin').click();
 
@@ -78,6 +91,7 @@ test.describe('registering', () => {
 
 test.describe('claiming a number that already has orders', () => {
   test.describe.configure({ mode: 'serial' });
+  test.use({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.32' } });
 
   const phone = normalisePhone('0787' + String(Date.now()).slice(-6));
 
@@ -104,8 +118,14 @@ test.describe('claiming a number that already has orders', () => {
       data: { phone, name: 'Impostor', password: PASSWORD },
       headers: { origin: new URL(test.info().project.use.baseURL!).origin },
     });
-    expect(res.status()).toBe(409);
-    expect((await res.json()).data.state).toBe('needs-verification');
+    expect(res.status()).toBe(400);
+
+    // Nothing was created.
+    const claimed = await withDb(async (db) => {
+      const r = await db.query('select password_hash from customers where phone = $1', [phone]);
+      return Boolean(r.rows[0]?.password_hash);
+    });
+    expect(claimed).toBe(false);
   });
 
   test('a proof for a DIFFERENT number does not unlock it', async ({ page, request }) => {
@@ -132,7 +152,7 @@ test.describe('claiming a number that already has orders', () => {
       data: { phone, name: 'Impostor', password: PASSWORD, phoneProof: proof },
       headers: { origin: new URL(test.info().project.use.baseURL!).origin },
     });
-    expect(res.status()).toBe(409);
+    expect(res.status()).toBe(400);
 
     await withDb((db) => db.query('delete from customer_otp where phone = $1', [other]));
   });
@@ -140,9 +160,8 @@ test.describe('claiming a number that already has orders', () => {
   test('proving the number signs the real owner in, and offers a password', async ({ page }) => {
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-continue').click();
+    await page.getByTestId('account-send-code').click();
 
-    // A code is sent because the number has history behind it.
     await expect(page.getByTestId('account-code')).toBeVisible();
     await seedCode(phone);
 
@@ -169,6 +188,7 @@ test.describe('claiming a number that already has orders', () => {
 
 test.describe('an account holds', () => {
   test.describe.configure({ mode: 'serial' });
+  test.use({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.33' } });
 
   const phone = normalisePhone('0785' + String(Date.now()).slice(-6));
 
@@ -190,7 +210,6 @@ test.describe('an account holds', () => {
     await page.goto('/en/account');
     if (await page.getByTestId('account-auth').isVisible().catch(() => false)) {
       await page.getByTestId('account-phone').fill(phone);
-      await page.getByTestId('account-continue').click();
       await page.getByTestId('account-password').fill(PASSWORD);
       await page.getByTestId('account-signin').click();
       await expect(page.getByTestId('account-page')).toBeVisible();
@@ -308,5 +327,83 @@ test.describe('order privacy', () => {
 
     await page.goto(`/en/order/${order!.order_number}?phone=0790000000`);
     await expect(page.getByTestId('order-lookup')).toBeVisible();
+  });
+});
+
+test.describe('the sign-in screen does not say who shops here', () => {
+  /**
+   * The customers table is names, phone numbers and delivery addresses, so
+   * "is this number a customer?" is not a question to answer to anyone who
+   * asks. Every response below has to look the same for a known number and an
+   * invented one.
+   */
+  const known = normalisePhone('0784' + String(Date.now()).slice(-6));
+  const unknown = normalisePhone('0770000123');
+
+  test.beforeAll(async () => {
+    await withDb(async (db) =>
+      db.query(
+        `insert into customers (phone, name, password_hash, registered_at)
+         values ($1, 'Known Buyer', $2, now())`,
+        [known, await hashPassword(PASSWORD)]
+      )
+    );
+  });
+
+  test.afterAll(async () => {
+    await withDb(async (db) => {
+      await db.query('delete from customer_otp where phone = any($1)', [[known, unknown]]);
+      await db.query('delete from customers where phone = $1', [known]);
+    });
+  });
+
+  test('a wrong password and an unknown number fail identically', async ({ request }) => {
+    const origin = new URL(test.info().project.use.baseURL!).origin;
+    /**
+     * A distinct client IP per call. Rate limiting is per client, so sharing
+     * one would let the second call come back 429 purely because the first had
+     * been made — the responses would differ for a reason that has nothing to
+     * do with the property under test. It is also the truer simulation: two
+     * different people probing.
+     */
+    const call = (phone: string, ip: string) =>
+      request.post('/api/account/login', {
+        data: { phone, password: 'definitely not the password' },
+        headers: { origin, 'x-forwarded-for': ip },
+      });
+
+    const a = await call(known, '203.0.113.11');
+    const b = await call(unknown, '203.0.113.12');
+
+    expect(a.status()).toBe(b.status());
+    expect(a.status()).not.toBe(429);
+    expect(await a.json()).toEqual(await b.json());
+  });
+
+  test('requesting a code answers identically either way', async ({ request }) => {
+    const origin = new URL(test.info().project.use.baseURL!).origin;
+    const call = (phone: string, ip: string) =>
+      request.post('/api/account/request-code', {
+        data: { phone, locale: 'en' },
+        headers: { origin, 'x-forwarded-for': ip },
+      });
+
+    const a = await call(known, '203.0.113.21');
+    const b = await call(unknown, '203.0.113.22');
+
+    expect(a.status()).toBe(b.status());
+    // Guards the guard: a pair of 429s would also be "identical", and would
+    // prove nothing about what the endpoint says.
+    expect(a.status()).not.toBe(429);
+    expect(await a.json()).toEqual(await b.json());
+  });
+
+  test('there is no endpoint left that reports a number’s state', async ({ request }) => {
+    // This existed, and it was the leak. It must not come back.
+    const res = await request.get(
+      `/api/account/register?phone=${encodeURIComponent(known)}`,
+      { headers: { origin: new URL(test.info().project.use.baseURL!).origin } }
+    );
+    expect(res.status()).toBe(405);
   });
 });

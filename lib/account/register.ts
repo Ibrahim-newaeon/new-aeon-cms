@@ -39,7 +39,17 @@ export interface RegisterInput {
 /** Long enough to matter, short enough that people do not write it down. */
 export const MIN_PASSWORD_LENGTH = 8;
 
-export async function claimState(phone: string): Promise<'free' | 'unclaimed' | 'registered'> {
+/**
+ * NOT exported, and deliberately so.
+ *
+ * This function's answer IS the fact "is this number a customer here". It was
+ * briefly behind a GET endpoint so the sign-in form could show the right
+ * fields, which made that question answerable by anyone. The form now lets the
+ * shopper choose their own path instead, and this stays internal — if it ever
+ * needs to leave this module, that is the moment to ask what is being told to
+ * whom.
+ */
+async function claimState(phone: string): Promise<'free' | 'unclaimed' | 'registered'> {
   const [row] = await db
     .select({ id: customers.id, passwordHash: customers.passwordHash })
     .from(customers)
@@ -66,7 +76,12 @@ export async function register(
   if (state === 'registered') return { ok: false, reason: 'exists' };
   if (state === 'unclaimed' && !phoneProven) {
     // There is history behind this number. Proving ownership is the price of
-    // taking it over, and it is the same code flow used for signing in.
+    // taking it over.
+    //
+    // The route already refuses an unproven registration for ANY number, so
+    // this is a second lock on the same door rather than the only one — the
+    // consequence of getting it wrong is handing over somebody's order
+    // history, which is worth two locks.
     return { ok: false, reason: 'needs-verification' };
   }
 

@@ -17,6 +17,9 @@ const CODE = '424242';
 
 test.describe('shopper accounts', () => {
   test.describe.configure({ mode: 'serial' });
+  // Own client IP: code requests are rate limited per client, and every
+  // browser test otherwise shares one address.
+  test.use({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.41' } });
 
   const phone = normalisePhone('0799' + String(Date.now()).slice(-6));
   let customerId: string;
@@ -53,12 +56,18 @@ test.describe('shopper accounts', () => {
     await expect(page.getByTestId('account-page')).toHaveCount(0);
   });
 
-  test('an unknown number is offered registration, not a dead end', async ({ page }) => {
-    // Accounts are no longer limited to people who have already ordered.
+  test('an unknown number gets a code, worded exactly like a known one', async ({ page }) => {
+    /**
+     * Accounts are no longer limited to people who have already ordered, and
+     * the screen must not betray which case this is — the same notice appears
+     * either way, and only a verified code reveals anything.
+     */
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill('0770000009');
-    await page.getByTestId('account-continue').click();
-    await expect(page.getByTestId('account-name')).toBeVisible();
+    await page.getByTestId('account-send-code').click();
+
+    await expect(page.getByTestId('account-code')).toBeVisible();
+    await expect(page.getByTestId('account-notice')).toContainText('a code is on its way');
   });
 
   test('a wrong code is refused and costs an attempt', async ({ page }) => {
@@ -76,7 +85,7 @@ test.describe('shopper accounts', () => {
 
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-continue').click();
+    await page.getByTestId('account-send-code').click();
     await expect(page.getByTestId('account-code')).toBeVisible();
 
     // Re-seed: requesting through the UI replaced the code with a real one.
@@ -109,7 +118,7 @@ test.describe('shopper accounts', () => {
 
     await page.goto('/en/account');
     await page.getByTestId('account-phone').fill(phone);
-    await page.getByTestId('account-continue').click();
+    await page.getByTestId('account-send-code').click();
 
     // Wait for the UI's OWN code request to finish before re-seeding, or it
     // lands after and overwrites the known code with a real one — the test

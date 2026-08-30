@@ -33,28 +33,17 @@ export async function POST(request: Request) {
     const phone = normalisePhone(data.phone, await getStoreCountry());
     const result = await signInWithPassword(phone, data.password);
 
-    if (!result.ok) {
-      /**
-       * "not-registered" is told apart from a wrong password on purpose: a
-       * known buyer who never set one needs to be offered the code flow, not
-       * left guessing at a password that does not exist. It reveals only what
-       * the person in front of us already knows — their own number — and the
-       * alternative is a dead end for every existing customer of this shop.
-       */
-      if (result.reason === 'not-registered') {
-        return NextResponse.json(
-          {
-            success: false,
-            error: { message: 'لم تُنشئ كلمة مرور بعد. سجّل الدخول برمز.' },
-            data: { state: 'not-registered' },
-          },
-          { status: 409 }
-        );
-      }
-      // "no account" and "wrong password" share a message, so the endpoint
-      // cannot be used to test whether a number is a customer here.
-      return fail('الرقم أو كلمة المرور غير صحيحة.', 401);
-    }
+    /**
+     * ONE response for every failure — no account, no password set, wrong
+     * password. Telling them apart would make this endpoint a way to ask
+     * whether a given person shops here, and the customers table is names,
+     * numbers and addresses.
+     *
+     * The buyer who has no password is not stranded by this: the sign-in form
+     * always offers "send me a code", which works for any number and is how
+     * they get in and set one.
+     */
+    if (!result.ok) return fail('الرقم أو كلمة المرور غير صحيحة.', 401);
 
     // Signing in brings a cart with it, in both directions — see
     // mergeSavedCart for why this merges rather than replaces.

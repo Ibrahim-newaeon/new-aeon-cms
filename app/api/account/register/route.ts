@@ -1,7 +1,7 @@
 // app/api/account/register/route.ts
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { register, claimState, MIN_PASSWORD_LENGTH } from '@/lib/account/register';
+import { register, MIN_PASSWORD_LENGTH } from '@/lib/account/register';
 import { normalisePhone, isValidMobile } from '@/lib/commerce/phone';
 import { getStoreCountry } from '@/lib/commerce/regions';
 import {
@@ -19,13 +19,16 @@ const schema = z.object({
   password: z.string().min(MIN_PASSWORD_LENGTH).max(200),
   email: z.union([z.literal(''), z.string().email()]).nullable().optional(),
   /**
-   * Signed by us after a code was verified. Required to claim a phone that
-   * already has orders behind it.
+   * Signed by us after a one-time code was verified. REQUIRED for every
+   * registration, not only for a phone that already has orders.
+   *
+   * Requiring it always is what closes the last way to ask "is this number a
+   * customer here?". When it was conditional, the difference between "register
+   * freely" and "prove it first" was itself the answer.
    *
    * `.nullable()` as well as `.optional()`: zod's optional accepts undefined
    * and NOT null, while a JSON client with nothing to send naturally sends
-   * null. Omitting it rejected every ordinary registration with "invalid
-   * request" and no clue which field was wrong.
+   * null.
    */
   phoneProof: z.string().max(2048).nullable().optional(),
 });
@@ -55,23 +58,18 @@ export async function POST(request: Request) {
      */
     const proven = data.phoneProof ? (await verifyPhoneProof(data.phoneProof)) === phone : false;
 
+    // Refused before anything is looked up, so the response cannot depend on
+    // whether the number is known.
+    if (!proven) return fail('أكّد رقمك برمز أولاً.', 400);
+
     const result = await register({ ...data, phone }, proven);
 
     if (!result.ok) {
       if (result.reason === 'exists') {
+        // Safe to say: they just proved they hold this number, so this tells
+        // them about their OWN account and nobody else's.
         return NextResponse.json(
           { success: false, error: { message: 'لديك حساب بالفعل. سجّل الدخول.' }, data: { state: 'exists' } },
-          { status: 409 }
-        );
-      }
-      if (result.reason === 'needs-verification') {
-        // There are orders behind this number. Prove it is yours first.
-        return NextResponse.json(
-          {
-            success: false,
-            error: { message: 'لهذا الرقم طلبات سابقة. أكّد ملكيته برمز أولاً.' },
-            data: { state: 'needs-verification' },
-          },
           { status: 409 }
         );
       }
@@ -86,39 +84,4 @@ export async function POST(request: Request) {
   } catch {
     return fail('طلب غير صالح', 400);
   }
-}
-
-/**
- * What a number is, so the form can ask for a password or a name rather than
- * making the person guess which they need.
- *
- * This DOES reveal whether a number is a customer here, which the code-request
- * endpoint deliberately does not. It is the same trade every shop with a
- * separate Login and Register makes, and the alternative — sending an SMS
- * before we know whether one is needed — costs money on every sign-in.
- *
- * Rate limited because it is unauthenticated and answers a question about
- * other people: 20 in ten minutes is a person filling in a form, not a list
- * being checked against the customer table.
- */
-export async function GET(request: Request) {
-  const blocked = await guard(request);
-  if (blocked) return blocked;
-
-  const limit = await rateLimit(clientKey(request, 'account-state'), 20, 600);
-  if (!limit.allowed) {
-    return NextResponse.json(
-      { success: false, error: { message: 'محاولات كثيرة. حاول لاحقاً.' } },
-      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
-    );
-  }
-
-  const raw = new URL(request.url).searchParams.get('phone') ?? '';
-  const country = await getStoreCountry();
-  if (!isValidMobile(raw, country)) return NextResponse.json({ success: true, data: { state: 'invalid' } });
-
-  return NextResponse.json({
-    success: true,
-    data: { state: await claimState(normalisePhone(raw, country)) },
-  });
 }
