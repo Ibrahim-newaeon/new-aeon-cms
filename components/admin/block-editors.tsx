@@ -7,7 +7,7 @@ import { MediaField } from './media-field';
 import {
   TableEditor, PricingEditor, ComparisonEditor, ProductGridEditor, CustomEditor,
 } from './blocks/grid-editors';
-import { BLOCK_LABELS, isSafeUrl } from '@/lib/blocks/defaults';
+import { BLOCK_LABEL_KEYS, isSafeUrl } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
 import { useT } from './i18n-provider';
 
@@ -577,7 +577,7 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
     default:
       return (
         <p className="text-sm text-[var(--admin-text-muted)]">
-          {t('be.editorTodo', { name: BLOCK_LABELS[block.type] })}
+          {t('be.editorTodo', { name: t(BLOCK_LABEL_KEYS[block.type]) })}
         </p>
       );
   }

@@ -1,44 +1,47 @@
 // lib/blocks/defaults.ts
 import type { ContentBlock } from './types';
+import type { MessageKey } from '@/lib/admin-i18n/messages';
 
 export type BlockType = ContentBlock['type'];
 
 /**
- * Arabic labels for the block picker. Keyed by BlockType rather than `string`,
- * so adding a variant to the union without a label is a compile error instead
- * of a block that shows its raw slug in the UI.
+ * Message keys for the block picker labels, resolved through the admin
+ * dictionary so they follow the admin UI locale. Keyed by BlockType rather
+ * than `string`, so adding a variant to the union without a label is a compile
+ * error instead of a block that shows its raw slug in the UI; typing the values
+ * as MessageKey means a key with no dictionary entry fails to compile too.
  */
-export const BLOCK_LABELS: Record<BlockType, string> = {
-  'rich-text': 'نص منسق',
-  heading: 'عنوان',
-  paragraph: 'فقرة',
-  image: 'صورة',
-  gallery: 'معرض صور',
-  video: 'فيديو',
-  quote: 'اقتباس',
-  embed: 'تضمين',
-  button: 'زر',
-  divider: 'فاصل',
-  spacer: 'مسافة',
-  html: 'HTML',
-  table: 'جدول',
-  accordion: 'أكورديون',
-  tabs: 'تبويبات',
-  cta: 'دعوة للإجراء',
-  'feature-grid': 'شبكة مميزات',
-  testimonial: 'آراء العملاء',
-  team: 'الفريق',
-  stats: 'إحصائيات',
-  timeline: 'خط زمني',
-  comparison: 'مقارنة',
-  pricing: 'الأسعار',
-  map: 'خريطة',
-  'contact-form': 'نموذج اتصال',
-  newsletter: 'نشرة بريدية',
-  'social-links': 'روابط اجتماعية',
-  'recent-posts': 'منشورات حديثة',
-  'product-grid': 'منتجات',
-  custom: 'مكوّن مخصص',
+export const BLOCK_LABEL_KEYS: Record<BlockType, MessageKey> = {
+  'rich-text': 'block.rich-text',
+  heading: 'block.heading',
+  paragraph: 'block.paragraph',
+  image: 'block.image',
+  gallery: 'block.gallery',
+  video: 'block.video',
+  quote: 'block.quote',
+  embed: 'block.embed',
+  button: 'block.button',
+  divider: 'block.divider',
+  spacer: 'block.spacer',
+  html: 'block.html',
+  table: 'block.table',
+  accordion: 'block.accordion',
+  tabs: 'block.tabs',
+  cta: 'block.cta',
+  'feature-grid': 'block.feature-grid',
+  testimonial: 'block.testimonial',
+  team: 'block.team',
+  stats: 'block.stats',
+  timeline: 'block.timeline',
+  comparison: 'block.comparison',
+  pricing: 'block.pricing',
+  map: 'block.map',
+  'contact-form': 'block.contact-form',
+  newsletter: 'block.newsletter',
+  'social-links': 'block.social-links',
+  'recent-posts': 'block.recent-posts',
+  'product-grid': 'block.product-grid',
+  custom: 'block.custom',
 };
 
 /** Which blocks currently have a real editor. The rest are addable but stubbed. */
@@ -94,7 +97,7 @@ export function createDefaultBlock(type: BlockType): ContentBlock {
   return FACTORIES[type]();
 }
 
-export const ALL_BLOCK_TYPES = Object.keys(BLOCK_LABELS) as BlockType[];
+export const ALL_BLOCK_TYPES = Object.keys(BLOCK_LABEL_KEYS) as BlockType[];
 
 /**
  * Rejects javascript:, data: and other script-bearing schemes before a URL

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { RichTextBlockEditor } from './rich-text-block-editor';
 import { BlockEditor } from './block-editors';
 import {
-  ALL_BLOCK_TYPES, BLOCK_LABELS, EDITABLE_BLOCKS, createDefaultBlock,
+  ALL_BLOCK_TYPES, BLOCK_LABEL_KEYS, EDITABLE_BLOCKS, createDefaultBlock,
   type BlockType,
 } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
@@ -207,7 +207,7 @@ export function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
                     data-test-id={`block-add-${type}`}
                     className="flex items-center justify-between gap-2 rounded px-3 py-2 text-start text-sm transition-colors hover:bg-white/5"
                   >
-                    <span>{BLOCK_LABELS[type]}</span>
+                    <span>{t(BLOCK_LABEL_KEYS[type])}</span>
                     {/* Honest about which pickers lead to a real editor. */}
                     {!editable && (
                       <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-400">
@@ -257,7 +257,7 @@ function BlockItem({
         <GripVertical size={16} aria-hidden="true" className="text-[var(--admin-text-muted)]" />
 
         <span className="flex-1 text-sm font-medium">
-          {BLOCK_LABELS[block.type]}
+          {t(BLOCK_LABEL_KEYS[block.type])}
           <span className="ms-2 text-xs text-[var(--admin-text-muted)]" dir="ltr">
             #{index + 1}
           </span>
