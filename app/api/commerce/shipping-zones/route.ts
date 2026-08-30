@@ -5,6 +5,8 @@ import { db } from '@/lib/db';
 import { shippingZones } from '@/lib/db/schema';
 import { requireApiAuth } from '@/lib/auth/api-guard';
 import { shippingZoneSchema } from '@/lib/commerce-schema';
+import { isRegionOf } from '@/lib/commerce/phone';
+import { getShippingRegions } from '@/lib/commerce/regions';
 import { findOverlappingGovernorates, labelGovernorates } from '@/lib/commerce/zone-overlap';
 
 export async function POST(request: Request) {
@@ -13,6 +15,19 @@ export async function POST(request: Request) {
 
   try {
     const data = shippingZoneSchema.parse(await request.json());
+
+    // Existence check against the store's own list. The schema proves the
+    // values are well-formed; this proves they are real, which is what stops a
+    // zone that silently matches no order.
+    const regions = await getShippingRegions();
+    const unknown = data.governorates.filter((g) => !isRegionOf(regions, g));
+    if (unknown.length > 0) {
+      return NextResponse.json(
+        { success: false, error: { message: `منطقة غير معروفة: ${unknown.join('، ')}` } },
+        { status: 400 }
+      );
+    }
+
 
     if (data.isActive) {
       const clash = await findOverlappingGovernorates(data.governorates);

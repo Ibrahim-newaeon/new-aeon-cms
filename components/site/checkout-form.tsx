@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { formatPrice } from '@/lib/money';
-import { GOVERNORATES } from '@/lib/commerce/phone';
+import type { ShippingRegion } from '@/lib/commerce/phone';
 
 const COPY = {
   ar: {
@@ -53,12 +53,20 @@ export function CheckoutForm({
   currency,
   subtotal,
   token,
+  regions,
 }: {
   locale: 'ar' | 'en';
   currency: string;
   subtotal: number;
   /** One-time, minted server-side. Makes a double submit idempotent. */
   token: string;
+  /**
+   * Where this store ships. Passed in rather than imported, so this dropdown
+   * and the shipping-zone editor cannot offer different values — a zone built
+   * on a region the form never shows matches nothing, and every order in it
+   * falls through to "no zone" at checkout.
+   */
+  regions: readonly ShippingRegion[];
 }) {
   const router = useRouter();
   const copy = COPY[locale];
@@ -132,7 +140,7 @@ export function CheckoutForm({
           <Field label={copy.governorate}>
             <select name="governorate" required className="w-full rounded-lg border border-site-line p-3 text-sm" data-test-id="checkout-governorate">
               <option value="">{copy.choose}</option>
-              {GOVERNORATES.map((g) => (
+              {regions.map((g) => (
                 <option key={g.value} value={g.value}>{locale === 'ar' ? g.ar : g.en}</option>
               ))}
             </select>

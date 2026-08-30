@@ -23,6 +23,7 @@ import {
 import { getSettings } from '@/lib/db/queries';
 import { minorUnitExponent } from '@/lib/money';
 import { normalisePhone } from '@/lib/commerce/phone';
+import { getStoreCountry } from '@/lib/commerce/regions';
 import { headersFor, type EntityDef } from './registry';
 import { fromMinorUnits, parseBoolean, toMinorUnits, type ImportPlan } from './plan';
 import type { Table } from './table';
@@ -627,7 +628,7 @@ async function upsertReview(row: Record<string, string>): Promise<boolean> {
 
   // The same normalisation the checkout uses, so a review imported as "+962 7…"
   // belongs to the same person as one left as "07…".
-  const phone = normalisePhone(row.phone!);
+  const phone = normalisePhone(row.phone!, await getStoreCountry());
   const values = {
     productId: variant.productId,
     customerName: row.author!,

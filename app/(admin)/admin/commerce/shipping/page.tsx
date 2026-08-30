@@ -1,5 +1,6 @@
 // app/(admin)/admin/commerce/shipping/page.tsx
 import { db } from '@/lib/db';
+import { getShippingRegions } from '@/lib/commerce/regions';
 import { shippingZones, orders } from '@/lib/db/schema';
 import { asc, count, eq } from 'drizzle-orm';
 import { getSettings } from '@/lib/db/queries';
@@ -64,7 +65,8 @@ export default async function ShippingPage() {
         </p>
       </div>
 
-      <ShippingZonesManager initial={initial} currency={settings?.currency ?? 'JOD'} />
+      <ShippingZonesManager
+        regions={await getShippingRegions()} initial={initial} currency={settings?.currency ?? 'JOD'} />
     </div>
   );
 }

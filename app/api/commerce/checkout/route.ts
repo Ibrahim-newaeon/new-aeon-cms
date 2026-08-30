@@ -5,7 +5,9 @@ import { readCartCookie, clearCart } from '@/lib/commerce/cart';
 import { placeOrder } from '@/lib/commerce/checkout';
 import { verifyCheckoutToken } from '@/lib/commerce/checkout-token';
 import { commerceEnabled } from '@/lib/commerce/guard';
-import { isValidJordanianMobile, isGovernorate } from '@/lib/commerce/phone';
+import { isValidMobile, isRegionOf, type ShippingRegion } from '@/lib/commerce/phone';
+import { getShippingRegions, getStoreCountry } from '@/lib/commerce/regions';
+import type { CountryCode } from 'libphonenumber-js';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 import { notifyOrderPlaced } from '@/lib/email/notify';
 
@@ -16,11 +18,17 @@ export const runtime = 'nodejs';
  * Any `total`, `subtotal` or `price` field sent by a client is ignored, because
  * this schema does not accept one and the total is computed from the database.
  */
-const checkoutSchema = z.object({
+/**
+ * Built per request rather than once at module load: which numbers are valid
+ * and which regions exist both depend on the store's own settings, and a shop
+ * that changes country must not need a redeploy to accept its customers.
+ */
+const buildCheckoutSchema = (country: CountryCode, regions: readonly ShippingRegion[]) =>
+  z.object({
   name: z.string().trim().min(2, 'الاسم مطلوب').max(255),
-  phone: z.string().trim().refine(isValidJordanianMobile, 'رقم هاتف أردني غير صالح'),
+  phone: z.string().trim().refine((v) => isValidMobile(v, country), 'رقم هاتف غير صالح'),
   email: z.union([z.literal(''), z.string().email('بريد غير صالح')]).optional(),
-  governorate: z.string().refine(isGovernorate, 'اختر المحافظة'),
+  governorate: z.string().refine((v) => isRegionOf(regions, v), 'اختر المحافظة'),
   city: z.string().trim().min(2, 'المدينة مطلوبة').max(100),
   addressLine: z.string().trim().min(5, 'العنوان مطلوب').max(500),
   landmark: z.string().trim().max(255).optional(),
@@ -78,7 +86,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = checkoutSchema.parse(await request.json());
+    const [country, regions] = await Promise.all([getStoreCountry(), getShippingRegions()]);
+    const data = buildCheckoutSchema(country, regions).parse(await request.json());
 
     // The token is signed by us; its jti becomes the idempotency key, and the
     // UNIQUE index on orders.idempotency_key makes a repeat submit return the

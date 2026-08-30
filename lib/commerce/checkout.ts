@@ -7,6 +7,7 @@ import {
 } from '@/lib/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
 import { normalisePhone } from './phone';
+import { getStoreCountry } from './regions';
 import { priceCart, type CartCookie } from './cart';
 
 export interface CheckoutAddress {
@@ -144,7 +145,9 @@ export async function placeOrder(
   const shipping = zone.freeOver !== null && discounted >= zone.freeOver ? 0 : zone.flatRate;
   const total = discounted + shipping;
 
-  const phone = normalisePhone(address.phone);
+  // Country-aware: the store decides what a bare local number means, and the
+  // result is the merge key for this customer.
+  const phone = normalisePhone(address.phone, await getStoreCountry());
 
   return db.transaction(async (tx) => {
     // Conditional decrement: only succeeds while stock is still sufficient.

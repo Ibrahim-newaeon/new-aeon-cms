@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Pencil, X, Loader2, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GOVERNORATES } from '@/lib/commerce/phone';
+import type { ShippingRegion } from '@/lib/commerce/phone';
 import { toMajorUnits, toMinorUnits, formatPrice } from '@/lib/money';
 import { useT, useAdminI18n } from './i18n-provider';
 
@@ -35,17 +35,24 @@ const emptyDraft = (): Draft => ({
 
 // Takes the locale rather than always reading the Arabic label: this list is
 // rendered inside an admin panel that may be in English.
-const labelOf = (value: string, locale: 'ar' | 'en') =>
+const labelOf = (value: string, locale: 'ar' | 'en', regions: readonly ShippingRegion[]) =>
   (locale === 'ar'
-    ? GOVERNORATES.find((g) => g.value === value)?.ar
-    : GOVERNORATES.find((g) => g.value === value)?.en) ?? value;
+    ? regions.find((g) => g.value === value)?.ar
+    : regions.find((g) => g.value === value)?.en) ?? value;
 
 export function ShippingZonesManager({
   initial,
   currency,
+  regions,
 }: {
   initial: ShippingZoneRow[];
   currency: string;
+  /**
+   * The store's shipping regions — the SAME list the checkout dropdown renders.
+   * Passed in rather than imported from a constant, which is what makes it
+   * impossible to build a zone on a region a customer can never pick.
+   */
+  regions: readonly ShippingRegion[];
 }) {
   const t = useT();
   const { locale } = useAdminI18n();
@@ -117,7 +124,7 @@ export function ShippingZonesManager({
     }));
 
   const editorOpen = creating || editingId !== null;
-  const uncovered = GOVERNORATES.filter(
+  const uncovered = regions.filter(
     (g) => !rows.some((r) => r.isActive && r.governorates.includes(g.value))
   );
 
@@ -181,7 +188,7 @@ export function ShippingZonesManager({
               {t('zone.governorates')}
             </legend>
             <div className="flex flex-wrap gap-2">
-              {GOVERNORATES.map((g) => {
+              {regions.map((g) => {
                 const on = draft.governorates.includes(g.value);
                 const takenBy = claimedElsewhere.get(g.value);
                 return (
@@ -332,7 +339,7 @@ export function ShippingZonesManager({
               <div className="min-w-[10rem] flex-1">
                 <p className="text-sm font-medium">{row.name}</p>
                 <p className="text-xs text-[var(--admin-text-muted)]">
-                  {row.governorates.map((g) => labelOf(g, locale)).join(t('common.listSeparator'))}
+                  {row.governorates.map((g) => labelOf(g, locale, regions)).join(t('common.listSeparator'))}
                 </p>
               </div>
 

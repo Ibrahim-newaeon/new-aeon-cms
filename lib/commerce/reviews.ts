@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { productReviews, users } from '@/lib/db/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { normalisePhone } from './phone';
+import { getStoreCountry } from './regions';
 
 /**
  * Product reviews, moderated.
@@ -45,7 +46,7 @@ export async function submitReview(input: {
 
   // The same normalisation that merges customers, so one person cannot post
   // twice by writing +962 once and 07 the next time.
-  const phone = normalisePhone(input.phone);
+  const phone = normalisePhone(input.phone, await getStoreCountry());
 
   try {
     const [row] = await db

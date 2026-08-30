@@ -1,6 +1,7 @@
 // e2e/reviews.spec.ts
 import { test, expect } from '@playwright/test';
 import { ADMIN_PATH, PRODUCT_SLUG, SHOP_LOCALE, withDb } from './fixtures';
+import { normalisePhone } from '../lib/commerce/phone';
 
 /**
  * Moderated product reviews.
@@ -14,7 +15,15 @@ test.describe('product reviews', () => {
 
   const stamp = Date.now();
   const bodyText = `e2e-review-${stamp} a genuinely lovely product`;
+  /** What the shopper types. */
   const phone = '0799' + String(stamp).slice(-6);
+  /**
+   * What the database holds. The two differ on purpose: the app canonicalises
+   * to E.164 so one person cannot become two by writing +962 once and 07 the
+   * next time, and looking the row up by the typed form would assert the
+   * opposite of the behaviour we want.
+   */
+  const storedPhone = normalisePhone(phone);
 
   let productId: string;
 
@@ -24,11 +33,11 @@ test.describe('product reviews', () => {
     );
     productId = rows.rows[0].id;
 
-    await withDb((db) => db.query(`delete from product_reviews where phone = $1`, [phone]));
+    await withDb((db) => db.query(`delete from product_reviews where phone = $1`, [storedPhone]));
   });
 
   test.afterAll(async () => {
-    await withDb((db) => db.query(`delete from product_reviews where phone = $1`, [phone]));
+    await withDb((db) => db.query(`delete from product_reviews where phone = $1`, [storedPhone]));
   });
 
   test('a shopper can submit a review, and it is NOT published immediately', async ({ page }) => {
@@ -48,10 +57,13 @@ test.describe('product reviews', () => {
     await expect(page.getByTestId('review-thanks')).toBeVisible({ timeout: 15_000 });
 
     const stored = await withDb((db) =>
-      db.query(`select status, rating from product_reviews where phone = $1`, [phone])
+      db.query(`select status, rating, phone from product_reviews where phone = $1`, [storedPhone])
     );
     expect(stored.rows[0].status).toBe('pending');
     expect(stored.rows[0].rating).toBe(4);
+    // Stored canonically, whatever spelling was typed.
+    expect(stored.rows[0].phone).toBe(storedPhone);
+    expect(storedPhone.startsWith('+')).toBe(true);
 
     // A fresh visitor must not see it.
     await page.goto(`/${SHOP_LOCALE}/products/${PRODUCT_SLUG}`);
@@ -93,7 +105,7 @@ test.describe('product reviews', () => {
     await expect(page.getByTestId('reviews-manager')).toBeVisible();
 
     const id = (await withDb((db) =>
-      db.query(`select id from product_reviews where phone = $1`, [phone])
+      db.query(`select id from product_reviews where phone = $1`, [storedPhone])
     )).rows[0].id;
 
     await expect(page.getByTestId(`review-${id}`)).toBeVisible();
@@ -121,7 +133,7 @@ test.describe('product reviews', () => {
 
   test('rejecting it takes the review back off the page', async ({ page }) => {
     const id = (await withDb((db) =>
-      db.query(`select id from product_reviews where phone = $1`, [phone])
+      db.query(`select id from product_reviews where phone = $1`, [storedPhone])
     )).rows[0].id;
 
     await page.goto(`${ADMIN_PATH}/commerce/reviews?status=approved`);

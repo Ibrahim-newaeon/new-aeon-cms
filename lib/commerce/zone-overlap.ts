@@ -3,7 +3,7 @@ import 'server-only';
 import { db } from '@/lib/db';
 import { shippingZones } from '@/lib/db/schema';
 import { eq, ne, and } from 'drizzle-orm';
-import { GOVERNORATES } from './phone';
+import { JORDAN_GOVERNORATES } from './phone';
 
 /**
  * Checkout resolves a zone with `zones.find(z => z.governorates.includes(g))`,
@@ -35,6 +35,8 @@ export async function findOverlappingGovernorates(
 /** Arabic labels, so the error names the governorate rather than its key. */
 export function labelGovernorates(values: string[]): string {
   return values
-    .map((v) => GOVERNORATES.find((g) => g.value === v)?.ar ?? v)
+        // Best-effort label for a warning message; an unconfigured value falls
+    // back to the raw slug rather than being dropped from the warning.
+    .map((v) => JORDAN_GOVERNORATES.find((g) => g.value === v)?.ar ?? v)
     .join('، ');
 }

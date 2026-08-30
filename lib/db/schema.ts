@@ -6,6 +6,7 @@ import {
 // TS cannot infer the callback's return type. AnyPgColumn breaks the cycle.
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { Theme } from '../theme/slots';
+import type { ShippingRegion } from '../commerce/phone';
 import { relations, sql } from 'drizzle-orm';
 
 /**
@@ -300,6 +301,22 @@ export const settings = pgTable('settings', {
   comingSoonMessage: text('coming_soon_message'),
   eCommerceEnabled: boolean('ecommerce_enabled').default(false),
   currency: varchar('currency', { length: 3 }).default('JOD'),
+  /**
+   * ISO 3166-1 alpha-2. Decides what a bare local phone number means: `079…`
+   * is a Jordanian mobile and something else entirely elsewhere, so without
+   * this a two-country shop would merge two different people onto one customer.
+   */
+  countryCode: varchar('country_code', { length: 2 }).default('JO'),
+  /**
+   * Where this store ships, as [{ value, ar, en }].
+   *
+   * Was a hardcoded list of Jordan's twelve governorates — correct for exactly
+   * one country. The reason it was a fixed list still holds: the checkout
+   * dropdown and the shipping zone editor must offer the SAME values or a zone
+   * matches nothing and every order in it falls through to "no zone". They now
+   * read this one list rather than sharing a constant.
+   */
+  shippingRegions: jsonb('shipping_regions').$type<ShippingRegion[]>(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

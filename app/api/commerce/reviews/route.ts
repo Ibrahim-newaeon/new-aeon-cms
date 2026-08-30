@@ -3,18 +3,22 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { submitReview, MIN_RATING, MAX_RATING } from '@/lib/commerce/reviews';
 import { commerceEnabled } from '@/lib/commerce/guard';
-import { isValidJordanianMobile } from '@/lib/commerce/phone';
+import { isValidMobile } from '@/lib/commerce/phone';
+import { getStoreCountry } from '@/lib/commerce/regions';
+import type { CountryCode } from 'libphonenumber-js';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
-const schema = z.object({
-  productId: z.string().uuid(),
-  name: z.string().trim().min(2).max(255),
-  phone: z.string().trim().refine(isValidJordanianMobile, 'رقم هاتف أردني غير صالح'),
-  rating: z.number().int().min(MIN_RATING).max(MAX_RATING),
-  body: z.string().trim().min(10).max(2000),
-});
+/** Built per request: what counts as a valid number depends on the store. */
+const buildSchema = (country: CountryCode) =>
+  z.object({
+    productId: z.string().uuid(),
+    name: z.string().trim().min(2).max(255),
+    phone: z.string().trim().refine((v) => isValidMobile(v, country), 'رقم هاتف غير صالح'),
+    rating: z.number().int().min(MIN_RATING).max(MAX_RATING),
+    body: z.string().trim().min(10).max(2000),
+  });
 
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
@@ -44,7 +48,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = schema.parse(await request.json());
+    const country = await getStoreCountry();
+    const data = buildSchema(country).parse(await request.json());
 
     const result = await submitReview({
       productId: data.productId,
