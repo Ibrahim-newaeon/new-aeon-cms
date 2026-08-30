@@ -93,6 +93,40 @@ test.describe('Arabic storefront', () => {
     expect(text.startsWith('+')).toBe(true);
   });
 
+  for (const locale of ['ar', 'en']) {
+    test(`${locale}: the product image is painted on arrival, with no scrolling`, async ({ page }) => {
+      /**
+       * Written because this looked broken and was not, twice.
+       *
+       * The Chrome extension's screenshot showed the Arabic product image as a
+       * blank hole while the English one rendered — and scrolling made it
+       * appear, which is equally consistent with a real paint bug that a
+       * shopper would hit on arrival. Reading the DOM cannot settle it: an
+       * image can be `complete` with pixel data and still not be on screen.
+       *
+       * A clipped screenshot can. A PNG of the real photo is ~174,000 bytes;
+       * the same-sized patch of empty page is ~470. There is no middle ground
+       * to argue about, and no image-decoding dependency needed to tell them
+       * apart.
+       */
+      await page.goto(`/${locale}/products/jm-pkg-05`, { waitUntil: 'load' });
+
+      const img = page.locator('article img').first();
+      await expect(img).toBeVisible();
+      await page.waitForFunction(() => {
+        const i = document.querySelector('article img') as HTMLImageElement | null;
+        return !!i && i.complete && i.naturalWidth > 0;
+      });
+
+      // No scroll, no interaction — exactly what a visitor gets on arrival.
+      const box = (await img.boundingBox())!;
+      const shot = await page.screenshot({ clip: box });
+
+      expect(box.width, `${locale} image has no width`).toBeGreaterThan(100);
+      expect(shot.length, `${locale} product image is a blank hole on arrival`).toBeGreaterThan(20_000);
+    });
+  }
+
   test('the product page reads right to left', async ({ page }) => {
     await page.goto('/ar/shop');
     await page.locator('a[href^="/ar/products/"]').first().click();
