@@ -1,7 +1,10 @@
 // app/llms.txt/route.ts
+import { db } from '@/lib/db';
+import { sql } from 'drizzle-orm';
 import { getSettings } from '@/lib/db/queries';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { absoluteUrl } from '@/lib/seo/json-ld';
+import { buildLlmsTxt } from '@/lib/seo/llms';
 import { env, locales } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -9,59 +12,63 @@ export const runtime = 'nodejs';
 /**
  * /llms.txt — the same idea as robots.txt, for language models.
  *
- * A short, plain-text brief: who this is, and the handful of URLs worth
- * reading. Models are given a page's worth of context instead of having to
- * infer a shop from a navigation menu.
+ * This route only GATHERS; the document itself is built by buildLlmsTxt, which
+ * is a pure function so the rules that matter — drafts excluded, real slugs
+ * used — can be tested directly rather than through an hour-long ISR cache.
  *
- * Built from Settings rather than written by hand, so it cannot drift from the
- * site. If the brand answer is empty it says so plainly rather than inventing
- * one — a confident sentence nobody wrote is worse than a missing one.
- *
- * Regenerated hourly, matching the sitemap: this changes when Settings change,
+ * Regenerated hourly, matching the sitemap: it changes when Settings change,
  * which is rarely.
  */
 export const revalidate = 3600;
 
+/** Published pages only, so nothing here points at a draft or a 404. */
+async function publishedPages(): Promise<Set<string>> {
+  const rows = await db.execute<{ slug: string }>(sql`
+    select c.slug
+    from content c
+    join content_types ct on ct.id = c.type_id
+    where ct.slug = 'page' and c.status = 'published'
+  `);
+  return new Set((rows.rows ?? []).map((r) => r.slug));
+}
+
+/** "ar" -> "Arabic", "JO" -> "Jordan". Falls back to the code, never guesses. */
+const displayName = (type: 'language' | 'region') => (code: string) => {
+  try {
+    return new Intl.DisplayNames(['en'], { type }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
 export async function GET() {
-  const settings = await getSettings();
-  const shop = await commerceEnabled();
-  const name = settings?.siteName ?? 'Site';
-  const locale = env.DEFAULT_LOCALE;
+  const [settings, shop, pages] = await Promise.all([
+    getSettings(),
+    commerceEnabled(),
+    publishedPages(),
+  ]);
 
-  const lines: string[] = [`# ${name}`, ''];
+  const primary = env.DEFAULT_LOCALE;
 
-  const answer = settings?.brandAnswer?.trim() || settings?.siteDescription?.trim();
-  if (answer) {
-    lines.push(`> ${answer}`, '');
-  }
+  const body = buildLlmsTxt({
+    name: settings?.siteName ?? 'Site',
+    answer: settings?.brandAnswer ?? settings?.siteDescription ?? null,
+    shop,
+    primary,
+    others: locales.filter((l) => l !== primary),
+    pages,
+    country: settings?.countryCode ? displayName('region')(settings.countryCode) : null,
+    currency: settings?.currency ?? null,
+    contactPhone: settings?.contactPhone ?? null,
+    whatsappNumber: settings?.whatsappNumber ?? null,
+    contactEmail: settings?.contactEmail ?? null,
+    social: (settings?.socialLinks ?? null) as Record<string, string> | null,
+    allowAiCrawlers: settings?.allowAiCrawlers ?? null,
+    url: absoluteUrl,
+    languageName: displayName('language'),
+  });
 
-  lines.push('## Pages', '');
-  lines.push(`- [Home](${absoluteUrl(`/${locale}`)})`);
-  if (shop) {
-    lines.push(`- [Shop](${absoluteUrl(`/${locale}/shop`)}) — the product catalogue`);
-  }
-  lines.push(`- [Search](${absoluteUrl(`/${locale}/search`)})`);
-  lines.push(`- [Sitemap](${absoluteUrl('/sitemap.xml')}) — every page, both languages`);
-
-  const contact: string[] = [];
-  if (settings?.contactEmail) contact.push(`Email: ${settings.contactEmail}`);
-  if (settings?.contactPhone) contact.push(`Phone: ${settings.contactPhone}`);
-  if (contact.length > 0) {
-    lines.push('', '## Contact', '', ...contact.map((c) => `- ${c}`));
-  }
-
-  lines.push(
-    '',
-    '## Notes',
-    '',
-    `- Languages: ${locales.join(', ')}. Every page exists at /{locale}/...`,
-    ...(shop ? ['- Prices are shown in the shop; product pages carry Product schema.'] : []),
-    settings?.allowAiCrawlers === false
-      ? '- This site asks not to be used for AI training. See /robots.txt.'
-      : '- AI crawlers are welcome to read and cite this site.'
-  );
-
-  return new Response(`${lines.join('\n')}\n`, {
+  return new Response(body, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       'Cache-Control': 'public, max-age=3600',

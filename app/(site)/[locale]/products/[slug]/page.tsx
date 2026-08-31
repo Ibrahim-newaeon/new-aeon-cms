@@ -2,7 +2,6 @@
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { getShopProduct } from '@/lib/commerce/storefront';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { getSettings } from '@/lib/db/queries';
@@ -67,6 +66,24 @@ export default async function ProductPage({ params }: Props) {
   // same set rather than stored — a denormalised mean drifts the first time a
   // moderation path forgets to update it.
   const shopper = await currentCustomer();
+
+  /**
+   * Where "Enquire" goes when there is no WhatsApp number.
+   *
+   * It used to be a hardcoded `/{locale}/contact`, and that route does not
+   * exist — no CMS page uses the slug and there is no such route file, so every
+   * product page on a shop without a WhatsApp number carried a dead link. It
+   * stayed hidden here only because this shop happens to have one set.
+   *
+   * A mailto/tel from Settings is something every shop already has, and the
+   * control renders nothing at all when there is no way to make contact —
+   * better than offering a button that goes nowhere.
+   */
+  const enquiryFallback = settings?.contactEmail
+    ? `mailto:${settings.contactEmail}`
+    : settings?.contactPhone
+      ? `tel:${settings.contactPhone.replace(/[^\d+]/g, '')}`
+      : null;
 
   const enquiryHref = whatsappLink({
     phone: settings?.whatsappNumber,
@@ -196,15 +213,15 @@ export default async function ProductPage({ params }: Props) {
                     <MessageCircle size={16} aria-hidden="true" />
                     {ar ? 'استفسر عبر واتساب' : 'Ask on WhatsApp'}
                   </a>
-                ) : (
-                  <Link
-                    href={`/${typedLocale}/contact`}
+                ) : enquiryFallback ? (
+                  <a
+                    href={enquiryFallback}
                     className="site-btn-outline px-6 py-3 text-sm font-medium"
                     data-test-id="product-enquire"
                   >
                     {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
-                  </Link>
-                )}
+                  </a>
+                ) : null}
 
                 <WishlistButton
                   productId={product.id}

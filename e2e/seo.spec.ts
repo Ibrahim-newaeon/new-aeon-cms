@@ -99,15 +99,13 @@ test.describe('structured data', () => {
 });
 
 test.describe('answer engines', () => {
-  test('llms.txt describes the site in plain text', async ({ page }) => {
-    const res = await page.goto('/llms.txt');
-    expect(res?.status()).toBe(200);
-    expect(res?.headers()['content-type']).toContain('text/plain');
-
-    const body = await res!.text();
-    expect(body).toContain('## Pages');
-    expect(body).toContain('/sitemap.xml');
-  });
+  /**
+   * llms.txt has its own spec now — e2e/llms-txt.spec.ts for the HTTP surface,
+   * tests/llms.test.ts for the document's rules. This one asserted the old
+   * "## Pages" heading, so it broke when the file was rebuilt to the agreed
+   * template; two tests describing the same file is how one of them ends up
+   * enforcing a shape nobody wants any more.
+   */
 
   test('robots names the AI crawlers rather than leaving it to inference', async ({ page }) => {
     const res = await page.goto('/robots.txt');
