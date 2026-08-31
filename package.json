@@ -1,7 +1,10 @@
 {
   "name": "new-aeon-cms",
   "version": "1.0.0",
+  "description": "Bilingual (Arabic/English) CMS and e-commerce platform.",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "New Aeon",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

@@ -1,0 +1,152 @@
+New Aeon CMS — Commercial Licence Agreement
+Version 1.0, 31 August 2026
+
+Copyright (c) 2026 New Aeon. All rights reserved.
+
+THIS IS NOT OPEN-SOURCE SOFTWARE. The source code is provided so that a
+licensee can host, configure and maintain their own installation. It is not
+placed in the public domain, and no right to redistribute it is granted.
+
+
+1. DEFINITIONS
+
+   "Software"   this codebase, including the admin panel, storefront,
+                database schema and accompanying files.
+   "Licensor"   New Aeon.
+   "Licensee"   the individual or organisation named on the invoice or
+                order form under which this Software was supplied.
+   "Instance"   one running deployment of the Software serving one website.
+   "Licence"    this agreement.
+
+
+2. GRANT
+
+   Subject to payment of the applicable fee, the Licensor grants the Licensee
+   a non-exclusive, non-transferable, worldwide licence to:
+
+   (a) install and run the Software as ONE Instance in production, together
+       with any number of non-production copies used solely for development,
+       staging, testing or backup;
+
+   (b) modify the Software for the Licensee's own use, including changing
+       appearance, adding features, and integrating other systems; and
+
+   (c) receive the source code, which is required in order to exercise (a)
+       and (b).
+
+   Each additional production Instance requires an additional licence.
+
+
+3. RESTRICTIONS
+
+   The Licensee shall not:
+
+   (a) sell, sublicense, lease, rent, lend or otherwise distribute the
+       Software, or any derivative of it, to any third party;
+
+   (b) operate the Software as a multi-tenant service, hosting platform or
+       website builder from which third parties obtain their own sites,
+       except under a separate written agreement with the Licensor;
+
+   (c) publish the source code, in whole or in substantial part, in any
+       public repository or other public location; or
+
+   (d) remove or obscure copyright notices in the source code.
+
+   Clause 3(d) concerns notices in the CODE. Visible branding in the admin
+   panel and on the storefront is addressed in clause 4.
+
+
+4. BRANDING
+
+   Unless the Licensee holds a white-label licence, the Software may display
+   an attribution to the Licensor within the admin panel. That attribution
+   is not shown to visitors of the public website, and the Licensee is free
+   to present the public site entirely under their own brand.
+
+   A white-label licence removes the admin attribution and permits the
+   Licensee to present the Software as their own product to their clients.
+
+
+5. AGENCY AND CLIENT WORK
+
+   An agency licensee may install and configure an Instance on behalf of a
+   client, and may charge that client for the work. The licence for that
+   Instance must be held by either the agency or the client, and one licence
+   covers one Instance regardless of which of them holds it.
+
+   Delivering the source code to the client for whom the Instance was built
+   is permitted, and does not constitute distribution under clause 3(a).
+   That client is then bound by this Licence in respect of that Instance.
+
+
+6. THIRD-PARTY COMPONENTS
+
+   The Software is distributed with open-source packages listed in
+   THIRD-PARTY-NOTICES.md. Each remains under its own licence, and those
+   licences — not this one — govern that code. Nothing in this Licence
+   limits any right the Licensee has under them.
+
+
+7. OWNERSHIP
+
+   The Licensor retains all right, title and interest in the Software.
+   Modifications made by the Licensee under clause 2(b) belong to the
+   Licensee, but confer no rights in the Software itself.
+
+   Content, product data, customer records and other material the Licensee
+   puts into an Instance belong entirely to the Licensee. The Software
+   provides export tools, and the Licensor asserts no claim over that data.
+
+
+8. SUPPORT AND UPDATES
+
+   This Licence grants no right to support, maintenance or updates. Those
+   are supplied, if at all, under a separate agreement.
+
+
+9. TERM AND TERMINATION
+
+   This Licence takes effect on delivery of the Software and continues until
+   terminated.
+
+   The Licensor may terminate it if the Licensee materially breaches it and
+   fails to remedy the breach within 30 days of written notice. On
+   termination the Licensee shall cease using the Software and destroy all
+   copies, except that the Licensee may retain and export their own data.
+
+   A licence already paid for is perpetual for the version supplied: expiry
+   of a support or update term does not terminate the right to keep running
+   the version already delivered.
+
+
+10. WARRANTY DISCLAIMER
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+
+11. LIMITATION OF LIABILITY
+
+    TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR'S TOTAL LIABILITY
+    ARISING OUT OF OR RELATED TO THIS LICENCE SHALL NOT EXCEED THE FEES PAID
+    BY THE LICENSEE FOR THE INSTANCE GIVING RISE TO THE CLAIM. THE LICENSOR
+    SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL OR
+    CONSEQUENTIAL DAMAGES, OR FOR LOST PROFITS, REVENUE OR DATA.
+
+
+12. GOVERNING LAW
+
+    This Licence is governed by the laws of the Hashemite Kingdom of Jordan,
+    and the courts of Amman shall have exclusive jurisdiction.
+
+
+13. ENTIRE AGREEMENT
+
+    This Licence, together with the order form or invoice under which the
+    Software was supplied, is the entire agreement between the parties in
+    respect of the Software.
+
+
+Questions about licensing: <set a contact address here before issuing>
