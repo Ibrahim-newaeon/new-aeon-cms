@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/session';
 import { getSettings } from '@/lib/db/queries';
 import { SettingsForm } from '@/components/admin/settings-form';
+import type { ThemeMode } from '@/lib/theme/slots';
 import { SeoReadiness } from '@/components/admin/seo-readiness';
 import type { SettingsInput, SocialPlatform } from '@/lib/settings-schema';
 import { createTranslator } from '@/lib/admin-i18n';
@@ -53,6 +54,11 @@ export default async function SettingsPage() {
     tiktokPixelId: s?.tiktokPixelId ?? '',
     snapPixelId: s?.snapPixelId ?? '',
     theme: s?.theme ?? {},
+    themeDark: s?.themeDark ?? {},
+    // 'light' rather than 'auto' for a site that predates the column: its one
+    // saved theme is a light one, and defaulting to auto would hand a blank
+    // dark stylesheet to every visitor whose device is dark.
+    themeMode: (s?.themeMode as ThemeMode | null) ?? 'light',
     customCss: s?.customCss ?? '',
     comingSoonMode: s?.comingSoonMode ?? false,
     comingSoonMessage: s?.comingSoonMessage ?? '',

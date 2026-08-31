@@ -10,6 +10,7 @@ import { MediaField } from './media-field';
 import { useT } from './i18n-provider';
 import { BackupPanel } from './backup-panel';
 import { ThemeEditor } from './theme-editor';
+import type { ThemeMode } from '@/lib/theme/slots';
 import type { MessageKey } from '@/lib/admin-i18n';
 
 const TABS: { id: string; key: MessageKey }[] = [
@@ -321,7 +322,11 @@ export function SettingsForm({
             <Field label={t('settings.theme')} hint={t('settings.themeHint')}>
               <ThemeEditor
                 value={value.theme ?? {}}
+                dark={value.themeDark ?? {}}
+                mode={(value.themeMode as ThemeMode | undefined) ?? 'light'}
                 onChange={(theme) => patch({ theme })}
+                onDarkChange={(themeDark) => patch({ themeDark })}
+                onModeChange={(themeMode) => patch({ themeMode })}
                 commerceEnabled={Boolean(value.eCommerceEnabled)}
               />
             </Field>

@@ -149,3 +149,94 @@ export function themeToFile(theme: Theme | null | undefined): Record<string, str
   file.radius = theme?.radius ?? RADIUS_FALLBACK;
   return file;
 }
+
+/* ── Light and dark ─────────────────────────────────────────────────────── */
+
+/**
+ * What decides which of a skin's two themes a visitor gets.
+ *
+ * `auto` is not "dark". It hands the choice to the device, which is what a
+ * visitor who has set their phone to dark already expects everywhere else.
+ * `light` and `dark` force one, for a business whose brand only works one way.
+ */
+export const THEME_MODES = ['light', 'dark', 'auto'] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
+export const themeModeSchema = z.enum(THEME_MODES);
+export const THEME_MODE_FALLBACK: ThemeMode = 'light';
+
+/**
+ * The dark theme as the browser actually resolves it.
+ *
+ * A dark theme carries only what DIFFERS from the light one; every slot it
+ * leaves unset cascades through to the `:root` block, because that is what the
+ * CSS below emits. So the effective dark theme is the light one with the dark
+ * one laid over it — and anything reasoning about the dark result (contrast
+ * checks, swatches, the preview) has to reason about this merge, not about the
+ * dark object on its own. Checking the raw dark object would compare a dark
+ * background against a body colour it never actually renders with.
+ */
+export function resolveDark(light: Theme | null | undefined, dark: Theme | null | undefined): Theme {
+  return { ...(light ?? {}), ...(dark ?? {}) };
+}
+
+/** True when a dark variant has anything worth emitting. */
+export function hasDark(dark: Theme | null | undefined): boolean {
+  return Boolean(dark && Object.values(dark).some((v) => typeof v === 'string' && v));
+}
+
+/**
+ * The full stylesheet for a skin: light, plus dark in both the ways a dark
+ * theme can be asked for.
+ *
+ * The emitted CSS is the SAME whatever the mode — the mode only decides what
+ * gets stamped on <html> (see themeModeAttr). That is deliberate: it keeps one
+ * cascade to reason about, and it means switching mode is an attribute change
+ * rather than a different stylesheet.
+ *
+ * Three states, because the viewer has three:
+ *   - `:root`                                  — light, always the base
+ *   - `@media (prefers-color-scheme: dark)`    — the device asked for dark, and
+ *     guarded with `:not([data-theme="light"])` so a business that forced light
+ *     still gets light on a dark phone
+ *   - `:root[data-theme="dark"]`               — dark was forced, and wins on a
+ *     light device too
+ *
+ * Without the third block, forcing dark would do nothing for the majority of
+ * visitors, whose devices are set to light. Without the guard on the second,
+ * forcing light would be ignored by anyone whose phone is dark. Both are the
+ * classic half-implemented dark mode.
+ */
+export function themePairToCss(
+  light: Theme | null | undefined,
+  dark: Theme | null | undefined
+): string {
+  const base = themeToCss(light);
+
+  if (!hasDark(dark)) return base;
+
+  // Emitted whole rather than as a diff: a partial block would leave the light
+  // value showing for any slot the dark theme happens to share, which is
+  // correct, but it makes the emitted CSS depend on the light theme's contents
+  // and impossible to read on its own.
+  const darkVars = themeToCss(resolveDark(light, dark), ':root');
+  if (!darkVars) return base;
+
+  const body = darkVars.slice(darkVars.indexOf('{'));
+
+  return [
+    base,
+    `@media (prefers-color-scheme:dark){:root:not([data-theme="light"])${body}}`,
+    `:root[data-theme="dark"]${body}`,
+  ].join('');
+}
+
+/**
+ * What to stamp on <html>.
+ *
+ * `auto` stamps NOTHING — the absence of the attribute is what lets the media
+ * query decide. Stamping `data-theme="auto"` would match neither selector and
+ * silently pin every visitor to light.
+ */
+export function themeModeAttr(mode: ThemeMode | null | undefined): 'light' | 'dark' | undefined {
+  return mode === 'dark' ? 'dark' : mode === 'light' ? 'light' : undefined;
+}

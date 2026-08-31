@@ -6,27 +6,44 @@ import type { Theme } from './slots';
  *
  * A business picks the one closest to its brand and changes the accent; that
  * covers most of them without anyone facing seventeen colour pickers on a blank
- * form. Every preset fills EVERY slot, so switching never leaves a site
- * half-themed with the previous choice showing through.
+ * form. Every skin fills EVERY slot in BOTH variants, so switching never leaves
+ * a site half-themed with the previous choice showing through.
  *
- * Each one is asserted to pass contrast in tests/theme.test.ts. Shipping a
- * preset whose buttons cannot be read would be worse than shipping none: the
+ * ── Why two themes per skin, not two skins ──────────────────────────────────
+ * A skin is the BRAND; light and dark are the same brand under different
+ * lighting. Modelling them as separate skins is what produced the old `night`
+ * preset: a business that wanted dark had to abandon its colours to get it, and
+ * a business that wanted its colours had to give up dark. Splitting the two
+ * axes means "Sand, following the visitor's device" is expressible, and it is
+ * what a visitor whose phone is set to dark already expects.
+ *
+ * A dark variant here is written out in full rather than as a diff from its
+ * light twin. It costs a few more lines and makes each variant readable on its
+ * own — you can tell what a dark storefront looks like without mentally
+ * merging two objects. (The CASCADE still merges: an unset dark slot falls
+ * through to light. See resolveDark in ./slots.)
+ *
+ * Every variant is asserted to pass contrast in tests/theme.test.ts. Shipping a
+ * skin whose buttons cannot be read would be worse than shipping none: the
  * business would reasonably assume the defaults were safe.
  */
 
-export interface Preset {
+export interface Skin {
   id: string;
   nameEn: string;
   nameAr: string;
-  theme: Theme;
+  /** The base. Always emitted, and what an unset dark slot falls back to. */
+  light: Theme;
+  /** Served on a dark device, or forced. */
+  dark: Theme;
 }
 
-export const PRESETS: readonly Preset[] = [
+export const SKINS: readonly Skin[] = [
   {
     id: 'aeon',
     nameEn: 'Aeon',
     nameAr: 'أيون',
-    theme: {
+    light: {
       accent: '#ffc619',
       'accent-hover': '#e0ac0c',
       'accent-ink': '#130c0e',
@@ -46,12 +63,35 @@ export const PRESETS: readonly Preset[] = [
       'out-of-stock': '#b91c1c',
       radius: '0.75rem',
     },
+    dark: {
+      // The yellow survives the move to a dark ground unchanged — it is the
+      // brand, and a brand that shifts hue at dusk stops being recognisable.
+      // What changes is everything it sits on.
+      accent: '#ffc619',
+      'accent-hover': '#ffd451',
+      'accent-ink': '#130c0e',
+      surface: '#0f1115',
+      'surface-raised': '#171a21',
+      'surface-inverted': '#05070a',
+      line: '#2a2f3a',
+      ink: '#f2f4f8',
+      'ink-muted': '#a3adbf',
+      'ink-inverted': '#f2f4f8',
+      success: '#4ade80',
+      warning: '#fbbf24',
+      danger: '#fca5a5',
+      price: '#f2f4f8',
+      'price-sale': '#fdba74',
+      'in-stock': '#4ade80',
+      'out-of-stock': '#fca5a5',
+      radius: '0.75rem',
+    },
   },
   {
     id: 'ink',
     nameEn: 'Ink',
     nameAr: 'حبري',
-    theme: {
+    light: {
       accent: '#111827',
       'accent-hover': '#000000',
       'accent-ink': '#ffffff',
@@ -71,12 +111,34 @@ export const PRESETS: readonly Preset[] = [
       'out-of-stock': '#b91c1c',
       radius: '0',
     },
+    dark: {
+      // A monochrome brand inverts rather than recolours: the accent is the
+      // ink and the ink is the accent.
+      accent: '#f4f4f5',
+      'accent-hover': '#ffffff',
+      'accent-ink': '#18181b',
+      surface: '#09090b',
+      'surface-raised': '#18181b',
+      'surface-inverted': '#000000',
+      line: '#2e2e33',
+      ink: '#fafafa',
+      'ink-muted': '#a1a1aa',
+      'ink-inverted': '#fafafa',
+      success: '#4ade80',
+      warning: '#fcd34d',
+      danger: '#fca5a5',
+      price: '#fafafa',
+      'price-sale': '#fca5a5',
+      'in-stock': '#4ade80',
+      'out-of-stock': '#fca5a5',
+      radius: '0',
+    },
   },
   {
     id: 'sand',
     nameEn: 'Sand',
     nameAr: 'رملي',
-    theme: {
+    light: {
       accent: '#9a5b2c',
       'accent-hover': '#7d4922',
       'accent-ink': '#ffffff',
@@ -96,12 +158,35 @@ export const PRESETS: readonly Preset[] = [
       'out-of-stock': '#a1341f',
       radius: '0.5rem',
     },
+    dark: {
+      // The brown lightens to a tan. A mid-brown accent that reads as rich on
+      // cream turns into a muddy smear on near-black, so this is the one skin
+      // whose accent genuinely has to move.
+      accent: '#d99a5b',
+      'accent-hover': '#e8b078',
+      'accent-ink': '#2b1c10',
+      surface: '#17110c',
+      'surface-raised': '#221a12',
+      'surface-inverted': '#0d0906',
+      line: '#3a2d21',
+      ink: '#f5ebe0',
+      'ink-muted': '#bfa88f',
+      'ink-inverted': '#f5ebe0',
+      success: '#a3c76d',
+      warning: '#e8b25e',
+      danger: '#ef9a8a',
+      price: '#f5ebe0',
+      'price-sale': '#ef9a8a',
+      'in-stock': '#a3c76d',
+      'out-of-stock': '#ef9a8a',
+      radius: '0.5rem',
+    },
   },
   {
     id: 'forest',
     nameEn: 'Forest',
     nameAr: 'غابة',
-    theme: {
+    light: {
       accent: '#0f7b5a',
       'accent-hover': '#0c6349',
       'accent-ink': '#ffffff',
@@ -121,14 +206,58 @@ export const PRESETS: readonly Preset[] = [
       'out-of-stock': '#b3261e',
       radius: '1rem',
     },
+    dark: {
+      accent: '#34d399',
+      'accent-hover': '#6ee7b7',
+      'accent-ink': '#04241a',
+      surface: '#0a1512',
+      'surface-raised': '#12211c',
+      'surface-inverted': '#050d0a',
+      line: '#22362e',
+      ink: '#e6f4ee',
+      'ink-muted': '#93b3a6',
+      'ink-inverted': '#e6f4ee',
+      success: '#34d399',
+      warning: '#fbbf24',
+      danger: '#fca5a5',
+      price: '#e6f4ee',
+      'price-sale': '#fca5a5',
+      'in-stock': '#34d399',
+      'out-of-stock': '#fca5a5',
+      radius: '1rem',
+    },
   },
   {
     id: 'night',
     nameEn: 'Night',
     nameAr: 'ليلي',
-    theme: {
-      // A dark storefront, which is the case the role names exist for: nothing
-      // here is "the light one" or "the dark one", only surface and ink.
+    light: {
+      // Night used to be dark-ONLY, which meant a business that liked it had
+      // no light variant to offer a visitor on a light device. This is the
+      // light half it never had: same cool blue, on paper instead of glass.
+      accent: '#0369a1',
+      'accent-hover': '#075985',
+      'accent-ink': '#ffffff',
+      surface: '#ffffff',
+      'surface-raised': '#f1f5f9',
+      'surface-inverted': '#0b1220',
+      line: '#dbe3ee',
+      ink: '#0f172a',
+      'ink-muted': '#51607a',
+      'ink-inverted': '#e8eefc',
+      success: '#15803d',
+      warning: '#b45309',
+      danger: '#b91c1c',
+      price: '#0f172a',
+      'price-sale': '#c2410c',
+      'in-stock': '#15803d',
+      'out-of-stock': '#b91c1c',
+      radius: '0.75rem',
+    },
+    dark: {
+      // The original Night, unchanged: nothing here is "the light one" or "the
+      // dark one", only surface and ink, which is the case the role names exist
+      // for.
       accent: '#7dd3fc',
       'accent-hover': '#a5e4ff',
       'accent-ink': '#04202e',
@@ -151,4 +280,4 @@ export const PRESETS: readonly Preset[] = [
   },
 ] as const;
 
-export const findPreset = (id: string) => PRESETS.find((p) => p.id === id);
+export const findSkin = (id: string) => SKINS.find((s) => s.id === id);

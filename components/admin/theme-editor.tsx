@@ -1,16 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Upload, RotateCcw, Monitor, Smartphone, RefreshCw } from 'lucide-react';
+import { Download, Upload, RotateCcw, Monitor, Smartphone, RefreshCw, Sun, MoonStar } from 'lucide-react';
 import { useT, useAdminI18n } from './i18n-provider';
 import {
   COLOR_SLOTS,
   RADIUS_FALLBACK,
+  THEME_MODES,
   themeToCss,
   themeToFile,
+  resolveDark,
+  hasDark,
   type Theme,
+  type ThemeMode,
 } from '@/lib/theme/slots';
-import { PRESETS } from '@/lib/theme/presets';
+import { SKINS } from '@/lib/theme/presets';
 import { checkContrast, parseThemeFile } from '@/lib/theme/import';
 import type { MessageKey } from '@/lib/admin-i18n';
 import { cn } from '@/lib/utils';
@@ -35,11 +39,19 @@ const GROUPS = ['brand', 'surface', 'text', 'status', 'shop'] as const;
  */
 export function ThemeEditor({
   value,
+  dark,
+  mode,
   onChange,
+  onDarkChange,
+  onModeChange,
   commerceEnabled,
 }: {
   value: Theme;
+  dark: Theme;
+  mode: ThemeMode;
   onChange: (theme: Theme) => void;
+  onDarkChange: (theme: Theme) => void;
+  onModeChange: (mode: ThemeMode) => void;
   commerceEnabled: boolean;
 }) {
   const t = useT();
@@ -49,6 +61,27 @@ export function ThemeEditor({
   const [notes, setNotes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [device, setDevice] = useState<'desktop' | 'phone'>('desktop');
+
+  /**
+   * Which variant the pickers below are editing.
+   *
+   * Local state, not a saved setting: it is a view of the form, not a property
+   * of the site. The site's own choice is `mode`, which is a separate control —
+   * conflating the two would mean you could not look at your dark colours
+   * without also switching your live storefront to dark.
+   */
+  const [editing, setEditing] = useState<'light' | 'dark'>('light');
+
+  /**
+   * The theme the pickers read and write.
+   *
+   * On the dark tab this is the RESOLVED dark theme — light with dark laid over
+   * it — because that is what the cascade actually serves. Showing the raw dark
+   * object would present an unset slot as its light-mode fallback (a white page
+   * background on the dark tab), which is not what the visitor sees.
+   */
+  const active = editing === 'dark' ? resolveDark(value, dark) : value;
+  const setActive = editing === 'dark' ? onDarkChange : onChange;
 
   /**
    * Paints the draft onto the previewed site.
@@ -77,29 +110,37 @@ export function ThemeEditor({
       style.id = id;
       doc.head.appendChild(style);
     }
-    style.textContent = themeToCss(value, ':root:root');
-  }, [value]);
+    style.textContent = themeToCss(active, ':root:root');
+
+    // The preview frame is a real storefront page, so the variant being edited
+    // has to be stamped on it the same way the server stamps the live site —
+    // otherwise a dark draft paints dark tokens onto a page still claiming to
+    // be light.
+    doc.documentElement.setAttribute('data-theme', editing);
+  }, [active, editing]);
 
   useEffect(() => {
     paintPreview();
   }, [paintPreview]);
 
   const slots = COLOR_SLOTS.filter((slot) => slot.group !== 'shop' || commerceEnabled);
-  const contrast = checkContrast(value);
+  // Checked against the resolved variant for the same reason the pickers show
+  // it: a contrast warning about colours the visitor never sees is noise.
+  const contrast = checkContrast(active);
 
-  const set = (name: string, colour: string) => onChange({ ...value, [name]: colour });
+  const set = (name: string, colour: string) => setActive({ ...active, [name]: colour });
 
   const download = () => {
     // A Blob download rather than a route: this is data the form already holds,
     // and it must reflect UNSAVED edits — a round trip to the server would hand
     // back the last saved theme instead of the one on screen.
-    const blob = new Blob([JSON.stringify(themeToFile(value), null, 2)], {
+    const blob = new Blob([JSON.stringify(themeToFile(active), null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'design-system.json';
+    a.download = `design-system-${editing}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -109,7 +150,7 @@ export function ThemeEditor({
     setNotes([]);
     try {
       const result = parseThemeFile(await file.text());
-      onChange({ ...value, ...result.theme });
+      setActive({ ...active, ...result.theme });
 
       const lines = [t('settings.themeApplied', { n: result.applied.length })];
       // Reported, not swallowed: "I uploaded my brand and nothing happened" has
@@ -135,34 +176,114 @@ export function ThemeEditor({
           {t('settings.themePresets')} — {t('settings.themePresetsHint')}
         </p>
         <div className="flex flex-wrap gap-2">
-          {PRESETS.map((preset) => (
+          {SKINS.map((skin) => (
             <button
-              key={preset.id}
+              key={skin.id}
               type="button"
-              // Replaces the theme rather than merging: a preset that inherited
-              // stray slots from the previous one would not be the preset.
+              // Applies BOTH halves, and replaces rather than merges: a skin
+              // that inherited stray slots from the previous one would not be
+              // the skin. Picking a skin while looking at the dark tab still
+              // sets its light half — they are one choice, not two.
               onClick={() => {
-                onChange({ ...preset.theme });
+                onChange({ ...skin.light });
+                onDarkChange({ ...skin.dark });
                 setNotes([]);
                 setError(null);
               }}
-              data-test-id={`theme-preset-${preset.id}`}
+              data-test-id={`theme-preset-${skin.id}`}
               className="flex items-center gap-2 rounded-lg border border-[var(--admin-line)] px-3 py-2 text-sm hover:bg-white/5"
             >
+              {/* Both halves in the swatch — the accent and page of each — so
+                  the pair is visible before it is applied. */}
               <span className="flex">
-                {(['accent', 'surface', 'surface-inverted'] as const).map((slot) => (
+                {(
+                  [
+                    [skin.light, 'accent'],
+                    [skin.light, 'surface'],
+                    [skin.dark, 'accent'],
+                    [skin.dark, 'surface'],
+                  ] as const
+                ).map(([theme, slot], i) => (
                   <span
-                    key={slot}
+                    key={i}
                     aria-hidden="true"
                     className="h-4 w-4 rounded-full border border-black/10 -ms-1 first:ms-0"
-                    style={{ background: preset.theme[slot] }}
+                    style={{ background: theme[slot] }}
                   />
                 ))}
               </span>
-              {locale === 'ar' ? preset.nameAr : preset.nameEn}
+              {locale === 'ar' ? skin.nameAr : skin.nameEn}
             </button>
           ))}
         </div>
+      </div>
+
+      {/*
+        Which variant visitors get. Separate from the tab below, which only
+        decides what this form is showing.
+      */}
+      <fieldset className="space-y-2" data-test-id="theme-mode">
+        <legend className="text-xs text-[var(--admin-text-secondary)]">
+          {t('settings.themeMode')} — {t('settings.themeModeHint')}
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {THEME_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onModeChange(m)}
+              aria-pressed={mode === m}
+              data-test-id={`theme-mode-${m}`}
+              className={cn(
+                'rounded-lg border px-3 py-2 text-sm',
+                mode === m
+                  ? 'border-[var(--admin-accent)] bg-white/10'
+                  : 'border-[var(--admin-line)] hover:bg-white/5'
+              )}
+            >
+              {t(`settings.themeMode.${m}` as MessageKey)}
+            </button>
+          ))}
+        </div>
+
+        {/* Said plainly rather than left to be discovered: choosing dark or
+            auto with no dark colours saved would silently do nothing. */}
+        {mode !== 'light' && !hasDark(dark) && (
+          <p className="text-xs text-[var(--admin-warning)]" data-test-id="theme-mode-warning">
+            {t('settings.themeNoDark')}
+          </p>
+        )}
+      </fieldset>
+
+      {/*
+        The variant this form is editing. A view of the form, not a site
+        setting — the site's choice is the control above.
+      */}
+      <div
+        className="flex gap-1 rounded-lg border border-[var(--admin-line)] p-1"
+        role="group"
+        aria-label={t('settings.themeEditing')}
+      >
+        {(['light', 'dark'] as const).map((variant) => (
+          <button
+            key={variant}
+            type="button"
+            onClick={() => setEditing(variant)}
+            aria-pressed={editing === variant}
+            data-test-id={`theme-edit-${variant}`}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-2 rounded px-3 py-2 text-sm',
+              editing === variant ? 'bg-white/10' : 'hover:bg-white/5'
+            )}
+          >
+            {variant === 'light' ? (
+              <Sun size={16} aria-hidden="true" />
+            ) : (
+              <MoonStar size={16} aria-hidden="true" />
+            )}
+            {t(`settings.themeEditing.${variant}` as MessageKey)}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -184,7 +305,9 @@ export function ThemeEditor({
         <button
           type="button"
           onClick={() => {
-            onChange({});
+            // Clears only the variant on screen. Resetting the light theme
+            // from the dark tab would be a surprise.
+            setActive({});
             setNotes([]);
             setError(null);
           }}
@@ -244,7 +367,9 @@ export function ThemeEditor({
             {slots
               .filter((slot) => slot.group === group)
               .map((slot) => {
-                const current = value[slot.name] ?? slot.fallback;
+                // `active`, not `value`: on the dark tab this must be the dark
+                // colour, or the pickers show — and write back — the light one.
+                const current = active[slot.name] ?? slot.fallback;
                 return (
                   <label key={slot.name} className="flex items-center gap-3">
                     <input
@@ -338,8 +463,8 @@ export function ThemeEditor({
           dir="ltr"
           className="admin-input py-2 text-sm text-start"
           placeholder={RADIUS_FALLBACK}
-          value={value.radius ?? ''}
-          onChange={(e) => onChange({ ...value, radius: e.target.value || undefined })}
+          value={active.radius ?? ''}
+          onChange={(e) => setActive({ ...active, radius: e.target.value || undefined })}
           data-test-id="theme-radius"
         />
       </label>

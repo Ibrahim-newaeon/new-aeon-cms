@@ -109,6 +109,34 @@
   }
 
   /*
+   * The storefront page itself, painted from the tokens rather than left
+   * transparent.
+   *
+   * Scoped to the site's own <body> and NOT applied to `body` globally: this
+   * stylesheet is shared with the admin, the auth pages and the holding page,
+   * which are dark and paint themselves from the --admin- palette. A bare
+   * `body` rule here would repaint all three white.
+   */
+  .site-body {
+    /*
+     * Painted from the tokens, not left transparent.
+     *
+     * Every storefront component already draws from --site-surface / --site-ink
+     * (there is not one hardcoded bg-white or text-black among them) — but the
+     * PAGE itself set neither, so it rendered on the browser's default white
+     * with the browser's default black text. In light that is invisible: the
+     * default happens to match. Switch the tokens to a dark skin and the
+     * components go dark on a white page.
+     *
+     * So this is the line that makes a dark theme possible at all. In light it
+     * changes body text from pure black to the site's own ink, which is the
+     * colour every component was already using.
+     */
+    background: var(--site-surface);
+    color: var(--site-ink);
+  }
+
+  /*
    * next/font generates a hashed family name and exposes it as --font-cairo.
    * The previous rules named the literal families 'Cairo' / 'Inter', which the
    * generated stylesheet never defines — so the fonts silently never applied.

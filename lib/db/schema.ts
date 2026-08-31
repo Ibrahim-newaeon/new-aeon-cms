@@ -311,6 +311,18 @@ export const settings = pgTable('settings', {
    * emitted into a <style> tag, so it is never free-form CSS.
    */
   theme: jsonb('theme').$type<Theme>(),
+  /**
+   * The dark half of the same skin. Null means this site has no dark variant,
+   * and themeMode is then effectively 'light' whatever it says — a site with
+   * no dark colours must not be served an empty dark stylesheet.
+   */
+  themeDark: jsonb('theme_dark').$type<Theme>(),
+  /**
+   * Which of the two a visitor gets: 'light', 'dark', or 'auto' to follow the
+   * visitor's own device setting. Defaults to 'light' so an existing site,
+   * whose theme column is its only theme, keeps rendering exactly as before.
+   */
+  themeMode: varchar('theme_mode', { length: 5 }).default('light'),
   customCss: text('custom_css'),
   comingSoonMode: boolean('coming_soon_mode').default(false),
   comingSoonMessage: text('coming_soon_message'),

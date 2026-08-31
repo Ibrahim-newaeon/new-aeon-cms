@@ -35,6 +35,8 @@ export async function PUT(request: Request) {
       snapPixelId: empty(data.snapPixelId),
       // Already validated by themeSchema: only known slots, only hex values.
       theme: data.theme ?? null,
+      themeDark: data.themeDark ?? null,
+      themeMode: data.themeMode ?? 'light',
       customCss: empty(data.customCss),
       comingSoonMode: data.comingSoonMode,
       comingSoonMessage: empty(data.comingSoonMessage),

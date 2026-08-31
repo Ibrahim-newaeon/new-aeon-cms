@@ -11,7 +11,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { Navbar } from '@/components/site/navbar';
-import { themeToCss } from '@/lib/theme/slots';
+import { themePairToCss, themeModeAttr, type ThemeMode } from '@/lib/theme/slots';
 import { Footer } from '@/components/site/footer';
 import { getNavigation, getSettings } from '@/lib/db/queries';
 import { TrackingScripts, TrackingNoScript } from '@/components/site/tracking-scripts';
@@ -127,12 +127,26 @@ export default async function SiteLayout({
   const dir = typedLocale === 'ar' ? 'rtl' : 'ltr';
   const nonce = headerList.get('x-nonce') ?? undefined;
 
-  const themeCss = themeToCss(settings?.theme ?? null);
+  /**
+   * Light and dark for the saved skin, plus the attribute that decides which.
+   *
+   * The stylesheet is the same whatever the mode; only the stamp changes. On
+   * 'auto' nothing is stamped, which is what lets the prefers-color-scheme
+   * block win — stamping "auto" would match no selector and pin everyone to
+   * light.
+   */
+  const themeCss = themePairToCss(settings?.theme ?? null, settings?.themeDark ?? null);
+  const themeAttr = themeModeAttr((settings?.themeMode as ThemeMode | null) ?? 'light');
 
 
   return (
-    <html lang={typedLocale} dir={dir} className={`${cairo.variable} ${inter.variable} h-full`}>
-      <body className="min-h-full antialiased">
+    <html
+      lang={typedLocale}
+      dir={dir}
+      data-theme={themeAttr}
+      className={`${cairo.variable} ${inter.variable} h-full`}
+    >
+      <body className="site-body min-h-full antialiased">
         {/* GTM requires its noscript iframe first inside <body>. */}
         <TrackingNoScript gtmId={settings?.gtmId} />
         <NextIntlClientProvider messages={messages} locale={typedLocale}>

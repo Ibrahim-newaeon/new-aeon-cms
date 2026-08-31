@@ -1,6 +1,6 @@
 // lib/settings-schema.ts
 import { z } from 'zod';
-import { themeSchema } from './theme/slots';
+import { themeSchema, themeModeSchema } from './theme/slots';
 
 export const SOCIAL_PLATFORMS = [
   'facebook',
@@ -65,6 +65,8 @@ export const settingsSchema = z.object({
   // Injected into a <style> tag, so it must not be able to close it.
   /** Strict: an unknown slot is rejected, not stored and ignored. */
   theme: themeSchema.optional(),
+  themeDark: themeSchema.optional(),
+  themeMode: themeModeSchema.optional(),
   customCss: z
     .string()
     .max(20000, 'CSS طويل جداً')

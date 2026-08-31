@@ -1,8 +1,18 @@
 // tests/theme.test.ts
 import { describe, it, expect } from 'vitest';
-import { COLOR_SLOTS, themeSchema, themeToCss, themeToFile, hexToChannels } from '@/lib/theme/slots';
+import {
+  COLOR_SLOTS,
+  themeSchema,
+  themeToCss,
+  themeToFile,
+  hexToChannels,
+  themePairToCss,
+  themeModeAttr,
+  resolveDark,
+  hasDark,
+} from '@/lib/theme/slots';
 import { parseThemeFile, contrastRatio, checkContrast } from '@/lib/theme/import';
-import { PRESETS, findPreset } from '@/lib/theme/presets';
+import { SKINS, findSkin } from '@/lib/theme/presets';
 
 describe('theme slots', () => {
   it('every slot has a valid hex fallback', () => {
@@ -159,36 +169,133 @@ describe('contrast', () => {
 });
 
 
-describe('presets', () => {
-  it('every preset fills every slot', () => {
-    // A partial preset would leave the previous choice showing through the
-    // gaps, so switching would half-apply.
-    for (const preset of PRESETS) {
+describe('skins', () => {
+  /** Both halves of every skin, flattened, so no loop can quietly skip one. */
+  const VARIANTS = SKINS.flatMap((skin) => [
+    { id: `${skin.id}.light`, theme: skin.light },
+    // The dark half as the cascade actually serves it. A dark theme is allowed
+    // to omit a slot and inherit the light value, so this is what must be
+    // checked — not the raw object.
+    { id: `${skin.id}.dark`, theme: resolveDark(skin.light, skin.dark) },
+  ]);
+
+  it('every skin fills every slot in both variants', () => {
+    // A partial skin would leave the previous choice showing through the gaps,
+    // so switching would half-apply.
+    for (const { id, theme } of VARIANTS) {
       for (const slot of COLOR_SLOTS) {
-        expect(preset.theme[slot.name], `${preset.id}.${slot.name}`).toMatch(/^#[0-9a-f]{6}$/);
+        expect(theme[slot.name], `${id}.${slot.name}`).toMatch(/^#[0-9a-f]{6}$/);
       }
-      expect(preset.theme.radius, `${preset.id}.radius`).toBeTruthy();
+      expect(theme.radius, `${id}.radius`).toBeTruthy();
     }
   });
 
-  it('every preset passes the validator the API uses', () => {
-    for (const preset of PRESETS) {
-      const parsed = themeSchema.safeParse(preset.theme);
-      expect(parsed.success, `${preset.id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
+  it('every variant passes the validator the API uses', () => {
+    for (const { id, theme } of VARIANTS) {
+      const parsed = themeSchema.safeParse(theme);
+      expect(parsed.success, `${id}: ${JSON.stringify(parsed.error?.issues)}`).toBe(true);
     }
   });
 
-  it('every preset is readable', () => {
-    // Shipping a preset whose buttons cannot be read is worse than shipping
-    // none: a business reasonably assumes the built-in choices are safe.
-    for (const preset of PRESETS) {
-      expect(checkContrast(preset.theme), preset.id).toEqual([]);
+  it('every variant is readable', () => {
+    // Shipping a skin whose buttons cannot be read is worse than shipping none:
+    // a business reasonably assumes the built-in choices are safe. The dark
+    // halves are hand-written, which is exactly why they are asserted — a dark
+    // theme is where a plausible-looking palette most often fails.
+    for (const { id, theme } of VARIANTS) {
+      expect(checkContrast(theme), id).toEqual([]);
+    }
+  });
+
+  it('every dark variant is actually darker than its light twin', () => {
+    // Guards against a copy-paste that leaves a skin's dark half holding the
+    // light colours — which would pass every check above, because a light
+    // theme is perfectly readable. It just would not be dark.
+    for (const skin of SKINS) {
+      const lum = (hex: string) => contrastRatio(hex, '#000000');
+      expect(
+        lum(skin.dark.surface!),
+        `${skin.id}: dark surface is not darker than light`
+      ).toBeLessThan(lum(skin.light.surface!));
     }
   });
 
   it('has unique ids', () => {
-    expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length);
-    expect(findPreset('forest')?.nameEn).toBe('Forest');
-    expect(findPreset('nope')).toBeUndefined();
+    expect(new Set(SKINS.map((s) => s.id)).size).toBe(SKINS.length);
+    expect(findSkin('forest')?.nameEn).toBe('Forest');
+    expect(findSkin('nope')).toBeUndefined();
+  });
+});
+
+describe('light and dark', () => {
+  const light = { surface: '#ffffff', ink: '#111827' };
+  const dark = { surface: '#0b1220', ink: '#e8eefc' };
+
+  it('emits only the light block when no dark variant is saved', () => {
+    // A site with no dark colours must not be handed an empty dark stylesheet,
+    // which would blank the page for anyone whose device is set to dark.
+    const css = themePairToCss(light, null);
+    expect(css).toContain('--site-surface:#ffffff');
+    expect(css).not.toContain('prefers-color-scheme');
+    expect(themePairToCss(light, {})).toBe(css);
+  });
+
+  it('emits all three states when a dark variant exists', () => {
+    const css = themePairToCss(light, dark);
+
+    // Light is the base.
+    expect(css).toContain(':root{');
+    expect(css).toContain('--site-surface:#ffffff');
+
+    // The device asked for dark — but not if the business forced light.
+    expect(css).toContain('@media (prefers-color-scheme:dark){:root:not([data-theme="light"])');
+
+    // Dark was forced, and must win on a light device too.
+    expect(css).toContain(':root[data-theme="dark"]{');
+
+    expect(css).toContain('--site-surface:#0b1220');
+  });
+
+  it('resolves an unset dark slot to its light value', () => {
+    // Only `surface` differs; ink must come through from light rather than
+    // being dropped, or the dark block would leave body text at the browser
+    // default.
+    const css = themePairToCss(light, { surface: '#0b1220' });
+    const darkBlock = css.slice(css.indexOf('[data-theme="dark"]'));
+    expect(darkBlock).toContain('--site-surface:#0b1220');
+    expect(darkBlock).toContain('--site-ink:#111827');
+  });
+
+  it('emits the channel twin in the dark block too', () => {
+    // text-site-ink/70 in a dark section needs it as much as in a light one;
+    // without it Tailwind's opacity modifier silently produces black.
+    const css = themePairToCss(light, dark);
+    expect(css.slice(css.indexOf('[data-theme="dark"]'))).toContain('--site-ink-rgb:232 238 252');
+  });
+
+  it('stamps nothing for auto', () => {
+    // The ABSENCE of the attribute is what lets the media query decide.
+    // Stamping "auto" would match neither selector and pin everyone to light.
+    expect(themeModeAttr('auto')).toBeUndefined();
+    expect(themeModeAttr(null)).toBeUndefined();
+    expect(themeModeAttr('light')).toBe('light');
+    expect(themeModeAttr('dark')).toBe('dark');
+  });
+
+  it('knows an empty dark theme from a real one', () => {
+    expect(hasDark(null)).toBe(false);
+    expect(hasDark({})).toBe(false);
+    expect(hasDark({ surface: undefined })).toBe(false);
+    expect(hasDark({ surface: '#0b1220' })).toBe(true);
+  });
+
+  it('the forced-light guard survives a dark device', () => {
+    // The regression this exists for: without :not([data-theme="light"]) the
+    // media query would override a business that deliberately forced light.
+    const css = themePairToCss(light, dark);
+    const media = css.slice(css.indexOf('@media'));
+    expect(media.slice(0, media.indexOf('{', media.indexOf(':root')))).toContain(
+      ':not([data-theme="light"])'
+    );
   });
 });
