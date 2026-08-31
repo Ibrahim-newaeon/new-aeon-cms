@@ -1,0 +1,57 @@
+# .github/workflows/deploy.yml
+#
+# Ships master to Railway — but only after CI has gone green.
+#
+# This waits on the CI workflow rather than duplicating its steps, and rather
+# than using Railway's own "deploy on push" integration, which would ship a red
+# build: Railway watches the branch, not the test result.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  # A manual button, for rolling forward after fixing something by hand.
+  workflow_dispatch:
+
+concurrency:
+  # One deploy at a time, and never cancel one midway: a half-applied release is
+  # worse than a queued one.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The gate. workflow_run fires whatever the outcome, so this is what stops a
+    # failing suite from reaching production.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install the Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        # --ci streams the build log and exits non-zero if the build fails, so a
+        # broken release fails this job instead of being reported as shipped.
+        run: railway up --service "${{ vars.RAILWAY_SERVICE || 'new-aeon-cms' }}" --ci
+
+      - name: Migrate
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        # AFTER the deploy, against the live database, using Railway's own env
+        # so DATABASE_URL is never copied into GitHub. Additive migrations only;
+        # a destructive one should be applied deliberately by a person.
+        run: railway run --service "${{ vars.RAILWAY_SERVICE || 'new-aeon-cms' }}" npm run db:migrate

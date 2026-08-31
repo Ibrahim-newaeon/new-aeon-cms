@@ -1,0 +1,130 @@
+# .github/workflows/ci.yml
+#
+# Runs on every push and pull request. Nothing deploys until this is green —
+# see deploy.yml, which waits on this workflow rather than racing it.
+#
+# The suite needs a real Postgres because most of what is worth testing is a
+# query: the bilingual product rule, facet counts, draft visibility. Mocking the
+# database here would test the mock.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A newer push makes an in-flight run pointless; cancel it rather than paying
+  # for a result nobody will read. Never cancels on master, where the run is the
+  # gate for a deploy.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aeon
+          POSTGRES_PASSWORD: aeon
+          POSTGRES_DB: aeon_test
+        ports: ['5432:5432']
+        # Without the health check the first migration races the server's own
+        # startup and fails with "the database system is starting up".
+        options: >-
+          --health-cmd "pg_isready -U aeon"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://aeon:aeon@localhost:5432/aeon_test
+      REDIS_URL: redis://localhost:6379
+      # Test-only values. Long enough to satisfy lib/env.ts, and meaningless
+      # outside this job — the real secrets live in Railway.
+      JWT_ACCESS_SECRET: ci-access-secret-not-used-anywhere-real-0000
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-anywhere-real-000
+      ADMIN_PATH: /admin
+      NEXT_PUBLIC_ADMIN_PATH: /admin
+      DEFAULT_LOCALE: ar
+      AVAILABLE_LOCALES: ar,en
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      MAIL_DRIVER: log
+      STORAGE_DRIVER: local
+      # next start refuses to serve a standalone build, and the browser suite's
+      # webServer is exactly that.
+      NEXT_STANDALONE: '0'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Migrations build a database from empty
+        # Runs BEFORE the real migrate, against a throwaway database. The chain
+        # had never been run end to end — the schema was built with db:push and
+        # hand-written ALTERs — so a generated catch-up migration collided with
+        # a hand-written one. That only fails on a FRESH database: in
+        # production, on the first deploy.
+        run: npx tsx scripts/migrate-check.ts
+
+      - name: Migrate
+        # migrate, NOT push. Production runs migrations, so CI has to run the
+        # same thing or it tests a schema that is never deployed — which is how
+        # three columns added by a hand-written ALTER stayed out of the
+        # migrations entirely and would have 500'd a fresh install.
+        run: npm run db:migrate
+
+      - name: Seed
+        # e2e/global-setup.ts refuses to start without an active shipping zone
+        # and the admin user. It fails loudly rather than letting specs discover
+        # the gap one confusing assertion at a time.
+        run: npm run db:seed
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npx playwright test
+
+      - name: Upload the report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
