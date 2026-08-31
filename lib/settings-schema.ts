@@ -64,6 +64,11 @@ export const settingsSchema = z.object({
 
   // Injected into a <style> tag, so it must not be able to close it.
   /** Strict: an unknown slot is rejected, not stored and ignored. */
+  // Capped: this renders on one line above the navbar, and a paragraph pasted
+  // in here would push the whole site down rather than fail visibly.
+  announcementAr: z.string().trim().max(200).optional().or(z.literal('')),
+  announcementEn: z.string().trim().max(200).optional().or(z.literal('')),
+  announcementActive: z.boolean().optional(),
   adminLogo: z.string().optional(),
   adminAccent: z
     .string()

@@ -329,6 +329,20 @@ export const settings = pgTable('settings', {
    * supplied mark here is #130c0e, i.e. invisible on it. A client needs to
    * upload a light variant, and that is a different asset, not a setting.
    */
+  /**
+   * A promo strip above the navbar: "delivery across Jordan · gift wrapping".
+   *
+   * Two columns rather than one, because the site is bilingual and a single
+   * string would show Arabic copy to English readers. Two rather than jsonb
+   * because it is two short strings with no structure — greppable, and
+   * validated by the same rules as any other text field.
+   *
+   * The toggle is separate from the text so turning the bar off for a week does
+   * not mean retyping it afterwards.
+   */
+  announcementAr: text('announcement_ar'),
+  announcementEn: text('announcement_en'),
+  announcementActive: boolean('announcement_active').default(false),
   adminLogo: text('admin_logo'),
   /** One hex colour. The admin's greys are structure, not brand. */
   adminAccent: varchar('admin_accent', { length: 7 }),

@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { Navbar } from '@/components/site/navbar';
+import { AnnouncementBar } from '@/components/site/announcement-bar';
 import { themePairToCss, themeModeAttr, hasDark, type ThemeMode } from '@/lib/theme/slots';
 import { THEME_COOKIE, effectiveMode } from '@/lib/theme/visitor-mode';
 import { Footer } from '@/components/site/footer';
@@ -174,6 +175,10 @@ export default async function SiteLayout({
                 is what lets an answer engine treat the name, the site and the
                 social profiles as one entity rather than unrelated pages. */}
             <SiteSchema locale={typedLocale} />
+
+            {/* Above the navbar and outside its sticky container, so it
+                scrolls away instead of costing a second pinned row. */}
+            <AnnouncementBar locale={typedLocale} />
 
             <Navbar
               navigation={headerNav}

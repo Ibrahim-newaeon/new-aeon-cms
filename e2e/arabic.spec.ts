@@ -131,10 +131,38 @@ test.describe('Arabic storefront', () => {
     await page.goto('/ar/shop');
     await page.locator('a[href^="/ar/products/"]').first().click();
 
+    /**
+     * Waits for the navigation to LAND before measuring. Without this the
+     * assertions can run against the shop page, which also has an h1 — so the
+     * h1 check passes, `article` is never found, and the failure reads as a
+     * missing element rather than as the race it is.
+     */
+    await page.waitForURL(/\/ar\/products\//);
+
+    await expect(page.locator('article')).toBeVisible();
     await expect(page.locator('h1')).toBeVisible();
-    const h1 = await page.locator('h1').boundingBox();
-    const main = await page.locator('article').boundingBox();
-    // The title starts from the right edge of its column, not the left.
-    expect(h1!.x + h1!.width).toBeGreaterThan(main!.x + main!.width / 2);
+
+    /**
+     * Flush with the END edge of its OWN column.
+     *
+     * This used to compare the title's right edge against the midpoint of the
+     * whole article, which passes only when the title is long enough to cross
+     * it — so it was really measuring the length of one product's Arabic name.
+     * Removing a product changed which one the shop lists first, a shorter
+     * title came up, and the test failed while the page was perfectly correct.
+     *
+     * Direction is the property under test, so this measures direction: in RTL
+     * a block-level heading starts at the right, and its right edge sits on its
+     * container's right edge whatever the text says.
+     */
+    const { gap, dir } = await page.locator('h1').evaluate((h1) => {
+      const parent = h1.parentElement!;
+      const [a, b] = [h1.getBoundingClientRect(), parent.getBoundingClientRect()];
+      return { gap: Math.abs(b.right - a.right), dir: getComputedStyle(h1).direction };
+    });
+
+    expect(dir).toBe('rtl');
+    // A couple of pixels of tolerance for sub-pixel layout, not a whole column.
+    expect(gap, 'the Arabic title is not flush with the right edge').toBeLessThanOrEqual(2);
   });
 });

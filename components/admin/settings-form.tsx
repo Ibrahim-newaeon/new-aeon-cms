@@ -332,6 +332,59 @@ export function SettingsForm({
               />
             </Field>
 
+            <Field label={t('settings.announcement')} hint={t('settings.announcementHint')}>
+              <div className="space-y-3" data-test-id="announcement-fields">
+                <label className="block">
+                  <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
+                    {t('settings.announcementAr')}
+                  </span>
+                  <input
+                    type="text"
+                    dir="rtl"
+                    maxLength={200}
+                    className="admin-input"
+                    value={value.announcementAr ?? ''}
+                    onChange={(e) => patch({ announcementAr: e.target.value })}
+                    data-test-id="settings-announcement-ar"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-xs text-[var(--admin-text-secondary)]">
+                    {t('settings.announcementEn')}
+                  </span>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    maxLength={200}
+                    className="admin-input text-start"
+                    value={value.announcementEn ?? ''}
+                    onChange={(e) => patch({ announcementEn: e.target.value })}
+                    data-test-id="settings-announcement-en"
+                  />
+                </label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(value.announcementActive)}
+                    onChange={(e) => patch({ announcementActive: e.target.checked })}
+                    data-test-id="settings-announcement-active"
+                  />
+                  {t('settings.announcementActive')}
+                </label>
+
+                {/* Said rather than discovered: a bar switched on with only one
+                    language written shows in that language and nowhere else. */}
+                {value.announcementActive &&
+                  !(value.announcementAr?.trim() && value.announcementEn?.trim()) && (
+                    <p className="text-xs text-[var(--admin-warning)]" data-test-id="announcement-warning">
+                      {t('settings.announcementOneLanguage')}
+                    </p>
+                  )}
+              </div>
+            </Field>
+
             {/*
               The admin's own identity. Separate from the storefront theme
               above because it answers a different question: what a CLIENT sees
