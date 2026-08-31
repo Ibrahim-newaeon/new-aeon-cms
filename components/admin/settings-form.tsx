@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { socialPlatforms, type SettingsInput } from '@/lib/settings-schema';
 import { MediaField } from './media-field';
 import { useT } from './i18n-provider';
+import { BackupPanel } from './backup-panel';
 import { ThemeEditor } from './theme-editor';
 import type { MessageKey } from '@/lib/admin-i18n';
 
@@ -17,6 +18,7 @@ const TABS: { id: string; key: MessageKey }[] = [
   { id: 'tracking', key: 'settings.tab.tracking' },
   { id: 'appearance', key: 'settings.tab.appearance' },
   { id: 'commerce', key: 'settings.tab.commerce' },
+  { id: 'data', key: 'settings.tab.data' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -332,6 +334,13 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
             )}
           </>
         )}
+        {tab === 'data' && (
+          <section className="admin-card flex flex-col gap-4">
+            <h2 className="font-medium">{t('backup.title')}</h2>
+            <BackupPanel />
+          </section>
+        )}
+
       </div>
     </form>
   );
