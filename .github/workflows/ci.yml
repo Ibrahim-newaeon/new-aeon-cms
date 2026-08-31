@@ -93,13 +93,16 @@ jobs:
         # same thing or it tests a schema that is never deployed — which is how
         # three columns added by a hand-written ALTER stayed out of the
         # migrations entirely and would have 500'd a fresh install.
-        run: npm run db:migrate
+        run: npx drizzle-kit migrate
 
       - name: Seed
         # e2e/global-setup.ts refuses to start without an active shipping zone
         # and the admin user. It fails loudly rather than letting specs discover
         # the gap one confusing assertion at a time.
-        run: npm run db:seed
+        # tsx directly, not `npm run db:seed`: that script passes
+        # --env-file=.env for local convenience, and Node exits 9 when the file
+        # is absent. CI has no .env by design — the values are job env above.
+        run: npx tsx scripts/seed.ts
 
       - name: Typecheck
         run: npx tsc --noEmit
