@@ -12,6 +12,8 @@ export interface ProductRow extends Record<string, unknown> {
   name: string | null;
   basePrice: number;
   isActive: boolean | null;
+  /** Languages this product has a name in. Short of all of them, it is not live. */
+  missingLocales: string[];
   variantCount: number;
   createdAt: string | null;
 }
@@ -52,13 +54,38 @@ export function ProductsTable({
         {
           key: 'isActive',
           header: t('common.status'),
-          render: (row) => (
-            <span className={`text-xs px-2 py-1 rounded-full ${
-              row.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
-            }`}>
-              {row.isActive ? t('products.visible') : t('products.hidden')}
-            </span>
-          ),
+          render: (row) => {
+            /**
+             * Switched ON but not reachable: a shopper cannot read it in every
+             * language the site publishes, so ./live.ts keeps it off the
+             * storefront. Shown as its own state rather than as "visible",
+             * which would be a lie, or "hidden", which would suggest someone
+             * chose it.
+             */
+            const blocked = Boolean(row.isActive) && row.missingLocales.length > 0;
+
+            if (blocked) {
+              return (
+                <span
+                  className="rounded-full bg-amber-500/20 px-2 py-1 text-xs text-amber-300"
+                  title={t('products.needsTranslationHint')}
+                  data-test-id="product-needs-translation"
+                >
+                  {t('products.needsTranslation', {
+                    list: row.missingLocales.map((l) => l.toUpperCase()).join(', '),
+                  })}
+                </span>
+              );
+            }
+
+            return (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                row.isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+              }`}>
+                {row.isActive ? t('products.visible') : t('products.hidden')}
+              </span>
+            );
+          },
         },
       ]}
     />

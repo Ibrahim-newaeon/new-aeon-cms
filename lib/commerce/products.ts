@@ -5,8 +5,9 @@ import {
   products, productI18n, productImages, productSpecs, productVariants,
   productOptions, variantOptionValues, brands, categories, categoryI18n,
 } from '@/lib/db/schema';
-import { and, asc, count, desc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import type { ProductInput } from '@/lib/commerce-schema';
+import { SITE_LOCALES } from './live';
 
 /**
  * Writes a product's options, variants and their option values.
@@ -117,6 +118,19 @@ export async function listProductsForAdmin(locale: 'ar' | 'en' = 'ar') {
       isActive: products.isActive,
       createdAt: products.createdAt,
       name: productI18n.name,
+      /**
+       * Which languages this product can actually be READ in.
+       *
+       * Selected here so the list can say WHY a product is not on the
+       * storefront. A product marked visible that a shopper cannot see, with
+       * nothing on screen explaining it, is a trap — the rule in
+       * ./live.ts hides it, and this is what makes that legible.
+       */
+      locales: sql<string[]>`coalesce((
+        select array_agg(distinct i.locale::text order by i.locale::text)
+        from product_i18n i
+        where i.product_id = products.id and coalesce(trim(i.name), '') <> ''
+      ), '{}')`,
     })
     .from(products)
     .leftJoin(
@@ -138,6 +152,9 @@ export async function listProductsForAdmin(locale: 'ar' | 'en' = 'ar') {
     name: r.name,
     basePrice: r.basePrice,
     isActive: r.isActive,
+    /** Locales with a name. Anything short of all of them is not live. */
+    locales: r.locales ?? [],
+    missingLocales: SITE_LOCALES.filter((l) => !(r.locales ?? []).includes(l)),
     variantCount: countByProduct.get(r.id) ?? 0,
     createdAt: r.createdAt ? r.createdAt.toISOString() : null,
   }));

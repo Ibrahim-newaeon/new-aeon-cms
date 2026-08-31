@@ -133,38 +133,35 @@ test.describe('shop filters', () => {
     await expect(page.getByTestId('shop-clear-all').first()).toBeVisible();
   });
 
-  test('a product with no English name still appears, under its other name', async ({ page }) => {
+  test('a half-translated product is nowhere on the shop', async () => {
     /**
-     * These queries used to INNER JOIN the translation, so a product with no
-     * English name vanished from the English shop and 404'd on its own page.
-     * The failure was silent both ways: nothing errored, the product simply
-     * was not there.
+     * This test used to assert the OPPOSITE: that a product with no English
+     * name still appeared, under its Arabic one. That was written to fix a
+     * real bug — the queries INNER JOINed the translation, so such a product
+     * vanished silently — but the cure was worse than the disease. It put a
+     * product on the English shop, priced and buyable, wearing a name the
+     * shopper could not read, and nothing on the page said so.
+     *
+     * The rule is now the other one: readable in every language, or not live.
+     * Kept here rather than deleted so the shop's own spec records which of
+     * the two behaviours is intended — a future reader finding the fallback in
+     * nameField() should land on this, not on the old test.
      */
     const untranslated = await withDb(async (db) => {
       const r = await db.query(
-        `select p.slug,
-                (select i.name from product_i18n i
-                  where i.product_id = p.id order by i.locale limit 1) as fallback_name
-         from products p
+        `select p.slug from products p
          where p.is_active
-           and not exists (
-             select 1 from product_i18n i
-             where i.product_id = p.id and i.locale = 'en' and i.name <> ''
-           )
+           and (select count(distinct i.locale) from product_i18n i
+                where i.product_id = p.id and coalesce(trim(i.name), '') <> '') < 2
          limit 1`
       );
-      return r.rows[0] as { slug: string; fallback_name: string } | undefined;
+      return r.rows[0] as { slug: string } | undefined;
     });
 
-    test.skip(!untranslated, 'every product has an English name');
-
-    await page.goto(`/${SHOP_LOCALE}/products/${untranslated!.slug}`);
-    await expect(page.locator('h1')).toHaveText(untranslated!.fallback_name);
-
-    await page.goto(shop);
-    await expect(
-      cards(page).filter({ hasText: untranslated!.fallback_name })
-    ).toHaveCount(1);
+    // Not a skip-when-absent: the absence IS the assertion. An active product
+    // that cannot be read in both languages should not exist in the first
+    // place, and if one is ever created this fails rather than going quiet.
+    expect(untranslated, `${untranslated?.slug} is active but not fully translated`).toBeUndefined();
   });
 
   test('the Arabic shop puts the sidebar on the right', async ({ page }) => {

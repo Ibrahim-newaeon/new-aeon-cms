@@ -268,6 +268,8 @@ export const ar = {
   'products.empty': 'لا توجد منتجات بعد.',
   'products.colPrice': 'السعر',
   'products.colVariants': 'المتغيّرات',
+  'products.needsTranslation': 'ينقصه {list}',
+  'products.needsTranslationHint': 'لن يظهر في المتجر حتى يُضاف اسم بكل اللغات — الزائر لا يستطيع قراءته.',
   'products.visible': 'معروض',
   'products.hidden': 'مخفي',
 
@@ -1159,6 +1161,8 @@ export const en: Partial<Record<MessageKey, string>> = {
   'products.empty': 'No products yet.',
   'products.colPrice': 'Price',
   'products.colVariants': 'Variants',
+  'products.needsTranslation': 'Missing {list}',
+  'products.needsTranslationHint': 'Not shown in the shop until it has a name in every language — a visitor could not read it.',
   'products.visible': 'Visible',
   'products.hidden': 'Hidden',
 

@@ -1,11 +1,12 @@
 // lib/commerce/storefront.ts
 import { db } from '@/lib/db';
 import {
-  products, productI18n, productImages, productVariants,
+  products, productImages, productVariants,
   productOptions, variantOptionValues, productSpecs, categories, categoryI18n,
   productCategories, brands,
 } from '@/lib/db/schema';
 import { and, asc, desc, eq, gte, lte, inArray, sql, type SQL } from 'drizzle-orm';
+import { isBilingual } from './live';
 
 export interface ShopCard {
   slug: string;
@@ -154,6 +155,8 @@ export async function listShopProducts(
   const conditions = filterConditions(filters);
   const where = and(
     eq(products.isActive, true),
+    // Both languages, or it is not on the grid in either. See ./live.
+    isBilingual,
     ...Object.values(conditions).filter((c): c is SQL => c !== undefined)
   );
 
@@ -208,7 +211,10 @@ export async function getShopProduct(slug: string, locale: 'ar' | 'en') {
       metaDescription: i18nField('meta_description', locale),
     })
     .from(products)
-    .where(eq(products.slug, slug))
+    // isBilingual here rather than after the fetch: a half-translated product
+    // must 404, not render with the other language's name in the title, the
+    // OG tags and the schema.org payload.
+    .where(and(eq(products.slug, slug), isBilingual))
     .limit(1);
 
   const product = rows[0];
@@ -313,17 +319,12 @@ export async function getShopFacets(
   const conditions = filterConditions(filters);
 
   /**
-   * The grid INNER JOINs product_i18n, so a product with no name in this locale
-   * is not on it. The counts have to agree, or the bar says "52 products" over
-   * a grid of 50 — which is this catalogue exactly: two products have no
-   * English name. A count that disagrees with what is on screen is worse than
-   * no count.
+   * The SAME condition the grid uses, not a similar one. The counts have to
+   * agree with what is on screen — a bar reading "52 products" over a grid of
+   * 51 is worse than no count — and the only way to guarantee that is to share
+   * the definition rather than restate it.
    */
-  const translated = sql`exists (
-    select 1 from ${productI18n} where ${productI18n.productId} = ${products.id}
-  )`;
-
-  const active = and(eq(products.isActive, true), translated);
+  const active = and(eq(products.isActive, true), isBilingual);
 
   /** Every condition except the named one. */
   const without = (key: keyof typeof conditions) =>

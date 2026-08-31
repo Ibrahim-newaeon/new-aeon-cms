@@ -2,6 +2,7 @@
 import { db } from './index';
 import { content, contentI18n, products, productI18n, productImages } from './schema';
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { isBilingual } from '../commerce/live';
 
 export interface SearchHit {
   slug: string;
@@ -129,10 +130,11 @@ export async function searchProducts(
     .where(
       and(
         eq(products.isActive, true),
+        isBilingual,
         or(
-          // Matches ANY locale's text: someone searching an English page for a
-          // product that only has an Arabic name should still find it, and the
-          // storefront now falls back to showing that name.
+          // Matches ANY locale's text: an English speaker searching for a
+          // product by its Arabic name should still find it. Safe now that
+          // isBilingual guarantees the result has an English name to show.
           sql`exists (
             select 1 from ${productI18n} i
             where i.product_id = ${products.id}
@@ -167,6 +169,8 @@ export async function listProductsForSitemap() {
       updatedAt: sql<Date>`coalesce(${products.updatedAt}, ${products.createdAt})`,
     })
     .from(products)
-    .where(eq(products.isActive, true))
+    // The sitemap must not advertise a URL that 404s in one of the two
+    // languages it lists as alternates.
+    .where(and(eq(products.isActive, true), isBilingual))
     .orderBy(desc(products.createdAt));
 }
