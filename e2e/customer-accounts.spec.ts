@@ -285,7 +285,21 @@ test.describe('an account holds', () => {
     const sibling = (await whatsapp.count()) > 0 ? whatsapp : enquire;
 
     const [a, b] = [await save.boundingBox(), await sibling.boundingBox()];
-    expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x + 1);
+
+    /**
+     * Non-overlap, not left-then-right. The first version of this asserted an
+     * ORDER, and broke the moment the actions were regrouped — even though
+     * nothing was wrong. Two rectangles miss each other if one ends before the
+     * other begins on EITHER axis, which is the property that actually
+     * matters: a click must not land on the wrong control.
+     */
+    const apart =
+      a!.x + a!.width <= b!.x + 1 ||
+      b!.x + b!.width <= a!.x + 1 ||
+      a!.y + a!.height <= b!.y + 1 ||
+      b!.y + b!.height <= a!.y + 1;
+
+    expect(apart, 'the save button overlaps the action beside it').toBe(true);
 
     await save.click();
     await expect(save).toHaveAttribute('aria-pressed', 'true');

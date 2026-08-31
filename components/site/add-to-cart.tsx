@@ -42,10 +42,18 @@ export function AddToCart({
   options,
   variants,
   locale,
+  actions,
 }: {
   options: { id: string; name: string; values: string[] }[];
   variants: SelectableVariant[];
   locale: 'ar' | 'en';
+  /**
+   * The other product actions — wishlist, WhatsApp — rendered in the SAME row
+   * as Add to cart rather than stacked further down. They were separated by
+   * the description and the spec table, which put the two things a shopper is
+   * most likely to press at opposite ends of the column.
+   */
+  actions?: React.ReactNode;
 }) {
   const router = useRouter();
   const copy = COPY[locale];
@@ -156,6 +164,8 @@ export function AddToCart({
           )}
           {state === 'busy' ? copy.adding : state === 'done' ? copy.added : copy.add}
         </button>
+
+        {actions}
 
         {state === 'done' && (
           <a href={`/${locale}/cart`} className="text-sm text-site-accent hover:underline">

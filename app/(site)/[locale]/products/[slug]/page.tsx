@@ -10,6 +10,7 @@ import { Price } from '@/components/site/price';
 import { AddToCart } from '@/components/site/add-to-cart';
 import { ProductReviews } from '@/components/site/product-reviews';
 import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
+import { MessageCircle } from 'lucide-react';
 import { WishlistButton } from '@/components/site/wishlist-button';
 import { whatsappLink, productEnquiry } from '@/lib/commerce/whatsapp';
 import { getStoreCountry } from '@/lib/commerce/regions';
@@ -168,7 +169,52 @@ export default async function ProductPage({ params }: Props) {
 
           {/* C1 rendered these as read-only chips because there was no cart.
               Now they select a variant and add it. */}
-          <AddToCart options={options} variants={selectable} locale={typedLocale} />
+          {/* All three in one row: the primary buy action, the way to ask a
+              question, and save-for-later. They were split across the page by
+              the description and specs.
+
+              Two colours, deliberately. Add to cart carries the site accent
+              because it is THE action; WhatsApp carries WhatsApp's own green,
+              which both distinguishes it and is the colour people already
+              recognise. Two accent-coloured buttons side by side compete, and
+              a shopper reads neither as primary. Save stays outlined — it is a
+              third-tier action and should not shout. */}
+          <AddToCart
+            options={options}
+            variants={selectable}
+            locale={typedLocale}
+            actions={
+              <>
+                {enquiryHref ? (
+                  <a
+                    href={enquiryHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="site-whatsapp inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium"
+                    data-test-id="product-whatsapp"
+                  >
+                    <MessageCircle size={16} aria-hidden="true" />
+                    {ar ? 'استفسر عبر واتساب' : 'Ask on WhatsApp'}
+                  </a>
+                ) : (
+                  <Link
+                    href={`/${typedLocale}/contact`}
+                    className="site-btn-outline px-6 py-3 text-sm font-medium"
+                    data-test-id="product-enquire"
+                  >
+                    {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
+                  </Link>
+                )}
+
+                <WishlistButton
+                  productId={product.id}
+                  locale={typedLocale}
+                  initial={saved}
+                  signedIn={Boolean(shopper)}
+                />
+              </>
+            }
+          />
 
 
           {product.description && (
@@ -186,41 +232,6 @@ export default async function ProductPage({ params }: Props) {
             </dl>
           )}
 
-          {/* Both are inline-flex, so in a space-y stack they sat on one line
-              and overlapped. A flex row with a gap is what was meant. */}
-          <div className="flex flex-wrap items-center gap-3">
-            <WishlistButton
-              productId={product.id}
-              locale={typedLocale}
-              initial={saved}
-              signedIn={Boolean(shopper)}
-            />
-
-            {/* WhatsApp when the shop has a number, the contact form otherwise.
-                For a cash-on-delivery shop most enquiries already happen in
-                WhatsApp, and a form is a slower path to the same conversation.
-                The message carries the product and its URL so whoever answers
-                does not have to ask which of fifty packages it is. */}
-            {enquiryHref ? (
-              <a
-                href={enquiryHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
-                data-test-id="product-whatsapp"
-              >
-                {ar ? 'استفسر عبر واتساب' : 'Ask on WhatsApp'}
-              </a>
-            ) : (
-              <Link
-                href={`/${typedLocale}/contact`}
-                className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
-                data-test-id="product-enquire"
-              >
-                {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
-              </Link>
-            )}
-          </div>
         </div>
       </div>
 
