@@ -233,6 +233,44 @@
    * WhatsApp, and recognition is the entire value of the icon. Fixed in both
    * light and dark.
    */
+  /*
+   * The theme toggle's icon, picked by the SAME cascade that picks the theme.
+   *
+   * Not by React: under "follow the device" the server cannot know which
+   * variant a visitor sees, so a JS-derived icon would mismatch on hydration
+   * and flip visibly on load. Both icons are rendered; CSS shows one.
+   *
+   * Light is showing -> offer the moon. Dark is showing -> offer the sun.
+   */
+  .theme-toggle .tt-to-light {
+    display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .theme-toggle .tt-to-dark {
+      display: none;
+    }
+    :root:not([data-theme='light']) .theme-toggle .tt-to-light {
+      display: block;
+    }
+  }
+
+  :root[data-theme='dark'] .theme-toggle .tt-to-dark {
+    display: none;
+  }
+  :root[data-theme='dark'] .theme-toggle .tt-to-light {
+    display: block;
+  }
+
+  /* An explicit light choice must beat a dark device, exactly as the theme
+     tokens do — otherwise the icon and the page disagree. */
+  :root[data-theme='light'] .theme-toggle .tt-to-dark {
+    display: block;
+  }
+  :root[data-theme='light'] .theme-toggle .tt-to-light {
+    display: none;
+  }
+
   .site-whatsapp {
     background: #25d366;
     color: #ffffff;

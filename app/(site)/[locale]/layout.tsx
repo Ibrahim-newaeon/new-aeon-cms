@@ -11,7 +11,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { Navbar } from '@/components/site/navbar';
-import { themePairToCss, themeModeAttr, type ThemeMode } from '@/lib/theme/slots';
+import { themePairToCss, themeModeAttr, hasDark, type ThemeMode } from '@/lib/theme/slots';
+import { THEME_COOKIE, effectiveMode } from '@/lib/theme/visitor-mode';
 import { Footer } from '@/components/site/footer';
 import { getNavigation, getSettings } from '@/lib/db/queries';
 import { TrackingScripts, TrackingNoScript } from '@/components/site/tracking-scripts';
@@ -136,7 +137,18 @@ export default async function SiteLayout({
    * light.
    */
   const themeCss = themePairToCss(settings?.theme ?? null, settings?.themeDark ?? null);
-  const themeAttr = themeModeAttr((settings?.themeMode as ThemeMode | null) ?? 'light');
+  /*
+   * The visitor's own choice wins over the site's default. Read on the SERVER
+   * so the right variant is in the first painted frame — the whole reason this
+   * is a cookie and not localStorage.
+   */
+  const darkAvailable = hasDark(settings?.themeDark ?? null);
+  const themeAttr = themeModeAttr(
+    effectiveMode(
+      darkAvailable ? (await cookies()).get(THEME_COOKIE)?.value : null,
+      (settings?.themeMode as ThemeMode | null) ?? 'light'
+    )
+  );
 
 
   return (
@@ -169,6 +181,8 @@ export default async function SiteLayout({
               siteName={settings?.siteName ?? 'CMS'}
               locale={typedLocale}
               commerceOn={Boolean(settings?.eCommerceEnabled)}
+              // Nothing to toggle between when the site has no dark colours.
+              showThemeToggle={darkAvailable}
             />
             {/* clip, not hidden: `hidden` would make this a scroll container
                 and break any position: sticky inside it. This absorbs the few

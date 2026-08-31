@@ -216,3 +216,72 @@ test.describe('the Settings control', () => {
     await expect(page.getByTestId('theme-mode-warning')).toBeVisible();
   });
 });
+
+test.describe('the visitor toggle', () => {
+  test('switches the page and survives navigation', async ({ page }) => {
+    await saveTheme('light');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/en');
+    expect(await bodyBg(page)).toBe(LIGHT);
+
+    await page.getByTestId('theme-toggle').click();
+    // Instant: every variant's CSS is already on the page, so this is one
+    // attribute write and a repaint — no refetch.
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    expect(await bodyBg(page)).toBe(DARK);
+
+    // The cookie is the point: without it the server would stamp the site
+    // default again and the choice would flash away on the next page.
+    await page.goto('/en/shop');
+    expect(await bodyBg(page)).toBe(DARK);
+    await page.goto('/ar');
+    expect(await bodyBg(page)).toBe(DARK);
+  });
+
+  test('a visitor can override a site forced to dark', async ({ page }) => {
+    await saveTheme('dark');
+    await page.goto('/en');
+    expect(await bodyBg(page)).toBe(DARK);
+
+    await page.getByTestId('theme-toggle').click();
+    expect(await bodyBg(page)).toBe(LIGHT);
+    await page.goto('/en');
+    expect(await bodyBg(page)).toBe(LIGHT);
+  });
+
+  test('shows the icon for the variant it will switch TO', async ({ page }) => {
+    // Both icons are in the DOM and CSS picks one. The risk this covers is
+    // both showing, or neither — which is what a missing cascade branch looks
+    // like, and it cannot be seen in the source.
+    await saveTheme('auto');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/en');
+
+    const moon = page.locator('.theme-toggle .tt-to-dark');
+    const sun = page.locator('.theme-toggle .tt-to-light');
+    await expect(moon).toBeVisible();
+    await expect(sun).toBeHidden();
+
+    await page.getByTestId('theme-toggle').click();
+    await expect(sun).toBeVisible();
+    await expect(moon).toBeHidden();
+  });
+
+  test('the icon is right under a dark device with no stamp at all', async ({ page }) => {
+    // The case a JS-derived icon gets wrong: the server cannot know what the
+    // media query decided, so only the CSS branch can be correct here.
+    await saveTheme('auto');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/en');
+
+    expect(await page.locator('html').getAttribute('data-theme')).toBeNull();
+    await expect(page.locator('.theme-toggle .tt-to-light')).toBeVisible();
+    await expect(page.locator('.theme-toggle .tt-to-dark')).toBeHidden();
+  });
+
+  test('is absent when the site has no dark colours', async ({ page }) => {
+    await saveTheme('light', false);
+    await page.goto('/en');
+    await expect(page.getByTestId('theme-toggle')).toHaveCount(0);
+  });
+});

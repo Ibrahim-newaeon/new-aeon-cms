@@ -240,3 +240,29 @@ export function themePairToCss(
 export function themeModeAttr(mode: ThemeMode | null | undefined): 'light' | 'dark' | undefined {
   return mode === 'dark' ? 'dark' : mode === 'light' ? 'light' : undefined;
 }
+
+/**
+ * Both variants as ONE file an author can edit and re-upload.
+ *
+ * The single-variant export was a trap once skins gained a dark half: the file
+ * is a flat map of slot names with nothing recording WHICH half it is, so
+ * downloading the light theme and uploading it while the Dark tab was open
+ * would quietly overwrite the dark colours with light ones. Naming the
+ * variants inside the file removes the ambiguity, and makes a whole skin
+ * portable between sites again as a single artefact.
+ *
+ * Every slot is present in both, filled with its default where unset: the
+ * export is also the TEMPLATE, so handing it to a designer must not require
+ * them to know which names exist.
+ */
+export function themePairToFile(
+  light: Theme | null | undefined,
+  dark: Theme | null | undefined
+): { light: Record<string, string>; dark: Record<string, string> } {
+  return {
+    light: themeToFile(light),
+    // Resolved, so the dark half of the file is the dark theme as it actually
+    // renders rather than a sparse diff a designer would have to merge by hand.
+    dark: themeToFile(resolveDark(light, dark)),
+  };
+}

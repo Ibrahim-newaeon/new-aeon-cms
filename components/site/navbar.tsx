@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Search, User, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from './theme-toggle';
 
 /** Shape returned by getNavigation(). Was `any[]`. */
 export interface NavItem {
@@ -24,9 +25,18 @@ interface NavbarProps {
   locale: 'ar' | 'en';
   /** Whether the shop is switched on; hides the account link when it is not. */
   commerceOn?: boolean;
+  /** False when the site has no dark colours saved: nothing to switch to. */
+  showThemeToggle?: boolean;
 }
 
-export function Navbar({ navigation, logo, siteName, locale, commerceOn = false }: NavbarProps) {
+export function Navbar({
+  navigation,
+  logo,
+  siteName,
+  locale,
+  commerceOn = false,
+  showThemeToggle = false,
+}: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -88,12 +98,15 @@ export function Navbar({ navigation, logo, siteName, locale, commerceOn = false 
             })}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Tighter on phones: this row now holds six controls, and at 390px
+              the old gap-2 pushed the menu button off the edge — a horizontal
+              scrollbar on every page. Unchanged from sm upwards. */}
+          <div className="flex items-center gap-0.5 sm:gap-2">
             <Link
               href={`/${locale}/search`}
               aria-label={locale === 'ar' ? 'بحث' : 'Search'}
               data-test-id="navbar-search"
-              className="rounded-full p-2 hover:bg-site-surface-raised"
+              className="rounded-full p-1.5 hover:bg-site-surface-raised sm:p-2"
             >
               <Search size={20} aria-hidden="true" />
             </Link>
@@ -105,7 +118,7 @@ export function Navbar({ navigation, logo, siteName, locale, commerceOn = false 
                 href={`/${locale}/account/wishlist`}
                 aria-label={locale === 'ar' ? 'المفضّلة' : 'Wishlist'}
                 data-test-id="navbar-wishlist"
-                className="rounded-full p-2 hover:bg-site-surface-raised"
+                className="rounded-full p-1.5 hover:bg-site-surface-raised sm:p-2"
               >
                 <Heart size={20} aria-hidden="true" />
               </Link>
@@ -116,18 +129,20 @@ export function Navbar({ navigation, logo, siteName, locale, commerceOn = false 
                 href={`/${locale}/account`}
                 aria-label={locale === 'ar' ? 'حسابي' : 'My account'}
                 data-test-id="navbar-account"
-                className="rounded-full p-2 hover:bg-site-surface-raised"
+                className="rounded-full p-1.5 hover:bg-site-surface-raised sm:p-2"
               >
                 <User size={20} aria-hidden="true" />
               </Link>
             )}
+
+            {showThemeToggle && <ThemeToggle locale={locale} />}
 
             <Link
               href={swappedPath}
               hrefLang={otherLocale}
               aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
               data-test-id="navbar-locale-switch"
-              className="rounded-full bg-site-surface-raised px-3 py-1 text-sm font-medium hover:bg-site-line"
+              className="rounded-full bg-site-surface-raised px-2 py-1 text-sm font-medium hover:bg-site-line sm:px-3"
             >
               {locale === 'ar' ? 'EN' : 'عربي'}
             </Link>

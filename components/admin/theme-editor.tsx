@@ -8,14 +8,14 @@ import {
   RADIUS_FALLBACK,
   THEME_MODES,
   themeToCss,
-  themeToFile,
+  themePairToFile,
   resolveDark,
   hasDark,
   type Theme,
   type ThemeMode,
 } from '@/lib/theme/slots';
 import { SKINS } from '@/lib/theme/presets';
-import { checkContrast, parseThemeFile } from '@/lib/theme/import';
+import { checkContrast, parseDesignFile, type ImportResult } from '@/lib/theme/import';
 import type { MessageKey } from '@/lib/admin-i18n';
 import { cn } from '@/lib/utils';
 
@@ -134,13 +134,16 @@ export function ThemeEditor({
     // A Blob download rather than a route: this is data the form already holds,
     // and it must reflect UNSAVED edits — a round trip to the server would hand
     // back the last saved theme instead of the one on screen.
-    const blob = new Blob([JSON.stringify(themeToFile(active), null, 2)], {
+    // BOTH halves, always — not just the tab on screen. A half-theme file with
+    // nothing recording which half it is, is how a light export ends up
+    // overwriting someone's dark colours.
+    const blob = new Blob([JSON.stringify(themePairToFile(value, dark), null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `design-system-${editing}.json`;
+    a.download = 'design-system.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -149,19 +152,44 @@ export function ThemeEditor({
     setError(null);
     setNotes([]);
     try {
-      const result = parseThemeFile(await file.text());
-      setActive({ ...active, ...result.theme });
+      const file_ = parseDesignFile(await file.text());
 
-      const lines = [t('settings.themeApplied', { n: result.applied.length })];
+      /**
+       * A file that names its variants lands on both halves; a flat one lands
+       * on the tab being edited. The second is every shape that worked before
+       * — our old export, W3C tokens, a CSS paste — so an existing file a
+       * designer already holds keeps behaving exactly as it did.
+       */
+      if (file_.light) onChange({ ...value, ...file_.light.theme });
+      if (file_.dark) onDarkChange({ ...dark, ...file_.dark.theme });
+      if (file_.single) setActive({ ...active, ...file_.single.theme });
+
+      const parts = [file_.light, file_.dark, file_.single].filter(Boolean) as ImportResult[];
+      const merge = <K extends 'applied' | 'unknown'>(key: K) => [
+        ...new Set(parts.flatMap((r) => r[key])),
+      ];
+
+      const lines = [t('settings.themeApplied', { n: merge('applied').length })];
+      // Named, so someone can see WHICH halves a file changed rather than
+      // inferring it from the colours moving.
+      if (file_.light || file_.dark) {
+        lines.push(
+          t('settings.themeVariants', {
+            list: [file_.light && t('settings.themeEditing.light'), file_.dark && t('settings.themeEditing.dark')]
+              .filter(Boolean)
+              .join(' + '),
+          })
+        );
+      }
       // Reported, not swallowed: "I uploaded my brand and nothing happened" has
       // to have an answer on screen.
-      if (result.unknown.length) {
-        lines.push(t('settings.themeUnknown', { list: result.unknown.slice(0, 8).join(', ') }));
+      const unknown = merge('unknown');
+      if (unknown.length) {
+        lines.push(t('settings.themeUnknown', { list: unknown.slice(0, 8).join(', ') }));
       }
-      if (result.invalid.length) {
-        lines.push(
-          t('settings.themeInvalid', { list: result.invalid.map((i) => i.name).join(', ') })
-        );
+      const invalid = [...new Set(parts.flatMap((r) => r.invalid.map((i) => i.name)))];
+      if (invalid.length) {
+        lines.push(t('settings.themeInvalid', { list: invalid.join(', ') }));
       }
       setNotes(lines);
     } catch (err) {

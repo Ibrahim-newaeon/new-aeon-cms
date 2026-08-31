@@ -7,12 +7,14 @@ import {
   themeToFile,
   hexToChannels,
   themePairToCss,
+  themePairToFile,
   themeModeAttr,
   resolveDark,
   hasDark,
 } from '@/lib/theme/slots';
-import { parseThemeFile, contrastRatio, checkContrast } from '@/lib/theme/import';
+import { parseThemeFile, parseDesignFile, contrastRatio, checkContrast } from '@/lib/theme/import';
 import { SKINS, findSkin } from '@/lib/theme/presets';
+import { effectiveMode, parseVisitorMode } from '@/lib/theme/visitor-mode';
 
 describe('theme slots', () => {
   it('every slot has a valid hex fallback', () => {
@@ -297,5 +299,93 @@ describe('light and dark', () => {
     expect(media.slice(0, media.indexOf('{', media.indexOf(':root')))).toContain(
       ':not([data-theme="light"])'
     );
+  });
+});
+
+describe('design files carrying both variants', () => {
+  it('round-trips a whole skin through export and import', () => {
+    // The property that matters for portability: what comes out of one site
+    // goes into another and produces the same two themes.
+    const skin = SKINS.find((s) => s.id === 'sand')!;
+    const file = themePairToFile(skin.light, skin.dark);
+    const parsed = parseDesignFile(JSON.stringify(file));
+
+    expect(parsed.single).toBeUndefined();
+    expect(parsed.light!.theme.accent).toBe(skin.light.accent);
+    expect(parsed.dark!.theme.accent).toBe(skin.dark.accent);
+    expect(parsed.light!.unknown).toEqual([]);
+    expect(parsed.dark!.unknown).toEqual([]);
+  });
+
+  it('exports the dark half resolved, not as a sparse diff', () => {
+    // A designer opening the file should see the dark theme as it renders. A
+    // half-empty dark block would make them fill in gaps the cascade already
+    // fills.
+    const file = themePairToFile({ surface: '#ffffff', ink: '#111827' }, { surface: '#0b1220' });
+    expect(file.dark.surface).toBe('#0b1220');
+    expect(file.dark.ink).toBe('#111827');
+  });
+
+  it('still accepts every single-theme shape that worked before', () => {
+    // Our old flat export, W3C tokens and a CSS paste must keep landing on the
+    // variant being edited — a designer may already hold one of these files.
+    for (const text of [
+      JSON.stringify({ accent: '#0f7b5a' }),
+      JSON.stringify({ color: { accent: { $value: '#0f7b5a' } } }),
+      ':root { --site-accent: #0f7b5a; }',
+    ]) {
+      const parsed = parseDesignFile(text);
+      expect(parsed.single?.theme.accent, text).toBe('#0f7b5a');
+      expect(parsed.light).toBeUndefined();
+      expect(parsed.dark).toBeUndefined();
+    }
+  });
+
+  it('accepts a file naming only one variant', () => {
+    const parsed = parseDesignFile(JSON.stringify({ dark: { accent: '#7dd3fc' } }));
+    expect(parsed.dark!.theme.accent).toBe('#7dd3fc');
+    expect(parsed.light).toBeUndefined();
+    expect(parsed.single).toBeUndefined();
+  });
+
+  it('does not mistake a design-token group named light for a variant', () => {
+    // `{ light: {...}, color: {...} }` is a token file with a group that
+    // happens to be called light. Reading it as a variant pair would apply a
+    // designer's palette to the wrong half.
+    const parsed = parseDesignFile(
+      JSON.stringify({ light: { accent: '#0f7b5a' }, color: { ink: '#111827' } })
+    );
+    expect(parsed.single).toBeDefined();
+    expect(parsed.light).toBeUndefined();
+  });
+
+  it('refuses a colour it cannot convert rather than guessing', () => {
+    // rgb()/named colours are reported, not half-converted: a wrong brand
+    // colour is worse than a rejected one.
+    const parsed = parseDesignFile(JSON.stringify({ light: { accent: 'rgb(15,123,90)' } }));
+    expect(parsed.light!.theme.accent).toBeUndefined();
+    expect(parsed.light!.invalid.map((i) => i.name)).toContain('accent');
+  });
+});
+
+describe("the visitor's own choice", () => {
+  it('overrides the site default', () => {
+    expect(effectiveMode('dark', 'light')).toBe('dark');
+    expect(effectiveMode('light', 'dark')).toBe('light');
+  });
+
+  it('falls back to the site default when absent', () => {
+    expect(effectiveMode(undefined, 'auto')).toBe('auto');
+    expect(effectiveMode(null, 'dark')).toBe('dark');
+  });
+
+  it('ignores a value it does not recognise', () => {
+    // A tampered or stale cookie must degrade to the site's setting rather
+    // than stamping something that matches no selector and pins everyone to
+    // light.
+    for (const bad of ['auto', 'DARK', 'true', '', 'system', '<script>']) {
+      expect(effectiveMode(bad, 'auto'), bad).toBe('auto');
+    }
+    expect(parseVisitorMode('auto')).toBeNull();
   });
 });

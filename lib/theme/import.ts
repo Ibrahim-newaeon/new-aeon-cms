@@ -87,6 +87,65 @@ function parseCssVariables(text: string): Record<string, string> {
   return out;
 }
 
+/**
+ * A design file that may describe one theme or a whole skin.
+ *
+ * `single` is every shape that existed before — our old flat export, W3C
+ * tokens, a CSS paste — and stays meaningful: it applies to whichever variant
+ * is being edited. `light`/`dark` come from a file that named them, and each
+ * lands on its own half.
+ */
+export interface DesignFile {
+  light?: ImportResult;
+  dark?: ImportResult;
+  single?: ImportResult;
+}
+
+/**
+ * True for `{ light: {...} }`, `{ dark: {...} }` or both, and nothing else.
+ *
+ * Checked BEFORE the token flattener runs: flattenTokens keys by the leaf name,
+ * so a pair file would collapse to one set of slots with dark silently winning
+ * over light. The keys must be exactly a subset of light/dark — a W3C file with
+ * a `light` group alongside other groups is not a variant pair, and guessing
+ * that it is would apply a designer's palette to the wrong half.
+ */
+function isVariantPair(json: unknown): json is Record<'light' | 'dark', unknown> {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return false;
+  const keys = Object.keys(json);
+  if (keys.length === 0 || keys.length > 2) return false;
+  if (!keys.every((k) => k === 'light' || k === 'dark')) return false;
+  return keys.every((k) => {
+    const v = (json as Record<string, unknown>)[k];
+    return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+  });
+}
+
+export function parseDesignFile(text: string): DesignFile {
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith('{')) {
+    let json: unknown;
+    try {
+      json = JSON.parse(trimmed);
+    } catch {
+      throw new Error('That file is not valid JSON.');
+    }
+
+    if (isVariantPair(json)) {
+      const pair = json as Record<string, unknown>;
+      const out: DesignFile = {};
+      // Re-serialised through parseThemeFile rather than parsed inline, so both
+      // halves go through the same validator and reporting as every other file.
+      if (pair.light) out.light = parseThemeFile(JSON.stringify(pair.light));
+      if (pair.dark) out.dark = parseThemeFile(JSON.stringify(pair.dark));
+      return out;
+    }
+  }
+
+  return { single: parseThemeFile(trimmed) };
+}
+
 export function parseThemeFile(text: string): ImportResult {
   const trimmed = text.trim();
   let flat: Record<string, string>;
