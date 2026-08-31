@@ -196,6 +196,23 @@
     background: rgb(0 0 0 / 0.45);
   }
 
+  /**
+   * WhatsApp's brand green.
+   *
+   * Not a theme slot, for the same reason as the scrim but the opposite
+   * cause: this colour belongs to WhatsApp, not to the shop. A themed
+   * WhatsApp button in the site's accent is no longer recognisable as
+   * WhatsApp, and recognition is the entire value of the icon. Fixed in both
+   * light and dark.
+   */
+  .site-whatsapp {
+    background: #25d366;
+    color: #ffffff;
+  }
+  .site-whatsapp:hover {
+    background: #1ebe5b;
+  }
+
   .admin-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
     background: var(--admin-accent);

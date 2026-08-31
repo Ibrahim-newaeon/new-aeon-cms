@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/session';
 import { getSettings } from '@/lib/db/queries';
 import { SettingsForm } from '@/components/admin/settings-form';
+import { SeoReadiness } from '@/components/admin/seo-readiness';
 import type { SettingsInput, SocialPlatform } from '@/lib/settings-schema';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
@@ -59,5 +60,5 @@ export default async function SettingsPage() {
     currency: s?.currency ?? 'JOD',
   };
 
-  return <SettingsForm initial={initial} />;
+  return <SettingsForm initial={initial} seoReadiness={<SeoReadiness />} />;
 }

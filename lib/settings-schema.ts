@@ -50,6 +50,9 @@ export const settingsSchema = z.object({
    */
   brandAnswer: z.string().trim().max(400).optional().or(z.literal('')),
   allowAiCrawlers: z.boolean().optional(),
+  /** Validated as a link, not merely as digits — see lib/commerce/whatsapp.ts. */
+  whatsappNumber: z.string().trim().max(32).optional().or(z.literal('')),
+  whatsappGreeting: z.string().trim().max(300).optional().or(z.literal('')),
 
   analyticsId: trackingId.optional(),
   gtmId: trackingId.optional(),

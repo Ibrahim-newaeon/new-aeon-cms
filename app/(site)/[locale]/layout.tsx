@@ -20,6 +20,7 @@ import { verifyAccessToken } from '@/lib/auth/session';
 import { env, locales, type Locale } from '@/lib/env';
 import { buildMetadata } from '@/lib/seo/metadata';
 import { SiteSchema } from '@/components/site/site-schema';
+import { WhatsAppButton } from '@/components/site/whatsapp-button';
 import '../../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -160,6 +161,9 @@ export default async function SiteLayout({
                 pixels a full-bleed block overhangs by, because 100vw counts
                 the scrollbar and the visible area does not. */}
             <main className="flex-1 overflow-x-clip">{children}</main>
+
+            {/* A link, not a widget. Renders nothing when no number is set. */}
+            <WhatsAppButton locale={typedLocale} />
             <Footer navigation={footerNav} settings={settings} locale={typedLocale} />
           </div>
         </NextIntlClientProvider>

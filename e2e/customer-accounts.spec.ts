@@ -265,13 +265,26 @@ test.describe('an account holds', () => {
   test('a saved product, which the wishlist then lists', async ({ page }) => {
     await page.goto('/en/shop');
     await page.locator('a[href^="/en/products/"]').first().click();
+    // Wait for the click to land. Querying before it does reports zero of
+    // everything, which reads as "the control is missing" rather than "the
+    // page has not arrived".
+    await page.waitForURL(/\/en\/products\//);
 
-    // The button and the enquiry link are both inline-flex and once sat on the
-    // same line, overlapping. If they overlap again the click lands on the
-    // wrong one, so this asserts they are actually separated.
+    /**
+     * The button and the action beside it are both inline-flex and once sat on
+     * the same line, overlapping. If they overlap again a click lands on the
+     * wrong control, so this asserts they are actually separated.
+     *
+     * Which action sits there depends on configuration — WhatsApp when the
+     * shop has a number, the contact form otherwise — so it is located by
+     * test id rather than by label.
+     */
     const save = page.getByTestId('wishlist-toggle');
-    const enquire = page.getByRole('link', { name: /enquire/i });
-    const [a, b] = [await save.boundingBox(), await enquire.boundingBox()];
+    const whatsapp = page.getByTestId('product-whatsapp');
+    const enquire = page.getByTestId('product-enquire');
+    const sibling = (await whatsapp.count()) > 0 ? whatsapp : enquire;
+
+    const [a, b] = [await save.boundingBox(), await sibling.boundingBox()];
     expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x + 1);
 
     await save.click();

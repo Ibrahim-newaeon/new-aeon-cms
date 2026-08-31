@@ -11,6 +11,9 @@ import { AddToCart } from '@/components/site/add-to-cart';
 import { ProductReviews } from '@/components/site/product-reviews';
 import { listApprovedReviews, reviewSummary } from '@/lib/commerce/reviews';
 import { WishlistButton } from '@/components/site/wishlist-button';
+import { whatsappLink, productEnquiry } from '@/lib/commerce/whatsapp';
+import { getStoreCountry } from '@/lib/commerce/regions';
+import { absoluteUrl } from '@/lib/seo/json-ld';
 import { currentCustomer } from '@/lib/auth/customer-session';
 import { isWishlisted } from '@/lib/account/profile';
 import { buildMetadata } from '@/lib/seo/metadata';
@@ -63,6 +66,16 @@ export default async function ProductPage({ params }: Props) {
   // same set rather than stored — a denormalised mean drifts the first time a
   // moderation path forgets to update it.
   const shopper = await currentCustomer();
+
+  const enquiryHref = whatsappLink({
+    phone: settings?.whatsappNumber,
+    country: await getStoreCountry(),
+    message: productEnquiry(typedLocale, {
+      name: product.name,
+      sku: variants.length === 1 ? variants[0]!.sku : null,
+      url: absoluteUrl(`/${typedLocale}/products/${product.slug}`),
+    }),
+  });
 
   const [reviews, summary, saved] = await Promise.all([
     listApprovedReviews(product.id),
@@ -183,12 +196,30 @@ export default async function ProductPage({ params }: Props) {
               signedIn={Boolean(shopper)}
             />
 
-            <Link
-              href={`/${typedLocale}/contact`}
-              className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
-            >
-              {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
-            </Link>
+            {/* WhatsApp when the shop has a number, the contact form otherwise.
+                For a cash-on-delivery shop most enquiries already happen in
+                WhatsApp, and a form is a slower path to the same conversation.
+                The message carries the product and its URL so whoever answers
+                does not have to ask which of fifty packages it is. */}
+            {enquiryHref ? (
+              <a
+                href={enquiryHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
+                data-test-id="product-whatsapp"
+              >
+                {ar ? 'استفسر عبر واتساب' : 'Ask on WhatsApp'}
+              </a>
+            ) : (
+              <Link
+                href={`/${typedLocale}/contact`}
+                className="inline-flex rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover"
+                data-test-id="product-enquire"
+              >
+                {ar ? 'استفسر عن المنتج' : 'Enquire about this product'}
+              </Link>
+            )}
           </div>
         </div>
       </div>

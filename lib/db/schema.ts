@@ -352,6 +352,14 @@ export const settings = pgTable('settings', {
    * training set, which was previously impossible without editing code.
    */
   allowAiCrawlers: boolean('allow_ai_crawlers').default(true),
+  /**
+   * The number the chat button opens. Separate from contactPhone: a shop's
+   * WhatsApp is often a different line from the one on the invoice, and
+   * quietly reusing the wrong one sends customers to a phone nobody watches.
+   */
+  whatsappNumber: varchar('whatsapp_number', { length: 32 }),
+  /** Opening line. Blank means the chat opens empty, which is fine. */
+  whatsappGreeting: text('whatsapp_greeting'),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

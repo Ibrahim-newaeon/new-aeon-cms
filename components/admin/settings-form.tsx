@@ -32,7 +32,17 @@ const SOCIAL_LABEL: Record<string, string> = {
   tiktok: 'TikTok',
 };
 
-export function SettingsForm({ initial }: { initial: SettingsInput }) {
+export function SettingsForm({
+  initial,
+  seoReadiness,
+}: {
+  initial: SettingsInput;
+  /**
+   * Passed in as a slot because it reads the database, which a client
+   * component cannot. Rendered on the server and handed over as markup.
+   */
+  seoReadiness?: React.ReactNode;
+}) {
   const t = useT();
   const router = useRouter();
   const [value, setValue] = useState<SettingsInput>(initial);
@@ -186,6 +196,30 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
               </span>
             </label>
 
+            {/* Its own field, not contactPhone: a shop's WhatsApp is often a
+                different line, and quietly reusing the wrong one sends
+                customers to a phone nobody watches. */}
+            <Field label={t('settings.whatsappNumber')} hint={t('settings.whatsappHint')}>
+              <input
+                type="tel"
+                dir="ltr"
+                className="admin-input"
+                placeholder="07XXXXXXXX"
+                value={value.whatsappNumber ?? ''}
+                onChange={(e) => patch({ whatsappNumber: e.target.value })}
+                data-test-id="settings-whatsapp"
+              />
+            </Field>
+
+            <Field label={t('settings.whatsappGreeting')} hint={t('settings.whatsappGreetingHint')}>
+              <input
+                className="admin-input"
+                value={value.whatsappGreeting ?? ''}
+                onChange={(e) => patch({ whatsappGreeting: e.target.value })}
+                data-test-id="settings-whatsapp-greeting"
+              />
+            </Field>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <MediaField
                 label={t('settings.logo')}
@@ -335,10 +369,17 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
           </>
         )}
         {tab === 'data' && (
-          <section className="admin-card flex flex-col gap-4">
-            <h2 className="font-medium">{t('backup.title')}</h2>
-            <BackupPanel />
-          </section>
+          <div className="flex flex-col gap-4">
+            <section className="admin-card flex flex-col gap-4">
+              <h2 className="font-medium">{t('seo.title')}</h2>
+              {seoReadiness}
+            </section>
+
+            <section className="admin-card flex flex-col gap-4">
+              <h2 className="font-medium">{t('backup.title')}</h2>
+              <BackupPanel />
+            </section>
+          </div>
         )}
 
       </div>
