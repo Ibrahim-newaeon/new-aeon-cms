@@ -323,6 +323,15 @@ export const settings = pgTable('settings', {
    * whose theme column is its only theme, keeps rendering exactly as before.
    */
   themeMode: varchar('theme_mode', { length: 5 }).default('light'),
+  /**
+   * The admin panel's own brand. Separate from `logo` because the storefront
+   * logo is designed for a light page and the sidebar is near-black — the
+   * supplied mark here is #130c0e, i.e. invisible on it. A client needs to
+   * upload a light variant, and that is a different asset, not a setting.
+   */
+  adminLogo: text('admin_logo'),
+  /** One hex colour. The admin's greys are structure, not brand. */
+  adminAccent: varchar('admin_accent', { length: 7 }),
   customCss: text('custom_css'),
   comingSoonMode: boolean('coming_soon_mode').default(false),
   comingSoonMessage: text('coming_soon_message'),

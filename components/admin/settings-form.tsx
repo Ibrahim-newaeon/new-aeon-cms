@@ -11,6 +11,7 @@ import { useT } from './i18n-provider';
 import { BackupPanel } from './backup-panel';
 import { ThemeEditor } from './theme-editor';
 import type { ThemeMode } from '@/lib/theme/slots';
+import { ADMIN_ACCENT_FALLBACK } from '@/lib/theme/admin-brand';
 import type { MessageKey } from '@/lib/admin-i18n';
 
 const TABS: { id: string; key: MessageKey }[] = [
@@ -329,6 +330,55 @@ export function SettingsForm({
                 onModeChange={(themeMode) => patch({ themeMode })}
                 commerceEnabled={Boolean(value.eCommerceEnabled)}
               />
+            </Field>
+
+            {/*
+              The admin's own identity. Separate from the storefront theme
+              above because it answers a different question: what a CLIENT sees
+              when they sign in, rather than what their customers see.
+            */}
+            <Field label={t('settings.adminBrand')} hint={t('settings.adminBrandHint')}>
+              <div className="space-y-4" data-test-id="admin-brand">
+                <MediaField
+                  label={t('settings.adminLogo')}
+                  value={value.adminLogo ?? ''}
+                  onChange={(adminLogo) => patch({ adminLogo })}
+                  testId="settings-admin-logo"
+                />
+                {/* Said explicitly: uploading the storefront logo here is the
+                    obvious move and produces a blank corner, because that mark
+                    is near-black and the sidebar is too. */}
+                <p className="text-xs text-[var(--admin-text-secondary)]">
+                  {t('settings.adminLogoHint')}
+                </p>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={value.adminAccent || ADMIN_ACCENT_FALLBACK}
+                    onChange={(e) => patch({ adminAccent: e.target.value })}
+                    aria-label={t('settings.adminAccent')}
+                    data-test-id="settings-admin-accent"
+                    className="h-9 w-12 shrink-0 cursor-pointer rounded border border-[var(--admin-line)] bg-transparent"
+                  />
+                  <span className="min-w-0 flex-1 text-sm">
+                    <span className="block">{t('settings.adminAccent')}</span>
+                    <span className="block font-mono text-xs text-[var(--admin-text-muted)]" dir="ltr">
+                      {value.adminAccent || ADMIN_ACCENT_FALLBACK}
+                    </span>
+                  </span>
+                  {value.adminAccent && (
+                    <button
+                      type="button"
+                      onClick={() => patch({ adminAccent: '' })}
+                      className="admin-btn-ghost py-1.5 text-xs"
+                      data-test-id="settings-admin-accent-reset"
+                    >
+                      {t('settings.themeReset')}
+                    </button>
+                  )}
+                </label>
+              </div>
             </Field>
 
             <Field label={t('settings.customCss')} hint={t('settings.customCssHint')}>

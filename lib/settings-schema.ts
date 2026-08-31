@@ -64,6 +64,13 @@ export const settingsSchema = z.object({
 
   // Injected into a <style> tag, so it must not be able to close it.
   /** Strict: an unknown slot is rejected, not stored and ignored. */
+  adminLogo: z.string().optional(),
+  adminAccent: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-f]{6}$/i, 'Use a six-digit hex colour, e.g. #1a2b3c')
+    .optional()
+    .or(z.literal('')),
   theme: themeSchema.optional(),
   themeDark: themeSchema.optional(),
   themeMode: themeModeSchema.optional(),

@@ -53,6 +53,8 @@ export default async function SettingsPage() {
     metaPixelId: s?.metaPixelId ?? '',
     tiktokPixelId: s?.tiktokPixelId ?? '',
     snapPixelId: s?.snapPixelId ?? '',
+    adminLogo: s?.adminLogo ?? '',
+    adminAccent: s?.adminAccent ?? '',
     theme: s?.theme ?? {},
     themeDark: s?.themeDark ?? {},
     // 'light' rather than 'auto' for a site that predates the column: its one

@@ -34,6 +34,8 @@ export async function PUT(request: Request) {
       tiktokPixelId: empty(data.tiktokPixelId),
       snapPixelId: empty(data.snapPixelId),
       // Already validated by themeSchema: only known slots, only hex values.
+      adminLogo: empty(data.adminLogo),
+      adminAccent: empty(data.adminAccent),
       theme: data.theme ?? null,
       themeDark: data.themeDark ?? null,
       themeMode: data.themeMode ?? 'light',

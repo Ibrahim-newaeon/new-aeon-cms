@@ -17,6 +17,8 @@ import '../globals.css';
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
+import { adminBrandCss } from '@/lib/theme/admin-brand';
+
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 // generateMetadata rather than a static object: the title has to follow the
@@ -24,8 +26,13 @@ const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 export async function generateMetadata(): Promise<Metadata> {
   const t = createTranslator(await getAdminLocale());
 
+  const settings = await getSettings();
+
   return {
-    title: t('brand.panelTitle'),
+    // The client's name, not ours: this is the browser tab and the bookmark.
+    title: settings?.siteName
+      ? `${settings.siteName} — ${t('brand.panelTitle')}`
+      : t('brand.panelTitle'),
     // The admin panel must never be indexed.
     robots: { index: false, follow: false },
   };
@@ -57,6 +64,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // apparently-broken login loop with no explanation.
   const [settings, locale] = await Promise.all([getSettings(), getAdminLocale()]);
 
+  const adminCss = adminBrandCss(settings?.adminAccent);
+
   return (
     <html
       lang={locale}
@@ -64,6 +73,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       className={`${cairo.variable} ${inter.variable} h-full`}
     >
       <body className="min-h-full antialiased">
+        {/*
+          The client's accent, before anything renders. Emits nothing when the
+          accent is unset or is already the default, so the common case adds no
+          bytes. Only a validated six-digit hex reaches this, and style-src
+          allows inline, so no nonce plumbing is needed here.
+        */}
+        {adminCss && <style dangerouslySetInnerHTML={{ __html: adminCss }} />}
         <SessionKeeper loginPath={`${ADMIN_PATH}/login`} />
         <AdminI18nProvider locale={locale}>
           <AdminShell
@@ -71,7 +87,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             siteName={settings?.siteName ?? 'CMS'}
             adminPath={ADMIN_PATH}
             eCommerceEnabled={settings?.eCommerceEnabled ?? false}
-            logo={settings?.logo}
+            // adminLogo, not logo: the storefront mark is drawn for a light
+            // page and disappears on the near-black sidebar.
+            logo={settings?.adminLogo}
           >
             {children}
           </AdminShell>

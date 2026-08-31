@@ -18,6 +18,10 @@
     --admin-accent: #ffc619;
     --admin-accent-soft: #fddc0d;
     --admin-accent-muted: rgba(255, 198, 25, 0.15);
+    /* Text ON the accent. A token rather than the literal it replaced, because
+       #130c0e is right for yellow and unreadable on a client's navy. Derived
+       per-accent in lib/theme/admin-brand.ts. */
+    --admin-accent-ink: #130c0e;
     /* Kept as aliases so existing components using --admin-primary still work. */
     --admin-primary: #ffc619;
     --admin-primary-hover: #fddc0d;
@@ -282,7 +286,7 @@
   .admin-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors;
     background: var(--admin-accent);
-    color: #130c0e; /* the logo's ink, for text on the yellow accent */
+    color: var(--admin-accent-ink);
     min-block-size: 2.75rem;
   }
 
