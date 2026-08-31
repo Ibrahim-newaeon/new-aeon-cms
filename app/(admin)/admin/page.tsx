@@ -153,7 +153,8 @@ export default async function AdminDashboard() {
 }
 
 async function RecentContent() {
-  const t = createTranslator(await getAdminLocale());
+  const locale = await getAdminLocale();
+  const t = createTranslator(locale);
 
   // Inside the component so it can reach the translator.
   const STATUS_LABEL: Record<'draft' | 'published' | 'archived', string> = {
@@ -167,7 +168,9 @@ async function RecentContent() {
     .from(content)
     .leftJoin(
       contentI18n,
-      and(eq(content.id, contentI18n.contentId), eq(contentI18n.locale, 'ar'))
+      // The admin's language, not a fixed one: this panel sits beside English
+      // chrome whenever staff choose English.
+      and(eq(content.id, contentI18n.contentId), eq(contentI18n.locale, locale))
     )
     .orderBy(desc(content.createdAt))
     .limit(5);

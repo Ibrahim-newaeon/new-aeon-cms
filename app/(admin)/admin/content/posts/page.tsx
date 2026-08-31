@@ -9,8 +9,12 @@ import { getAdminLocale } from '@/lib/admin-i18n/server';
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function PostsPage() {
-  const t = createTranslator(await getAdminLocale());
-  const rows = await listContentByType('post', 'ar');
+  // The list follows the admin's own language, like the rest of the panel.
+  // It was pinned to 'ar', so an English admin read English chrome above a
+  // table of Arabic titles.
+  const locale = await getAdminLocale();
+  const t = createTranslator(locale);
+  const rows = await listContentByType('post', locale);
 
   return (
     <div className="space-y-6">

@@ -402,6 +402,65 @@ async function seed() {
   }
 
   /**
+   * The three legal pages every shop is asked for.
+   *
+   * Created EMPTY and as DRAFTS, deliberately.
+   *
+   * Empty, because a privacy policy or a returns policy is a statement the
+   * business is legally bound by. Seeding plausible-looking boilerplate would
+   * be worse than seeding nothing: it reads as finished, so nobody rewrites
+   * it, and the shop ends up promising terms its owner never agreed to.
+   *
+   * Drafts, because an empty PUBLISHED legal page is worse still — a live
+   * "Privacy Policy" with no text is a misrepresentation, and it would be
+   * indexed and quoted by answer engines as the shop's actual policy. As
+   * drafts they are invisible to shoppers and to the sitemap, while sitting in
+   * Content > Pages ready to be written and published.
+   *
+   * Slugs are the conventional ones rather than short ones: these are pages
+   * people and search engines look for by name.
+   */
+  const LEGAL_PAGES = [
+    { slug: 'privacy-policy', ar: 'سياسة الخصوصية', en: 'Privacy Policy' },
+    { slug: 'terms-and-conditions', ar: 'الشروط والأحكام', en: 'Terms and Conditions' },
+    { slug: 'returns-and-refunds', ar: 'سياسة الإرجاع والاسترداد', en: 'Returns and Refunds' },
+  ] as const;
+
+  if (pageTypeRow) {
+    for (const page of LEGAL_PAGES) {
+      const exists = await db
+        .select({ id: content.id })
+        .from(content)
+        .where(eq(content.slug, page.slug))
+        .limit(1);
+
+      // Never overwrite: on a shop that has already written its policies, this
+      // seed running again must not blank them.
+      if (exists.length) continue;
+
+      const [row] = await db
+        .insert(content)
+        .values({
+          typeId: pageTypeRow.id,
+          slug: page.slug,
+          authorId: adminId,
+          status: 'draft',
+          publishedAt: null,
+        })
+        .returning();
+
+      if (!row) continue;
+
+      await db.insert(contentI18n).values([
+        { contentId: row.id, locale: 'ar', title: page.ar, body: [] },
+        { contentId: row.id, locale: 'en', title: page.en, body: [] },
+      ]);
+
+      console.log(`✅ Legal page created as an empty draft: ${page.slug}`);
+    }
+  }
+
+  /**
    * Commerce fixtures.
    *
    * These were missing, which made the browser suite unrunnable from a clean

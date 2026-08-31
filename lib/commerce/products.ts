@@ -117,7 +117,23 @@ export async function listProductsForAdmin(locale: 'ar' | 'en' = 'ar') {
       basePrice: products.basePrice,
       isActive: products.isActive,
       createdAt: products.createdAt,
-      name: productI18n.name,
+      /**
+       * This locale's name, falling back to any other.
+       *
+       * Was a LEFT JOIN on the locale, so a product with no name in the
+       * language being viewed rendered as a blank row — unidentifiable and
+       * unsearchable, which is the worst state for the very products that need
+       * attention. The `missingLocales` column below is what actually reports
+       * the gap; this just keeps the row readable.
+       */
+      name: sql<string | null>`coalesce(
+        (select t.name from product_i18n t
+          where t.product_id = products.id and t.locale::text = ${locale}
+            and coalesce(trim(t.name), '') <> ''),
+        (select t.name from product_i18n t
+          where t.product_id = products.id and coalesce(trim(t.name), '') <> ''
+          order by t.locale limit 1)
+      )`,
       /**
        * Which languages this product can actually be READ in.
        *
@@ -133,10 +149,6 @@ export async function listProductsForAdmin(locale: 'ar' | 'en' = 'ar') {
       ), '{}')`,
     })
     .from(products)
-    .leftJoin(
-      productI18n,
-      and(eq(productI18n.productId, products.id), eq(productI18n.locale, locale))
-    )
     .orderBy(asc(products.sortOrder), desc(products.createdAt));
 
   const variantCounts = await db

@@ -12,7 +12,9 @@ const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
 export default async function ProductsPage() {
   const t = createTranslator(await getAdminLocale());
-  const [rows, settings] = await Promise.all([listProductsForAdmin('ar'), getSettings()]);
+  // Follows the admin's own language, like the rest of the panel.
+  const locale = await getAdminLocale();
+  const [rows, settings] = await Promise.all([listProductsForAdmin(locale), getSettings()]);
   const currency = settings?.currency ?? 'JOD';
 
   return (
