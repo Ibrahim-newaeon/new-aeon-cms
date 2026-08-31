@@ -11,7 +11,7 @@ import {
 } from '../lib/db/schema';
 import { hashPassword } from '../lib/auth/password';
 import type { ContentBlock } from '../lib/blocks/types';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray } from 'drizzle-orm';
 
 /**
  * The placeholder paragraph, with "admin panel" as a real link.
@@ -72,6 +72,10 @@ async function seed() {
       hasTags: false,
       hasFeaturedImage: true,
       isActive: true,
+      // Built in: page, post and resource own hand-built screens and routes.
+      // Deleting one would orphan every row that uses it, so the admin must not
+      // offer a delete button for them.
+      isBuiltIn: true,
     })
     .onConflictDoNothing()
     .returning();
@@ -92,6 +96,10 @@ async function seed() {
       hasTags: true,
       hasFeaturedImage: true,
       isActive: true,
+      // Built in: page, post and resource own hand-built screens and routes.
+      // Deleting one would orphan every row that uses it, so the admin must not
+      // offer a delete button for them.
+      isBuiltIn: true,
     })
     .onConflictDoNothing()
     .returning();
@@ -106,6 +114,10 @@ async function seed() {
       hasTags: true,
       hasFeaturedImage: true,
       isActive: true,
+      // Built in: page, post and resource own hand-built screens and routes.
+      // Deleting one would orphan every row that uses it, so the admin must not
+      // offer a delete button for them.
+      isBuiltIn: true,
     })
     .onConflictDoNothing()
     .returning();
@@ -150,6 +162,20 @@ async function seed() {
     });
     console.log('✅ Default settings created');
   }
+
+  /**
+   * Repairs a database seeded before isBuiltIn was set.
+   *
+   * The flag defaults to false, and the three built-in types were inserted
+   * without it — so on every fresh install the admin offered a Delete button
+   * for `page`, and using it would orphan every page in the CMS. An UPDATE
+   * rather than a migration because the rows are seed data, not schema, and a
+   * shop that has since added its own types must keep them deletable.
+   */
+  await db
+    .update(contentTypes)
+    .set({ isBuiltIn: true })
+    .where(inArray(contentTypes.slug, ['page', 'post', 'resource']));
 
   /**
    * Contact details, only when they are still empty.
@@ -611,6 +637,113 @@ async function seed() {
       console.log('✅ Product image attached: /seed/amber-oud.png');
     }
   }
+
+  /**
+   * A catalogue with enough SHAPE for the shop to be exercised.
+   *
+   * The seed created exactly one product, which was enough to render a page and
+   * nothing more. The filter specs — category, brand, price range, on-sale, in
+   * stock, sorting — all need a catalogue with variety, and they passed only
+   * because the developer's own database happened to have 51 imported products.
+   * In CI, against a freshly seeded database, ten of them failed.
+   *
+   * So the fixtures below are chosen for the PROPERTIES the specs assert, not
+   * for realism:
+   *   - two brands, so a brand facet can narrow
+   *   - two categories beyond "general", so a category facet can narrow
+   *   - a price spread from 19 to 249 JOD, so a range filter and both sort
+   *     directions have something to order
+   *   - three on sale (compareAtPrice above price), so the sale facet is not
+   *     everything or nothing
+   *   - one out of stock, so the in-stock facet excludes something
+   *   - every one bilingual, or the live rule would hide it and the counts
+   *     would disagree with the grid
+   *
+   * Keyed on each slug so re-seeding is safe and a shop that has since edited
+   * one is never overwritten.
+   */
+  const FIXTURES = [
+    { slug: 'oud-royal',      ar: 'عود ملكي',        en: 'Oud Royal',        price: 249000, was: null,    stock: 12, brand: 'aeon-atelier', cat: 'perfumes' },
+    { slug: 'rose-damascena', ar: 'ورد دمشقي',       en: 'Rose Damascena',   price: 189000, was: 229000,  stock: 8,  brand: 'aeon-atelier', cat: 'perfumes' },
+    { slug: 'musk-white',     ar: 'مسك أبيض',        en: 'White Musk',       price: 79000,  was: null,    stock: 30, brand: 'levant-house', cat: 'perfumes' },
+    { slug: 'amber-travel',   ar: 'عنبر للسفر',      en: 'Amber Travel Size',price: 39000,  was: 49000,   stock: 45, brand: 'levant-house', cat: 'gifts' },
+    { slug: 'gift-box-duo',   ar: 'علبة هدايا ثنائية', en: 'Gift Box Duo',   price: 119000, was: 149000,  stock: 6,  brand: 'aeon-atelier', cat: 'gifts' },
+    { slug: 'sampler-set',    ar: 'طقم عينات',       en: 'Sampler Set',      price: 19000,  was: null,    stock: 0,  brand: 'levant-house', cat: 'gifts' },
+  ] as const;
+
+  // Brands and categories the fixtures reference, created once and reused.
+  const brandIds = new Map<string, string>();
+  for (const [slug, name] of [['aeon-atelier', 'Aeon Atelier'], ['levant-house', 'Levant House']] as const) {
+    const [existing] = await db.select().from(brands).where(eq(brands.slug, slug)).limit(1);
+    if (existing) { brandIds.set(slug, existing.id); continue; }
+    const [row] = await db.insert(brands).values({ slug, name, isActive: true }).onConflictDoNothing().returning();
+    if (row) brandIds.set(slug, row.id);
+  }
+
+  const catIds = new Map<string, string>();
+  for (const [slug, ar, en] of [['perfumes', 'عطور', 'Perfumes'], ['gifts', 'هدايا', 'Gifts']] as const) {
+    const [existing] = await db.select().from(categories).where(eq(categories.slug, slug)).limit(1);
+    if (existing) { catIds.set(slug, existing.id); continue; }
+    const [row] = await db.insert(categories).values({ slug, isActive: true }).onConflictDoNothing().returning();
+    if (!row) continue;
+    catIds.set(slug, row.id);
+    await db.insert(categoryI18n).values([
+      { categoryId: row.id, locale: 'ar', name: ar },
+      { categoryId: row.id, locale: 'en', name: en },
+    ]);
+  }
+
+  let made = 0;
+  for (const f of FIXTURES) {
+    const [exists] = await db.select({ id: products.id }).from(products).where(eq(products.slug, f.slug)).limit(1);
+    if (exists) continue;
+
+    const [product] = await db
+      .insert(products)
+      .values({
+        slug: f.slug,
+        brandId: brandIds.get(f.brand),
+        basePrice: f.price,
+        // On the PRODUCT, not only the variant: the storefront reads
+        // compare-at from here, and writing it to the variant alone is how a
+        // whole import once reported "53 updated" and changed nothing visible.
+        compareAtPrice: f.was,
+        isActive: true,
+      })
+      .returning();
+    if (!product) continue;
+
+    const catId = catIds.get(f.cat);
+    if (catId) await setProductCategories(product.id, [catId]);
+
+    // Both languages. A one-language product is not live, so it would be
+    // missing from the grid the specs count.
+    await db.insert(productI18n).values([
+      { productId: product.id, locale: 'ar', name: f.ar, shortDesc: `${f.ar} من نيو إيون.`, description: `${f.ar} — عطر من مجموعة نيو إيون.` },
+      { productId: product.id, locale: 'en', name: f.en, shortDesc: `${f.en} by New Aeon.`, description: `${f.en} — from the New Aeon collection.` },
+    ]);
+
+    await db.insert(productVariants).values({
+      productId: product.id,
+      sku: f.slug.toUpperCase(),
+      price: f.price,
+      compareAtPrice: f.was,
+      stock: f.stock,
+      isActive: true,
+    });
+
+    await db.insert(productImages).values({
+      productId: product.id,
+      // The committed placeholder, so the grid has something to paint on every
+      // machine — public/uploads is gitignored user content.
+      url: '/seed/amber-oud.png',
+      alt: f.en,
+      sortOrder: 0,
+    });
+
+    made += 1;
+  }
+  if (made > 0) console.log(`✅ Catalogue fixtures created: ${made} products across 2 brands and 2 categories`);
 
   console.log('✅ Seed complete!');
   process.exit(0);

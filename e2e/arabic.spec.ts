@@ -1,5 +1,6 @@
 // e2e/arabic.spec.ts
 import { test, expect } from '@playwright/test';
+import { withDb } from './fixtures';
 
 /**
  * The Arabic storefront.
@@ -109,7 +110,26 @@ test.describe('Arabic storefront', () => {
        * to argue about, and no image-decoding dependency needed to tell them
        * apart.
        */
-      await page.goto(`/${locale}/products/jm-pkg-05`, { waitUntil: 'load' });
+      /**
+       * Resolved from the database, not hardcoded. This named jm-pkg-05, a slug
+       * from one developer's imported catalogue, so it 404'd on any freshly
+       * seeded database and the failure read as "the image did not paint"
+       * rather than "the product does not exist".
+       */
+      const slug = await withDb(async (db) => {
+        const r = await db.query(
+          `select p.slug from products p
+           join product_images i on i.product_id = p.id
+           where p.is_active
+             and (select count(distinct t.locale) from product_i18n t
+                  where t.product_id = p.id and coalesce(trim(t.name), '') <> '') >= 2
+           order by p.slug limit 1`
+        );
+        return r.rows[0]?.slug as string | undefined;
+      });
+      test.skip(!slug, 'no live product with an image');
+
+      await page.goto(`/${locale}/products/${slug}`, { waitUntil: 'load' });
 
       const img = page.locator('article img').first();
       await expect(img).toBeVisible();

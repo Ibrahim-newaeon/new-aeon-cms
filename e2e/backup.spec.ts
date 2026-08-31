@@ -27,6 +27,28 @@ async function fetchBackup(page: import('@playwright/test').Page) {
       disposition: res.headers.get('content-disposition') ?? '',
       bytes: buf.byteLength,
       signature: new TextDecoder('latin1').decode(new Uint8Array(buf.slice(0, 2))),
+      /**
+       * Entry names, read from the zip's local file headers.
+       *
+       * Parsed here rather than unzipped in Node because the archive is
+       * streamed and never touches disk — and the names are all the assertion
+       * needs. Each entry begins PK\x03\x04, with the name length at offset 26
+       * and the name itself at offset 30.
+       */
+      names: (() => {
+        const b = new Uint8Array(buf);
+        const view = new DataView(buf);
+        const out: string[] = [];
+        for (let i = 0; i + 30 < b.length; i++) {
+          if (b[i] === 0x50 && b[i + 1] === 0x4b && b[i + 2] === 0x03 && b[i + 3] === 0x04) {
+            const nameLen = view.getUint16(i + 26, true);
+            if (nameLen > 0 && nameLen < 512 && i + 30 + nameLen <= b.length) {
+              out.push(new TextDecoder().decode(b.slice(i + 30, i + 30 + nameLen)));
+            }
+          }
+        }
+        return out;
+      })(),
     };
   });
 }
@@ -39,9 +61,19 @@ test.describe('backup', () => {
     expect(res.type).toContain('application/zip');
     expect(res.disposition).toContain('attachment');
 
-    // A real archive, not an empty or error one. Media alone is megabytes.
-    expect(res.bytes).toBeGreaterThan(100_000);
+    /**
+     * A real archive, judged by what is IN it rather than by its size.
+     *
+     * This asserted > 100kB on the reasoning that "media alone is megabytes" —
+     * true of a shop with a full uploads folder, false of a fresh install,
+     * where the whole archive is the seed placeholder and some JSON. Size was
+     * standing in for completeness; the entry names are the actual claim.
+     */
     expect(res.signature).toBe('PK');
+    expect(res.bytes).toBeGreaterThan(1_000);
+    for (const entry of ['manifest.json', 'README', 'data/']) {
+      expect(res.names.some((n) => n.includes(entry)), `archive has no ${entry}`).toBe(true);
+    }
   });
 
   test('the download is recorded, because it contains every customer', async ({ page }) => {
