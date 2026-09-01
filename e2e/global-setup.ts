@@ -9,6 +9,24 @@ import { withDb } from './fixtures';
  * repeatable rather than passing once and then failing on stock.
  */
 export default async function globalSetup() {
+  /**
+   * Fresh-install mode.
+   *
+   * The setup wizard can only be exercised on a database with NO administrator
+   * — which is precisely the state every assertion below refuses to start in.
+   * Without an escape the wizard's own UI could never be tested against the
+   * thing it exists for, and the three behaviours that only live in the form
+   * (reveal, confirmation mismatch, country picking its currency) would be
+   * verified by hand or not at all.
+   *
+   * Opt-in and loud: the checks below are the reason `npm run test:e2e` is
+   * repeatable, so this must never be the default.
+   */
+  if (process.env.E2E_FRESH_INSTALL === '1') {
+    console.log('[e2e] fresh-install mode — seeded-data checks skipped');
+    return;
+  }
+
   await withDb(async (db) => {
     // Checkout decrements stock permanently, so without this the second run of
     // the commerce spec fails on an out-of-stock variant.

@@ -39,6 +39,8 @@ const VALID = {
   email: 'owner@example.test',
   password: 'a-very-long-password-123',
   defaultLocale: 'ar',
+  countryCode: 'JO',
+  currency: 'JOD',
   commerce: true,
   demoContent: false,
 };
@@ -85,6 +87,17 @@ test.describe('on a site that is already set up', () => {
   });
 });
 
+/**
+ * These skip on a configured database, which is every normal run. To exercise
+ * them, point the suite at a migrated-but-unseeded database:
+ *
+ *   E2E_FRESH_INSTALL=1 DATABASE_URL=…/fresh \
+ *     npx playwright test setup-wizard --project=chromium --no-deps
+ *
+ * --no-deps because auth.setup cannot log in when no administrator exists, and
+ * E2E_FRESH_INSTALL because global-setup otherwise refuses to start without
+ * seeded data — the exact state the wizard requires.
+ */
 test.describe('the form itself', () => {
   test('renders every field a first run needs', async ({ page }) => {
     // Rendered directly, bypassing the redirect, so the form can be checked on
@@ -97,10 +110,63 @@ test.describe('the form itself', () => {
 
     await page.goto('/setup');
     for (const id of [
-      'setup-name', 'setup-email', 'setup-password',
-      'setup-site-name', 'setup-locale', 'setup-commerce', 'setup-demo', 'setup-submit',
+      'setup-name', 'setup-email', 'setup-password', 'setup-password-confirm',
+      'setup-password-reveal', 'setup-site-name', 'setup-locale',
+      'setup-country', 'setup-currency', 'setup-commerce', 'setup-demo', 'setup-submit',
     ]) {
       await expect(page.getByTestId(id), id).toBeVisible();
     }
+  });
+
+  test('the password can be revealed, because it cannot be reset', async ({ page }) => {
+    const admins = await withDb(async (db) => {
+      const r = await db.query(`select count(*)::int as n from users where role = 'admin'`);
+      return r.rows[0].n as number;
+    });
+    test.skip(admins > 0, 'site is configured — the wizard is correctly unreachable');
+
+    await page.goto('/setup');
+    const pw = page.getByTestId('setup-password');
+    await expect(pw).toHaveAttribute('type', 'password');
+
+    await page.getByTestId('setup-password-reveal').click();
+    await expect(pw).toHaveAttribute('type', 'text');
+    // The confirmation follows the same toggle — revealing one and not the
+    // other would leave the person still typing the important half blind.
+    await expect(page.getByTestId('setup-password-confirm')).toHaveAttribute('type', 'text');
+  });
+
+  test('a mismatched confirmation is refused before anything is created', async ({ page }) => {
+    const admins = await withDb(async (db) => {
+      const r = await db.query(`select count(*)::int as n from users where role = 'admin'`);
+      return r.rows[0].n as number;
+    });
+    test.skip(admins > 0, 'site is configured — the wizard is correctly unreachable');
+
+    await page.goto('/setup');
+    await page.getByTestId('setup-name').fill('Owner');
+    await page.getByTestId('setup-email').fill('owner@example.test');
+    await page.getByTestId('setup-password').fill('a-very-long-password-123');
+    await page.getByTestId('setup-password-confirm').fill('a-very-long-password-124');
+    await page.getByTestId('setup-site-name').fill('Shop');
+
+    await expect(page.getByTestId('setup-password-mismatch')).toBeVisible();
+    await page.getByTestId('setup-submit').click();
+    await expect(page.getByTestId('setup-error')).toBeVisible();
+    // Still on the wizard: nothing was created.
+    await expect(page).toHaveURL(/\/setup/);
+  });
+
+  test('choosing a country sets its currency', async ({ page }) => {
+    const admins = await withDb(async (db) => {
+      const r = await db.query(`select count(*)::int as n from users where role = 'admin'`);
+      return r.rows[0].n as number;
+    });
+    test.skip(admins > 0, 'site is configured — the wizard is correctly unreachable');
+
+    await page.goto('/setup');
+    await expect(page.getByTestId('setup-currency')).toHaveValue('JOD');
+    await page.getByTestId('setup-country').selectOption('SA');
+    await expect(page.getByTestId('setup-currency')).toHaveValue('SAR');
   });
 });

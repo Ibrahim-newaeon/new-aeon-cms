@@ -43,6 +43,8 @@ const INPUT = {
   email: 'first@example.test',
   password: 'a-very-long-password-123',
   defaultLocale: 'ar' as const,
+  countryCode: 'JO',
+  currency: 'JOD',
   commerce: true,
   demoContent: true,
 };
@@ -131,9 +133,26 @@ async function main() {
     if (won !== 0) throw new Error(`${won} concurrent installs succeeded after setup was complete`);
     if ((await admins()) !== 1) throw new Error(`concurrency created extra admins: ${await admins()}`);
 
+    // Country and currency reach settings. They are not cosmetic: countryCode
+    // drives normalisePhone(), whose E.164 output is the key customer records
+    // are merged on, so a wizard that dropped it would silently give every
+    // client Jordanian phone parsing.
+    const cfg = await check.query<{ country_code: string; currency: string; site_name: string }>(
+      'select country_code, currency, site_name from settings limit 1'
+    );
+    const row = cfg.rows[0];
+    if (!row) throw new Error('no settings row was written');
+    if (row.country_code !== INPUT.countryCode) {
+      throw new Error(`countryCode was not saved: expected ${INPUT.countryCode}, got ${row.country_code}`);
+    }
+    if (row.currency !== INPUT.currency) {
+      throw new Error(`currency was not saved: expected ${INPUT.currency}, got ${row.currency}`);
+    }
+    if (row.site_name !== INPUT.siteName) throw new Error('siteName was not saved');
+
     const products = await check.query<{ n: number }>('select count(*)::int n from products');
     console.log(
-      `✅ setup runs exactly once — 1 administrator after 12 attempts, ${products.rows[0]!.n} demo products installed`
+      `✅ setup runs exactly once — 1 administrator after 12 attempts, ${products.rows[0]!.n} demo products, country ${row.country_code}/${row.currency} saved`
     );
   } finally {
     await check.end();

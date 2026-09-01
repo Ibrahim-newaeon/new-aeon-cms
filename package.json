@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:check": "tsx --env-file=.env scripts/migrate-check.ts",
     "setup:check": "tsx --env-file=.env scripts/setup-check.ts",
+    "test:e2e:fresh": "E2E_FRESH_INSTALL=1 playwright test setup-wizard --project=chromium --no-deps",
     "media:migrate": "tsx --env-file=.env scripts/migrate-media-to-s3.ts",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useT } from './i18n-provider';
+import { LocaleSwitcher } from './locale-switcher';
+import { SETUP_COUNTRIES, DEFAULT_SETUP_COUNTRY, currencyFor } from '@/lib/setup/countries';
+import { useAdminI18n } from './i18n-provider';
 
 /**
  * First-run setup.
@@ -17,23 +20,38 @@ export function SetupForm({ adminPath }: { adminPath: string }) {
   const t = useT();
   const router = useRouter();
 
+  const { locale } = useAdminI18n();
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reveal, setReveal] = useState(false);
+  const [confirm, setConfirm] = useState('');
   const [value, setValue] = useState({
     name: '',
     email: '',
     password: '',
     siteName: '',
     defaultLocale: 'ar' as 'ar' | 'en',
+    countryCode: DEFAULT_SETUP_COUNTRY,
+    currency: currencyFor(DEFAULT_SETUP_COUNTRY),
     commerce: true,
     demoContent: true,
   });
+
+  // Typed once, into a field they cannot read, on a site whose password reset
+  // needs email that is not configured yet. A mismatch here is the difference
+  // between a working install and one only a database client can rescue.
+  const mismatch = confirm.length > 0 && confirm !== value.password;
 
   const set = <K extends keyof typeof value>(k: K, v: (typeof value)[K]) =>
     setValue((prev) => ({ ...prev, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (value.password !== confirm) {
+      setError(t('setup.passwordMismatch'));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -68,6 +86,16 @@ export function SetupForm({ adminPath }: { adminPath: string }) {
   return (
     <form onSubmit={submit} className="space-y-8" data-test-id="setup-form">
       <header>
+        {/*
+          The person installing is not always the audience the storefront
+          serves. With no admin-locale cookie yet this screen falls back to
+          Arabic, so an English-speaking operator met a form they might not
+          read — and "Primary language" below sets the SHOP's language, not
+          theirs. This switches the panel.
+        */}
+        <div className="mb-4 flex justify-end">
+          <LocaleSwitcher />
+        </div>
         <h1 className="text-2xl font-bold text-[var(--admin-text)]">{t('setup.heading')}</h1>
         <p className="mt-2 text-sm text-[var(--admin-text-secondary)]">{t('setup.intro')}</p>
       </header>
@@ -93,13 +121,46 @@ export function SetupForm({ adminPath }: { adminPath: string }) {
 
         <label className="block">
           <span className={label}>{t('setup.password')}</span>
-          <input
-            type="password" dir="ltr" className={`${field} text-start`} required minLength={12}
-            autoComplete="new-password"
-            value={value.password} onChange={(e) => set('password', e.target.value)}
-            data-test-id="setup-password"
-          />
+          <span className="relative block">
+            <input
+              type={reveal ? 'text' : 'password'} dir="ltr"
+              className={`${field} text-start pe-11`} required minLength={12}
+              autoComplete="new-password"
+              value={value.password} onChange={(e) => set('password', e.target.value)}
+              data-test-id="setup-password"
+            />
+            {/* The login screen has this; the wizard did not — so the one
+                password nobody can reset was the one typed blind. */}
+            <button
+              type="button"
+              onClick={() => setReveal((v) => !v)}
+              aria-label={reveal ? t('auth.hidePassword') : t('auth.showPassword')}
+              className="absolute inset-y-0 end-0 grid w-11 place-items-center text-[var(--admin-text-muted)]"
+              data-test-id="setup-password-reveal"
+            >
+              {reveal ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+            </button>
+          </span>
           <p className={hint}>{t('setup.passwordHint')}</p>
+        </label>
+
+        <label className="block">
+          <span className={label}>{t('setup.passwordConfirm')}</span>
+          <input
+            type={reveal ? 'text' : 'password'} dir="ltr"
+            className={`${field} text-start`} required
+            autoComplete="new-password"
+            value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            aria-invalid={mismatch || undefined}
+            data-test-id="setup-password-confirm"
+          />
+          {mismatch && (
+            <p className="mt-1 text-xs text-[var(--admin-danger)]" data-test-id="setup-password-mismatch">
+              {t('setup.passwordMismatch')}
+            </p>
+          )}
+          {/* Said plainly, because it is the reason this field exists. */}
+          <p className={hint}>{t('setup.recoveryWarning')}</p>
         </label>
       </Section>
 
@@ -124,6 +185,43 @@ export function SetupForm({ adminPath }: { adminPath: string }) {
             <option value="en">English</option>
           </select>
         </label>
+
+        <label className="block">
+          <span className={label}>{t('setup.country')}</span>
+          <select
+            className={field}
+            value={value.countryCode}
+            onChange={(e) => {
+              // Currency follows the country, because the pair is nearly always
+              // predictable and a shop priced in the wrong one is a mistake
+              // nobody notices until an order arrives. Still editable below:
+              // plenty of shops price in USD wherever they are.
+              const code = e.target.value;
+              setValue((prev) => ({ ...prev, countryCode: code, currency: currencyFor(code) }));
+            }}
+            data-test-id="setup-country"
+          >
+            {SETUP_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {locale === 'ar' ? c.ar : c.en}
+              </option>
+            ))}
+          </select>
+          <p className={hint}>{t('setup.countryHint')}</p>
+        </label>
+
+        {value.commerce && (
+          <label className="block">
+            <span className={label}>{t('setup.currency')}</span>
+            <input
+              dir="ltr" className={`${field} text-start uppercase`} required
+              maxLength={3} minLength={3} pattern="[A-Za-z]{3}"
+              value={value.currency}
+              onChange={(e) => set('currency', e.target.value.toUpperCase())}
+              data-test-id="setup-currency"
+            />
+          </label>
+        )}
       </Section>
 
       <Section n={3} title={t('setup.sectionContent')}>

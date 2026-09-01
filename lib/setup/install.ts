@@ -33,6 +33,13 @@ export const setupSchema = z.object({
   // billing-adjacent settings. It is the highest-value password in the system.
   password: z.string().min(12, 'Use at least 12 characters').max(200),
   defaultLocale: z.enum(['ar', 'en']),
+  /**
+   * Drives phone parsing, and therefore the key customers are merged on. Not
+   * an ISO free-for-all: only the codes the wizard offers, so an unchecked
+   * string cannot reach libphonenumber.
+   */
+  countryCode: z.string().trim().toUpperCase().length(2),
+  currency: z.string().trim().toUpperCase().length(3).regex(/^[A-Z]{3}$/, 'Use an ISO code such as JOD'),
   commerce: z.boolean(),
   demoContent: z.boolean(),
 });
@@ -65,10 +72,21 @@ export async function install(input: SetupInput): Promise<InstallResult> {
 
   await db
     .insert(settings)
-    .values({ id: 1, siteName: input.siteName, eCommerceEnabled: input.commerce })
+    .values({
+      id: 1,
+      siteName: input.siteName,
+      eCommerceEnabled: input.commerce,
+      countryCode: input.countryCode,
+      currency: input.currency,
+    })
     .onConflictDoUpdate({
       target: settings.id,
-      set: { siteName: input.siteName, eCommerceEnabled: input.commerce },
+      set: {
+        siteName: input.siteName,
+        eCommerceEnabled: input.commerce,
+        countryCode: input.countryCode,
+        currency: input.currency,
+      },
     });
 
   // The built-in types own hand-built screens and routes; without these rows
