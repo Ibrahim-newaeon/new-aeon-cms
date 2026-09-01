@@ -120,7 +120,20 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: The image builds with no database
+        # Twice now a deploy has died in `next build` because a route was being
+        # prerendered and queried the database — invisible on any machine whose
+        # database happens to be up, which is every developer's. The Docker
+        # build has only a placeholder DATABASE_URL, so this reproduces the one
+        # condition that matters, by pointing it at a closed port.
+        env:
+          DATABASE_URL: postgresql://build:build@127.0.0.1:59999/build
+          JWT_ACCESS_SECRET: build-time-placeholder-not-a-real-secret-1
+          JWT_REFRESH_SECRET: build-time-placeholder-not-a-real-secret-2
+        run: npm run build
+
       - name: Build
+        # Again with a real database, which is what the e2e run then serves.
         run: npm run build
 
       - name: Install browsers

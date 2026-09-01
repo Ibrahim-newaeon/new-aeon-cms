@@ -39,6 +39,21 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Never prerendered.
+ *
+ * This shell is authenticated and reads the database on every request, so a
+ * static copy of it could never be correct. It USED to be treated as dynamic
+ * only incidentally — the first thing it did was call cookies(), which Next
+ * takes as the signal. Adding the setup check in front of that put a database
+ * query before the signal, and `next build` began trying to prerender /admin
+ * against a database it could not reach.
+ *
+ * Stated explicitly so the behaviour no longer depends on the order of two
+ * unrelated lines.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   /**
    * Before the auth check, not after.
