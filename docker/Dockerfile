@@ -39,6 +39,14 @@ RUN npm run db:generate
 # Requires `output: 'standalone'` in next.config.ts, which is now set.
 RUN npm run build
 
+# A self-contained migration runner for the runtime image.
+#
+# The standalone output carries only what Next traced from the app, and
+# drizzle-kit is a devDependency that is not in it. Bundling pg and the drizzle
+# migrator into one CommonJS file gives the runner a migrate command without
+# shipping node_modules or a second install. ~360kB.
+RUN npx --yes esbuild scripts/migrate-runtime.ts       --bundle --platform=node --target=node24 --format=cjs       --outfile=migrate.cjs
+
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -52,6 +60,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
+# Read by migrate.cjs, which resolves ./lib/db/migrations relative to WORKDIR.
+COPY --from=builder /app/migrate.cjs ./migrate.cjs
 
 RUN mkdir -p public/uploads && chown -R nextjs:nodejs public/uploads
 

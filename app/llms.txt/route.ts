@@ -19,7 +19,22 @@ export const runtime = 'nodejs';
  * Regenerated hourly, matching the sitemap: it changes when Settings change,
  * which is rarely.
  */
-export const revalidate = 3600;
+/**
+ * Rendered per request, NOT prerendered at build.
+ *
+ * With only `revalidate` set and no dynamic API, Next treats this as static and
+ * runs it during `next build` — which means the BUILD needs a reachable
+ * database. That is false everywhere the database is not the developer's own:
+ * the Docker build has only a placeholder DATABASE_URL, and the first Railway
+ * deploy died here with ENOTFOUND postgres.railway.internal.
+ *
+ * Nothing is lost by rendering on demand. The response already carries
+ * `Cache-Control: public, max-age=3600`, so crawlers and any CDN cache it for
+ * the same hour ISR would have; the difference is only WHERE the hour is
+ * counted. What is gained is that the image builds anywhere, with no
+ * infrastructure — which is what makes CI and a cold deploy possible at all.
+ */
+export const dynamic = 'force-dynamic';
 
 /** Published pages only, so nothing here points at a draft or a 404. */
 async function publishedPages(): Promise<Set<string>> {

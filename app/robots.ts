@@ -3,6 +3,21 @@ import type { MetadataRoute } from 'next';
 import { env } from '@/lib/env';
 import { getSettings } from '@/lib/db/queries';
 
+/**
+ * Read per request, not baked at build.
+ *
+ * This queries Settings for comingSoonMode and allowAiCrawlers, and it was the
+ * one route Next actually prerendered — so both values were frozen at build
+ * time. Switching the site to coming-soon, or asking AI crawlers to stay out,
+ * changed nothing in robots.txt until the next deploy. Worse, the queries are
+ * wrapped in try/catch with safe defaults, so a build with no database emitted
+ * a confident "everything is allowed" and nothing looked wrong.
+ *
+ * Both are switches an operator expects to take effect immediately, which they
+ * cannot do from a file written days earlier.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
 

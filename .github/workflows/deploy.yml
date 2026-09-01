@@ -48,10 +48,15 @@ jobs:
         # broken release fails this job instead of being reported as shipped.
         run: railway up --service "${{ vars.RAILWAY_SERVICE || 'new-aeon-cms' }}" --ci
 
-      - name: Migrate
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        # AFTER the deploy, against the live database, using Railway's own env
-        # so DATABASE_URL is never copied into GitHub. Additive migrations only;
-        # a destructive one should be applied deliberately by a person.
-        run: railway run --service "${{ vars.RAILWAY_SERVICE || 'new-aeon-cms' }}" npm run db:migrate
+      # Migrations are NOT run from here.
+      #
+      # Railway's Postgres has no public endpoint — postgres.railway.internal
+      # resolves only inside the project's private network — so a migrate step
+      # in this job cannot reach it, and exposing the database through a public
+      # proxy purely to let CI migrate it would widen the attack surface of the
+      # one service holding every customer record.
+      #
+      # Instead railway.json declares `preDeployCommand: node migrate.cjs`,
+      # which Railway runs once per release, on the private network, before the
+      # new version takes traffic. A failed migration aborts the release rather
+      # than promoting a container whose schema does not match its code.
