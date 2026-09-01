@@ -12,6 +12,8 @@ import { AdminI18nProvider } from '@/components/admin/i18n-provider';
 import { createTranslator } from '@/lib/admin-i18n';
 import { getSettings } from '@/lib/db/queries';
 import { adminBrandCss } from '@/lib/theme/admin-brand';
+import { redirect } from 'next/navigation';
+import { needsSetup } from '@/lib/setup/status';
 import '../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -35,6 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  // Same reason as the admin layout: a login form is useless before any
+  // account exists, and offering one reads as the deploy having failed.
+  if (await needsSetup()) redirect('/setup');
+
   const [locale, settings] = await Promise.all([getAdminLocale(), getSettings()]);
 
   // The login screen is branded too: it is the only page a locked-out client

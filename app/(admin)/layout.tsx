@@ -18,6 +18,7 @@ const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', di
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 import { adminBrandCss } from '@/lib/theme/admin-brand';
+import { needsSetup } from '@/lib/setup/status';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
@@ -39,6 +40,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  /**
+   * Before the auth check, not after.
+   *
+   * On a fresh install there is no account to authenticate, so the redirect
+   * below would send someone to /admin/login — a form that cannot succeed
+   * because no user exists. Setup has to win that race or the CMS is a locked
+   * door with no key.
+   */
+  if (await needsSetup()) redirect('/setup');
+
   const cookieStore = await cookies();
   const accessToken = cookieStore.get('access_token')?.value;
 

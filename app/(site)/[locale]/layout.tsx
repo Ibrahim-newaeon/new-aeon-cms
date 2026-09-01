@@ -14,6 +14,7 @@ import { Navbar } from '@/components/site/navbar';
 import { AnnouncementBar } from '@/components/site/announcement-bar';
 import { themePairToCss, themeModeAttr, hasDark, type ThemeMode } from '@/lib/theme/slots';
 import { THEME_COOKIE, effectiveMode } from '@/lib/theme/visitor-mode';
+import { needsSetup } from '@/lib/setup/status';
 import { Footer } from '@/components/site/footer';
 import { getNavigation, getSettings } from '@/lib/db/queries';
 import { TrackingScripts, TrackingNoScript } from '@/components/site/tracking-scripts';
@@ -122,6 +123,16 @@ export default async function SiteLayout({
    * inside the RSC flight payload, visible in view-source. A redirect sends no
    * body at all.
    */
+  /**
+   * A fresh deploy sends its PUBLIC url to the wizard too.
+   *
+   * The alternative is a storefront with no name, no navigation and no
+   * products, which reads as a broken site rather than an unfinished one. This
+   * adds no exposure: /api/setup is open during exactly this window whether or
+   * not the page is shown, and it closes the moment an administrator exists.
+   */
+  if (await needsSetup()) redirect('/setup');
+
   if (settings?.comingSoonMode && !staffPreview) {
     redirect('/coming-soon');
   }

@@ -91,6 +91,12 @@ export async function middleware(request: NextRequest) {
   // Not locale-prefixed; must not be rewritten to /ar/coming-soon.
   if (pathname === '/coming-soon') return next();
 
+  // Same: the first-run wizard lives outside the locale tree, because it runs
+  // before anyone has chosen a default language. Without this it is redirected
+  // to /ar/setup, which matches the storefront's [segment] route and renders an
+  // error — so a fresh install could not reach its own installer.
+  if (pathname === '/setup') return next();
+
   // API routes authenticate themselves via lib/auth/api-guard — middleware
   // cannot, because it must not import Node-only modules. Still apply CSP.
   if (pathname.startsWith('/api/')) return next();

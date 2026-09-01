@@ -26,7 +26,7 @@ function deny(message: string, status: number): GuardResult {
  * Same-origin requests send Origin matching the host (or omit it for
  * same-origin GETs, which never reach this guard).
  */
-function isSameOrigin(request: Request): boolean {
+export function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) {
     // No Origin at all: only trust it when the browser marks it same-origin.

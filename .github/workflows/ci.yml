@@ -88,6 +88,13 @@ jobs:
         # production, on the first deploy.
         run: npx tsx scripts/migrate-check.ts
 
+      - name: Setup can only ever run once
+        # /api/setup creates an administrator WITHOUT authentication, so this is
+        # the property standing between a fresh deploy and a stranger owning the
+        # CMS. Runs the real install() against a scratch database: once, then
+        # again, then ten concurrently.
+        run: npx tsx scripts/setup-check.ts
+
       - name: Migrate
         # migrate, NOT push. Production runs migrations, so CI has to run the
         # same thing or it tests a schema that is never deployed — which is how

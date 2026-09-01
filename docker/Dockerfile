@@ -78,4 +78,31 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
-CMD ["node", "server.js"]
+# Migrate, then serve.
+#
+# Railway's Postgres has no public endpoint, so migrations can only run from
+# inside the private network. The intended hook is railway.json's
+# preDeployCommand — but Railway did not honour that file for this service (the
+# Dockerfile itself had to be selected with RAILWAY_DOCKERFILE_PATH), and a
+# release silently started with no schema: every page 500'd with 42P01 while
+# /api/health returned 200, because health does not touch those tables.
+#
+# Putting it in the image's own start command removes the dependency on any
+# platform config being read. Migrations are idempotent — drizzle skips what is
+# already applied — so a restart costs one no-op query, and `&&` means a failed
+# migration stops the server rather than serving against a schema that does not
+# match the code.
+#
+# Single instance today. Running several would need a lock, because concurrent
+# migrators on a fresh database can race.
+# Migrate, then serve. Nothing else.
+#
+# There is deliberately no bootstrap step creating a first administrator from
+# environment variables. The setup wizard owns that, and two ways to mint an
+# owner is twice the surface for the one account that can publish, export every
+# customer, and change every setting. A variable left set in a dashboard is
+# also a credential sitting in plain text long after it was needed.
+#
+# A container that boots against an empty database serves the wizard; the app
+# tolerates having no settings row until someone completes it.
+CMD ["sh", "-c", "node migrate.cjs && node server.js"]
