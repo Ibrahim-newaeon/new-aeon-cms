@@ -1,11 +1,12 @@
 // app/llms.txt/route.ts
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { commerceEnabled } from '@/lib/commerce/guard';
 import { absoluteUrl } from '@/lib/seo/json-ld';
 import { buildLlmsTxt } from '@/lib/seo/llms';
-import { env, locales } from '@/lib/env';
+import { locales } from '@/lib/env';
 
 export const runtime = 'nodejs';
 
@@ -57,13 +58,12 @@ const displayName = (type: 'language' | 'region') => (code: string) => {
 };
 
 export async function GET() {
-  const [settings, shop, pages] = await Promise.all([
+  const [settings, shop, pages, primary] = await Promise.all([
     getSettings(),
     commerceEnabled(),
     publishedPages(),
+    getDefaultLocale(),
   ]);
-
-  const primary = env.DEFAULT_LOCALE;
 
   const body = buildLlmsTxt({
     name: settings?.siteName ?? 'Site',

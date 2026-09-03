@@ -17,6 +17,7 @@ import { absoluteUrl } from '@/lib/seo/json-ld';
 import { currentCustomer } from '@/lib/auth/customer-session';
 import { isWishlisted } from '@/lib/account/profile';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { locales, type Locale } from '@/lib/env';
 import { JsonLd } from '@/components/site/json-ld';
 import { productJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
@@ -33,6 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const settings = await getSettings();
   return buildMetadata({
+    defaultLocale: await getDefaultLocale(),
     locale: locale as Locale,
     path: `/products/${slug}`,
     title: record.product.metaTitle || record.product.name,

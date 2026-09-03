@@ -140,8 +140,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Locale routing. Without this, `/` 404s: every public page lives under
-  // /[locale], and nothing previously redirected the bare root.
+  /**
+   * The bare root is decided by app/(root)/page.tsx, not here.
+   *
+   * This used to redirect `/` to `/${DEFAULT_LOCALE}`, which meant the store's
+   * primary language was whatever the environment variable said — never what
+   * the operator chose in the setup wizard, because that answer lives in
+   * `settings` and the Edge runtime cannot reach the database. A server
+   * component can, so `/` passes through to one.
+   *
+   * Deeper unprefixed paths below are still prefixed from the environment:
+   * they are typos and stale links, and a database read in front of every one
+   * of them would buy nothing.
+   */
+  if (pathname === '/') return next();
+
+  // Locale routing. Without this, `/shop` 404s: every public page lives under
+  // /[locale], and nothing previously redirected an unprefixed path.
   const hasLocale = LOCALES.some(
     (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
   );

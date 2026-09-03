@@ -5,6 +5,7 @@ import { getContentBySlug } from '@/lib/db/queries';
 import { ContentRenderer } from '@/components/site/content-renderer';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 import { TypeArchive, archiveMetadata } from './type-archive';
@@ -47,6 +48,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const settings = await getSettings();
 
   return buildMetadata({
+    defaultLocale: await getDefaultLocale(),
     locale: loaded.locale,
     path: `/${segment}`,
     title: i18n?.metaTitle || i18n?.title || segment,

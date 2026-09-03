@@ -37,14 +37,22 @@ const resolve = (Module as unknown as { _resolveFilename: (r: string, ...a: unkn
 
 const NAME = 'aeon_setup_check';
 
+/**
+ * Deliberately NOT Jordan, and deliberately not Arabic.
+ *
+ * Every default in this codebase is JO/JOD/ar, so a fixture that chose them
+ * would pass whether the wizard saved the operator's answers or silently fell
+ * back — which is exactly the bug this file now also guards. A Saudi shop in
+ * English fails loudly if any of the four is dropped.
+ */
 const INPUT = {
   siteName: 'Check Shop',
   name: 'First Owner',
   email: 'first@example.test',
   password: 'a-very-long-password-123',
-  defaultLocale: 'ar' as const,
-  countryCode: 'JO',
-  currency: 'JOD',
+  defaultLocale: 'en' as const,
+  countryCode: 'SA',
+  currency: 'SAR',
   commerce: true,
   demoContent: true,
 };
@@ -137,9 +145,13 @@ async function main() {
     // drives normalisePhone(), whose E.164 output is the key customer records
     // are merged on, so a wizard that dropped it would silently give every
     // client Jordanian phone parsing.
-    const cfg = await check.query<{ country_code: string; currency: string; site_name: string }>(
-      'select country_code, currency, site_name from settings limit 1'
-    );
+    const cfg = await check.query<{
+      country_code: string;
+      currency: string;
+      site_name: string;
+      default_locale: string | null;
+      shipping_regions: { value: string }[] | null;
+    }>('select country_code, currency, site_name, default_locale, shipping_regions from settings limit 1');
     const row = cfg.rows[0];
     if (!row) throw new Error('no settings row was written');
     if (row.country_code !== INPUT.countryCode) {
@@ -150,9 +162,72 @@ async function main() {
     }
     if (row.site_name !== INPUT.siteName) throw new Error('siteName was not saved');
 
+    /**
+     * The language the operator chose. This was asked for, validated, posted
+     * and then dropped: nothing wrote it, and every reader used the
+     * DEFAULT_LOCALE env var instead, so choosing English produced an Arabic
+     * site with no way to tell why.
+     */
+    if (row.default_locale !== INPUT.defaultLocale) {
+      throw new Error(
+        `defaultLocale was not saved: expected ${INPUT.defaultLocale}, got ${row.default_locale}`
+      );
+    }
+
+    /**
+     * Delivery regions follow the country. They used to fall back to Jordan's
+     * governorates for every store on earth, so a Riyadh shop offered delivery
+     * to Amman and to nowhere it actually ships.
+     */
+    const regions = (row.shipping_regions ?? []).map((r) => r.value);
+    if (regions.length === 0) throw new Error('no shipping regions were saved');
+    if (!regions.includes('riyadh')) {
+      throw new Error(`shipping regions are not Saudi: ${regions.join(', ')}`);
+    }
+    if (regions.includes('amman')) {
+      throw new Error('a Saudi store was given Jordanian governorates');
+    }
+
+    // The demo zone has to cover the regions checkout offers, or an order in
+    // any of them falls through to "no zone".
+    const zone = await check.query<{ governorates: string[] }>(
+      'select governorates from shipping_zones limit 1'
+    );
+    const covered = zone.rows[0]?.governorates ?? [];
+    if (!regions.every((r) => covered.includes(r))) {
+      throw new Error(`the demo shipping zone does not cover every region: ${covered.join(', ')}`);
+    }
+
+    /**
+     * Starter content. Without a home row the storefront falls back to a hero
+     * reading "New Aeon" — the CMS's name on a client's homepage.
+     */
+    const home = await check.query<{ status: string; title: string }>(
+      `select c.status, i.title from content c
+         join content_i18n i on i.content_id = c.id and i.locale = 'en'
+        where c.slug = 'home'`
+    );
+    const homeRow = home.rows[0];
+    if (!homeRow) throw new Error('no home page was created');
+    if (homeRow.status !== 'published') throw new Error(`the home page is ${homeRow.status}, not published`);
+    if (homeRow.title !== INPUT.siteName) {
+      throw new Error(`the home page is titled ${homeRow.title}, not the site name`);
+    }
+
+    const legal = await check.query<{ n: number }>(
+      `select count(*)::int n from content
+        where slug in ('privacy-policy', 'terms-and-conditions', 'returns-and-refunds')
+          and status = 'draft'`
+    );
+    if (legal.rows[0]!.n !== 3) {
+      throw new Error(`expected 3 legal drafts, found ${legal.rows[0]!.n}`);
+    }
+
     const products = await check.query<{ n: number }>('select count(*)::int n from products');
     console.log(
-      `✅ setup runs exactly once — 1 administrator after 12 attempts, ${products.rows[0]!.n} demo products, country ${row.country_code}/${row.currency} saved`
+      `✅ setup runs exactly once — 1 administrator after 12 attempts, ${products.rows[0]!.n} demo products, ` +
+        `country ${row.country_code}/${row.currency}/${row.default_locale} saved, ` +
+        `${regions.length} delivery regions, home page + ${legal.rows[0]!.n} legal drafts`
     );
   } finally {
     await check.end();

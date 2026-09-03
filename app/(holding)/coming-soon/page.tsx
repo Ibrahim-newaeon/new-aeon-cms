@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation';
 import { getSettings } from '@/lib/db/queries';
 import { ComingSoon } from '@/components/site/coming-soon';
-import { env } from '@/lib/env';
+import { getDefaultLocale } from '@/lib/default-locale';
 
 /**
  * Never prerendered.
@@ -16,10 +16,12 @@ import { env } from '@/lib/env';
 export const dynamic = 'force-dynamic';
 
 export default async function ComingSoonPage() {
-  const settings = await getSettings();
+  const [settings, locale] = await Promise.all([getSettings(), getDefaultLocale()]);
 
   // If the flag is off, this URL should not linger as a dead end.
-  if (!settings?.comingSoonMode) redirect(`/${env.DEFAULT_LOCALE}`);
+  if (!settings?.comingSoonMode) redirect(`/${locale}`);
 
-  return <ComingSoon settings={settings} locale={env.DEFAULT_LOCALE} />;
+  // The holding page is the whole site while the flag is on, so it has to be
+  // in the language the shop chose — not the one the environment defaults to.
+  return <ComingSoon settings={settings} locale={locale} />;
 }

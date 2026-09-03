@@ -10,45 +10,11 @@ import {
   variantOptionValues, shippingZones, tags,
 } from '../lib/db/schema';
 import { hashPassword } from '../lib/auth/password';
-import type { ContentBlock } from '../lib/blocks/types';
 import { eq, sql, inArray } from 'drizzle-orm';
 import { installDemoContent } from '../lib/setup/demo';
-
-/**
- * The placeholder paragraph, with "admin panel" as a real link.
- *
- * A `paragraph` block is plain text, so part of it cannot be a link — this is a
- * `rich-text` block instead. The href comes from ADMIN_PATH rather than a
- * hardcoded /admin: the panel is deliberately relocatable, and a seeded link
- * pointing at the wrong place is worse than no link.
- */
-function placeholderWithAdminLink(
-  before: string,
-  linkText: string,
-  after: string
-): ContentBlock {
-  const adminPath = process.env.ADMIN_PATH || '/admin';
-  return {
-    type: 'rich-text',
-    content: {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: before },
-            {
-              type: 'text',
-              marks: [{ type: 'link', attrs: { href: adminPath } }],
-              text: linkText,
-            },
-            { type: 'text', text: after },
-          ],
-        },
-      ],
-    },
-  };
-}
+// One definition, two callers — the wizard writes the same placeholder, and a
+// second copy here would drift the first time either changed.
+import { placeholderWithAdminLink } from '../lib/setup/starter';
 
 async function seed() {
   console.log('🌱 Seeding database...');

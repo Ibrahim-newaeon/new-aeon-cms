@@ -8,6 +8,7 @@ import { ContentRenderer } from '@/components/site/content-renderer';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
 import { typeByPrefix } from '@/lib/content/types-admin';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 
@@ -69,6 +70,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const settings = await getSettings();
 
   return buildMetadata({
+    defaultLocale: await getDefaultLocale(),
     locale: loaded.locale,
     path: `/${segment}/${slug}`,
     title: row.metaTitle || row.title || slug,

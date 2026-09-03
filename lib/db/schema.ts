@@ -358,6 +358,18 @@ export const settings = pgTable('settings', {
    */
   countryCode: varchar('country_code', { length: 2 }).default('JO'),
   /**
+   * The storefront's primary language — the one a visitor to `/` is sent to,
+   * and the one hreflang advertises as x-default.
+   *
+   * NULLABLE on purpose, and null is not the same as 'ar'. The setup wizard has
+   * always asked for this, but until now nothing stored the answer and every
+   * reader fell back to the DEFAULT_LOCALE environment variable, so choosing
+   * English produced an Arabic site. Existing installs have no row value and
+   * must keep obeying their env var exactly as before; only a site that has
+   * actually chosen one overrides it. See getDefaultLocale().
+   */
+  defaultLocale: varchar('default_locale', { length: 5 }),
+  /**
    * Where this store ships, as [{ value, ar, en }].
    *
    * Was a hardcoded list of Jordan's twelve governorates — correct for exactly

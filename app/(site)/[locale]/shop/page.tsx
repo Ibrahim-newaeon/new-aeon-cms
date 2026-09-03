@@ -5,6 +5,7 @@ import { commerceEnabled } from '@/lib/commerce/guard';
 import { ShopPageBody } from './shop-page';
 import type { SearchParams } from '@/lib/commerce/shop-query';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 
@@ -21,6 +22,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const settings = await getSettings();
   return buildMetadata({
+    defaultLocale: await getDefaultLocale(),
     locale: locale as Locale,
     path: '/shop',
     title: locale === 'ar' ? 'المتجر' : 'Shop',

@@ -6,6 +6,8 @@ import {
   brands, categories, categoryI18n, shippingZones,
 } from '@/lib/db/schema';
 import { setProductCategories } from '@/lib/commerce/product-categories';
+import { toMinorUnits } from '@/lib/money';
+import { regionsFor } from './regions';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -33,14 +35,37 @@ const CATEGORIES = [
   ['gifts', 'هدايا', 'Gifts'],
 ] as const;
 
+/**
+ * Prices in MAJOR units — 249 means two hundred and forty-nine of whatever the
+ * shop trades in, converted on the way to the database by toMinorUnits().
+ *
+ * They used to be written as stored integers (249000 fils), which is only
+ * correct for a 3-decimal currency. A shop set up in SAR got 249000 *cents* —
+ * 2,490 riyals for a bottle of oud, and a sale price of 2,290 next to it.
+ * Nothing in the demo is a real price, but an order of magnitude wrong is
+ * still the operator's first impression of the catalogue.
+ *
+ * This is a decimal shift, not a currency conversion: 249 JOD becomes 249 SAR,
+ * not its exchange-rate equivalent. Demo products exist to be deleted.
+ */
 const PRODUCTS = [
-  { slug: 'oud-royal',      ar: 'عود ملكي',          en: 'Oud Royal',         price: 249000, was: null,   stock: 12, brand: 'aeon-atelier', cat: 'perfumes' },
-  { slug: 'rose-damascena', ar: 'ورد دمشقي',         en: 'Rose Damascena',    price: 189000, was: 229000, stock: 8,  brand: 'aeon-atelier', cat: 'perfumes' },
-  { slug: 'musk-white',     ar: 'مسك أبيض',          en: 'White Musk',        price: 79000,  was: null,   stock: 30, brand: 'levant-house', cat: 'perfumes' },
-  { slug: 'amber-travel',   ar: 'عنبر للسفر',        en: 'Amber Travel Size', price: 39000,  was: 49000,  stock: 45, brand: 'levant-house', cat: 'gifts' },
-  { slug: 'gift-box-duo',   ar: 'علبة هدايا ثنائية', en: 'Gift Box Duo',      price: 119000, was: 149000, stock: 6,  brand: 'aeon-atelier', cat: 'gifts' },
-  { slug: 'sampler-set',    ar: 'طقم عينات',         en: 'Sampler Set',       price: 19000,  was: null,   stock: 0,  brand: 'levant-house', cat: 'gifts' },
+  { slug: 'oud-royal',      ar: 'عود ملكي',          en: 'Oud Royal',         price: 249, was: null, stock: 12, brand: 'aeon-atelier', cat: 'perfumes' },
+  { slug: 'rose-damascena', ar: 'ورد دمشقي',         en: 'Rose Damascena',    price: 189, was: 229,  stock: 8,  brand: 'aeon-atelier', cat: 'perfumes' },
+  { slug: 'musk-white',     ar: 'مسك أبيض',          en: 'White Musk',        price: 79,  was: null, stock: 30, brand: 'levant-house', cat: 'perfumes' },
+  { slug: 'amber-travel',   ar: 'عنبر للسفر',        en: 'Amber Travel Size', price: 39,  was: 49,   stock: 45, brand: 'levant-house', cat: 'gifts' },
+  { slug: 'gift-box-duo',   ar: 'علبة هدايا ثنائية', en: 'Gift Box Duo',      price: 119, was: 149,  stock: 6,  brand: 'aeon-atelier', cat: 'gifts' },
+  { slug: 'sampler-set',    ar: 'طقم عينات',         en: 'Sampler Set',       price: 19,  was: null, stock: 0,  brand: 'levant-house', cat: 'gifts' },
 ] as const;
+
+/**
+ * Where the demo shop is, and what it charges in. Optional because
+ * `scripts/seed.ts` calls this for a fixture database that is Jordan by
+ * definition; the wizard passes what the operator actually chose.
+ */
+export interface DemoOptions {
+  countryCode?: string;
+  currency?: string;
+}
 
 export interface DemoResult {
   products: number;
@@ -52,7 +77,11 @@ export interface DemoResult {
  * running this twice cannot duplicate a catalogue, and a shop that has since
  * edited a demo product keeps its edits.
  */
-export async function installDemoContent(): Promise<DemoResult> {
+export async function installDemoContent(options: DemoOptions = {}): Promise<DemoResult> {
+  const countryCode = (options.countryCode ?? 'JO').toUpperCase();
+  const currency = (options.currency ?? 'JOD').toUpperCase();
+  const price = (major: number) => toMinorUnits(major, currency);
+
   const brandIds = new Map<string, string>();
   for (const [slug, name] of BRANDS) {
     const [existing] = await db.select().from(brands).where(eq(brands.slug, slug)).limit(1);
@@ -86,11 +115,11 @@ export async function installDemoContent(): Promise<DemoResult> {
       .values({
         slug: p.slug,
         brandId: brandIds.get(p.brand),
-        basePrice: p.price,
+        basePrice: price(p.price),
         // On the PRODUCT as well as the variant: the storefront reads
         // compare-at from here, and writing it only to the variant is how an
         // import once reported "53 updated" and changed nothing visible.
-        compareAtPrice: p.was,
+        compareAtPrice: p.was === null ? null : price(p.was),
         isActive: true,
       })
       .returning();
@@ -107,8 +136,8 @@ export async function installDemoContent(): Promise<DemoResult> {
     await db.insert(productVariants).values({
       productId: product.id,
       sku: p.slug.toUpperCase(),
-      price: p.price,
-      compareAtPrice: p.was,
+      price: price(p.price),
+      compareAtPrice: p.was === null ? null : price(p.was),
       stock: p.stock,
       isActive: true,
     });
@@ -126,15 +155,28 @@ export async function installDemoContent(): Promise<DemoResult> {
     made += 1;
   }
 
-  // Without a zone covering somewhere, checkout cannot quote a delivery price
-  // and the demo stops at the cart.
-  const [zone] = await db.select().from(shippingZones).where(eq(shippingZones.name, 'Central')).limit(1);
+  /**
+   * Without a zone covering somewhere, checkout cannot quote a delivery price
+   * and the demo stops at the cart.
+   *
+   * Two things were wrong with the old version. It covered four Jordanian
+   * governorates regardless of the country chosen a step earlier, so a shop in
+   * Riyadh could not deliver anywhere it ships to; and it looked for a zone
+   * named exactly 'Central', which only ever matched the one it had itself
+   * written. The check is now "does this store have ANY zone" — the honest
+   * question, and the one that lets `scripts/seed.ts` create its own 'Central'
+   * zone first and have this skip rather than lay a second, overlapping one
+   * over the same governorates.
+   */
+  const [zone] = await db.select({ id: shippingZones.id }).from(shippingZones).limit(1);
   if (!zone) {
     await db.insert(shippingZones).values({
-      name: 'Central',
-      governorates: ['amman', 'zarqa', 'balqa', 'madaba'],
-      flatRate: 3000,
-      freeOver: 100000,
+      // Every region the store offers, so the demo can complete a checkout
+      // from any address the dropdown allows.
+      name: 'Standard',
+      governorates: regionsFor(countryCode).map((r) => r.value),
+      flatRate: price(3),
+      freeOver: price(100),
       etaDays: 2,
       isActive: true,
       sortOrder: 1,

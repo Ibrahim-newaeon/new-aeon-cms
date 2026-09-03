@@ -7,6 +7,8 @@ import { hashPassword } from '@/lib/auth/password';
 import { eq, sql } from 'drizzle-orm';
 import { markInstalled } from './status';
 import { installDemoContent } from './demo';
+import { installStarterContent } from './starter';
+import { regionsFor } from './regions';
 
 /**
  * The one-time install performed by the setup wizard.
@@ -47,7 +49,12 @@ export const setupSchema = z.object({
 export type SetupInput = z.infer<typeof setupSchema>;
 
 export type InstallResult =
-  | { ok: true; userId: string; demo: { products: number } | null }
+  | {
+      ok: true;
+      userId: string;
+      demo: { products: number } | null;
+      starter: { home: boolean; legal: number };
+    }
   | { ok: false; reason: 'already-installed' };
 
 export async function install(input: SetupInput): Promise<InstallResult> {
@@ -70,24 +77,26 @@ export async function install(input: SetupInput): Promise<InstallResult> {
   // Only after we know we won the race is anything else written.
   markInstalled();
 
+  /**
+   * `defaultLocale` and `shippingRegions` are written here for the same reason
+   * country and currency are: the wizard already asks, and until now the
+   * answers went nowhere. Language fell back to the DEFAULT_LOCALE env var, so
+   * choosing English produced an Arabic site; regions fell back to Jordan's
+   * governorates, so a shop in Riyadh offered delivery to Amman.
+   */
+  const values = {
+    siteName: input.siteName,
+    eCommerceEnabled: input.commerce,
+    countryCode: input.countryCode,
+    currency: input.currency,
+    defaultLocale: input.defaultLocale,
+    shippingRegions: regionsFor(input.countryCode),
+  };
+
   await db
     .insert(settings)
-    .values({
-      id: 1,
-      siteName: input.siteName,
-      eCommerceEnabled: input.commerce,
-      countryCode: input.countryCode,
-      currency: input.currency,
-    })
-    .onConflictDoUpdate({
-      target: settings.id,
-      set: {
-        siteName: input.siteName,
-        eCommerceEnabled: input.commerce,
-        countryCode: input.countryCode,
-        currency: input.currency,
-      },
-    });
+    .values({ id: 1, ...values })
+    .onConflictDoUpdate({ target: settings.id, set: values });
 
   // The built-in types own hand-built screens and routes; without these rows
   // those screens have nothing to attach content to.
@@ -107,15 +116,28 @@ export async function install(input: SetupInput): Promise<InstallResult> {
       .onConflictDoUpdate({ target: contentTypes.slug, set: { isBuiltIn: true } });
   }
 
+  /**
+   * Runs for every install, demo content or not. Without it the site has
+   * content types and no content, and the storefront falls back to a hero
+   * reading "New Aeon" — a client's homepage carrying the CMS's own name.
+   */
+  const starter = await installStarterContent({
+    siteName: input.siteName,
+    authorId: userId,
+  });
+
   let demo: { products: number } | null = null;
   if (input.demoContent) {
     // Commerce demo content on a site with the shop switched off would create
     // products nobody can reach, so it follows the commerce choice.
-    const result = await installDemoContent();
+    const result = await installDemoContent({
+      countryCode: input.countryCode,
+      currency: input.currency,
+    });
     demo = { products: result.products };
   }
 
-  return { ok: true, userId, demo };
+  return { ok: true, userId, demo, starter };
 }
 
 /** Whether an administrator exists, read fresh — used to close the wizard. */

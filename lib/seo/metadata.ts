@@ -40,6 +40,15 @@ export interface PageMetaInput {
    * invites a search engine to index the whole matrix.
    */
   canonicalQuery?: string;
+  /**
+   * The store's primary language, for hreflang's x-default.
+   *
+   * Passed in rather than read here because this function is synchronous and
+   * the answer now lives in `settings` — see getDefaultLocale(). Optional so
+   * the fallback stays the environment variable, which is what every install
+   * that has never chosen one still runs on.
+   */
+  defaultLocale?: Locale;
 }
 
 const OG_LOCALE: Record<Locale, string> = { ar: 'ar_JO', en: 'en_GB' };
@@ -52,7 +61,7 @@ export function buildMetadata(input: PageMetaInput): Metadata {
   // rather than duplicates. x-default points at the site's own default.
   const languages: Record<string, string> = {};
   for (const l of locales) languages[l] = absoluteUrl(`/${l}${path}`);
-  languages['x-default'] = absoluteUrl(`/${env.DEFAULT_LOCALE}${path}`);
+  languages['x-default'] = absoluteUrl(`/${input.defaultLocale ?? env.DEFAULT_LOCALE}${path}`);
 
   const description = input.description?.trim() || undefined;
   const image = input.image ? absoluteUrl(input.image) : undefined;

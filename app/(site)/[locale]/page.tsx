@@ -1,5 +1,5 @@
 // /app/(site)/[locale]/page.tsx
-import { getContentBySlug } from '@/lib/db/queries';
+import { getContentBySlug, getSettings } from '@/lib/db/queries';
 import { HeroSection } from '@/components/site/hero-section';
 import { ContentRenderer } from '@/components/site/content-renderer';
 import { notFound } from 'next/navigation';
@@ -19,6 +19,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const blocks = asContentBlocks(homeContent?.i18n?.body);
 
   /**
+   * The hero's last resort is the store's OWN name, not this CMS's.
+   *
+   * The wizard now writes a home page, so this should not be reached on a new
+   * install — but a shop can delete or unpublish that page, and when it did,
+   * the homepage introduced itself as "New Aeon — Content Management System"
+   * to the client's customers. Falling back to the name the operator typed at
+   * setup is wrong in a way they can at least see and fix.
+   */
+  const settings = await getSettings();
+  const fallbackTitle = settings?.siteName?.trim() || 'New Aeon';
+
+  /**
    * A slider in the first position IS the hero.
    *
    * Rendering both put a static banner above the thing built to be the banner,
@@ -33,8 +45,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <div>
       {!leadsWithSlider && (
         <HeroSection
-          title={homeContent?.i18n?.title || 'New Aeon'}
-          subtitle={homeContent?.i18n?.excerpt || 'Content Management System'}
+          title={homeContent?.i18n?.title || fallbackTitle}
+          subtitle={homeContent?.i18n?.excerpt || settings?.siteDescription || undefined}
           backgroundImage={homeContent?.content?.featuredImage ?? undefined}
         />
       )}

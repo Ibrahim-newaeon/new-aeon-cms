@@ -22,6 +22,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/auth/session';
 import { env, locales, type Locale } from '@/lib/env';
 import { buildMetadata } from '@/lib/seo/metadata';
+import { getDefaultLocale } from '@/lib/default-locale';
 import { SiteSchema } from '@/components/site/site-schema';
 import { WhatsAppButton } from '@/components/site/whatsapp-button';
 import '../../globals.css';
@@ -45,6 +46,7 @@ export async function generateMetadata({
   const typed = (locales.includes(locale as Locale) ? locale : env.DEFAULT_LOCALE) as Locale;
 
   const base = buildMetadata({
+    defaultLocale: await getDefaultLocale(),
     locale: typed,
     path: '',
     title: siteName,
