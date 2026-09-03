@@ -56,7 +56,17 @@ jobs:
       # proxy purely to let CI migrate it would widen the attack surface of the
       # one service holding every customer record.
       #
-      # Instead railway.json declares `preDeployCommand: node migrate.cjs`,
-      # which Railway runs once per release, on the private network, before the
-      # new version takes traffic. A failed migration aborts the release rather
-      # than promoting a container whose schema does not match its code.
+      # They run from the image's own entrypoint instead:
+      #
+      #   CMD ["sh", "-c", "node migrate.cjs && node server.js"]   docker/Dockerfile
+      #
+      # so the server only starts if the migration succeeded, and a container
+      # whose schema does not match its code never reaches the healthcheck.
+      #
+      # This used to say `preDeployCommand: node migrate.cjs` in railway.json.
+      # It is not there any more, and it would not help if it were: Railway
+      # skipped it silently, and a release once started with no schema at all
+      # while /api/health cheerfully returned 200. The same applies to
+      # `dockerfilePath` in that file, which is why the Dockerfile is selected
+      # by the RAILWAY_DOCKERFILE_PATH service variable. Treat railway.json as
+      # documentation of intent, not as configuration that runs.
