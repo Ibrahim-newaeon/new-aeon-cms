@@ -109,7 +109,14 @@ jobs:
         # tsx directly, not `npm run db:seed`: that script passes
         # --env-file=.env for local convenience, and Node exits 9 when the file
         # is absent. CI has no .env by design — the values are job env above.
-        run: npx tsx scripts/seed.ts
+        #
+        # --conditions=react-server: seed pulls in lib/setup/*, which import
+        # `server-only` so a stray client import fails loudly at build time.
+        # That package throws on sight in a plain Node process, which is what
+        # this step is — it only resolves to its empty stub under React's
+        # server condition. Without the flag this step has failed since the
+        # wizard landed, and a red CI is a release that never ships.
+        run: npx tsx --conditions=react-server scripts/seed.ts
 
       - name: Typecheck
         run: npx tsc --noEmit

@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push --force",
-    "db:seed": "tsx --env-file=.env scripts/seed.ts",
+    "db:seed": "tsx --conditions=react-server --env-file=.env scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:check": "tsx --env-file=.env scripts/migrate-check.ts",
     "setup:check": "tsx --env-file=.env scripts/setup-check.ts",
