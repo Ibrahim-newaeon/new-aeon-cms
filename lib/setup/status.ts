@@ -24,6 +24,25 @@ import { eq } from 'drizzle-orm';
  * The false case is deliberately NOT cached: before setup completes we must
  * keep asking, or the process that renders the wizard would still believe
  * setup is pending after another process completed it.
+ *
+ * ── Why `is_active` is not consulted ────────────────────────────────────────
+ * The CMS never hard-deletes a user — DELETE /api/users/[id] sets
+ * is_active = false, because content.author_id and four other columns
+ * reference users with no ON DELETE rule and deactivating keeps authorship
+ * intact. So "removed" means inactive there, and "exists" means present here.
+ * The two disagree on purpose, and only in the safe direction.
+ *
+ * Counting only ACTIVE admins would mean a site whose admins had all been
+ * deactivated reopens the unauthenticated account-creation form to whoever
+ * asks for it. This function guards the one path that mints an owner without
+ * credentials, so it has to fail closed: any admin row at all, active or not,
+ * means somebody owns this install.
+ *
+ * That state is not reachable through the UI anyway — wouldRemoveLastAdmin()
+ * refuses to demote, deactivate or delete the last active admin. It is
+ * reachable by direct SQL, which is also how it gets fixed; see
+ * `npm run setup:reset`, which changes the ROLE rather than the flag,
+ * precisely because the flag is not what this reads.
  */
 let installed = false;
 
