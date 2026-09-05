@@ -21,7 +21,6 @@ Prefer registered code and tests, then **package.json**, Drizzle schema/migratio
 ~~~bash
 cp .env.example .env
 npm ci
-npm run setup:check
 npm run dev
 npm run lint
 npm run typecheck
@@ -29,6 +28,8 @@ npm test
 npm run build
 npm run test:e2e
 ~~~
+
+**npm run setup:check** is a destructive integration check: it terminates sessions and drops/recreates `aeon_setup_check` on the configured PostgreSQL host. Run it only with explicit approval against a confirmed disposable local host. Browser and migration checks also need dedicated disposable fixtures.
 
 Database changes use **db:generate** and **db:migrate**. **db:push --force**, setup reset, storage migration, and deployment are destructive or environment-changing operations and require explicit authorization and a recovery plan.
 
