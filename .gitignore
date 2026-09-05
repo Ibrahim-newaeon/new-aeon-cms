@@ -52,3 +52,7 @@ shop.txt
 # client copy. Write throwaway cookie jars in here, not at the repo root —
 # ca/cb/cc.txt were committed with live admin tokens in them.
 prompt-archive/
+
+# Personal Claude Code overrides
+.claude/settings.local.json
+CLAUDE.local.md
