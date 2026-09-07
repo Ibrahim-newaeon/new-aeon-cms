@@ -20,6 +20,12 @@ Single-repo plan (no `cms-package` fork). Baseline tag: `v1.0.0-baseline`.
 - Migration `0017_html_theme_packs`
 - Static assets: `/theme-assets/{themeId}/...`
 
-## Phase 3 — PHP theme convert
+## Phase 3 — PHP theme convert ✅
 
-Convert-only importer that emits an HTML pack. Do not run PHP themes in production.
+- Convert-only importer: PHP/WordPress theme zip → HTML pack (Liquid)
+- Never executes PHP on the server
+- Maps `header.php` / `footer.php` / `index.php` / `page.php` / `single.php` / `archive.php`
+- Skips `functions.php` and includes; leftover PHP becomes HTML comments + warnings
+- Admin: Settings → Appearance → **Convert PHP theme**
+- API: `POST /api/themes/convert-php`
+- Sample: `themes/samples/php-starter.zip`

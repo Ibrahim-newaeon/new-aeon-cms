@@ -43,6 +43,12 @@ Sample: `themes/samples/minimal.zip`.
 
 Shop, cart, checkout, and account always use the builtin React storefront.
 
+## PHP theme convert (shipped)
+
+Settings → Appearance → **Convert PHP theme**: upload a WordPress-style theme zip.
+It is rewritten into an HTML pack (never executed). Review conversion warnings,
+then activate like any other pack. Sample: `themes/samples/php-starter.zip`.
+
 ## Run locally
 
 ```bash

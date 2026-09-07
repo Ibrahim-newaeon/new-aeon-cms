@@ -1,0 +1,9 @@
+/*
+Theme Name: PHP Starter
+Description: Sample WordPress-like theme for conversion tests
+Version: 1.0
+*/
+body { font-family: system-ui, sans-serif; margin: 0; }
+.site-header, .site-footer { padding: 1rem 1.5rem; border-bottom: 1px solid #ddd; }
+.site-footer { border-bottom: 0; border-top: 1px solid #ddd; margin-top: 2rem; }
+.site-main { max-width: 40rem; margin: 0 auto; padding: 2rem 1.5rem; }
