@@ -68,6 +68,7 @@ export function Sidebar({
   adminPath,
   eCommerceEnabled,
   logo,
+  hidePoweredBy = false,
 }: {
   user: SidebarUser;
   currentPath: string;
@@ -75,6 +76,8 @@ export function Sidebar({
   adminPath: string;
   eCommerceEnabled: boolean;
   logo?: string | null;
+  /** White-label licence tier — hide New Aeon attribution. */
+  hidePoweredBy?: boolean;
 }) {
   const t = useT();
 
@@ -131,6 +134,14 @@ export function Sidebar({
           {t('brand.viewSite')}
         </Link>
         <LogoutButton />
+        {!hidePoweredBy && (
+          <p
+            className="px-2 pt-2 text-[10px] leading-snug text-[var(--admin-text-muted)]"
+            data-test-id="sidebar-powered-by"
+          >
+            {t('brand.poweredBy')}
+          </p>
+        )}
       </div>
     </div>
   );

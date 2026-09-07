@@ -28,6 +28,7 @@ import { WhatsAppButton } from '@/components/site/whatsapp-button';
 import { resolveChromeMode } from '@/lib/site/chrome';
 import { resolveStorefrontPresentation } from '@/lib/themes/active';
 import { themeableKindForPath } from '@/lib/themes/package';
+import { sanitizeCustomCss } from '@/lib/css/custom-css';
 import '../../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -250,11 +251,12 @@ export default async function SiteLayout({
         {settings?.customCss && (
           // Same nonce/hydration story as the theme block above. This one has
           // always had the problem; it simply never fired, because no install
-          // in this repo had customCss set.
+          // in this repo had customCss set. Values are sanitised on save; we
+          // scrub again here so older rows cannot inject @import / expression().
           <style
             nonce={nonce}
             suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: settings.customCss }}
+            dangerouslySetInnerHTML={{ __html: sanitizeCustomCss(settings.customCss) }}
           />
         )}
       </body>

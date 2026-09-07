@@ -29,6 +29,7 @@ export const ar = {
 
   'brand.subtitle': 'مركز التحكم الكامل',
   'brand.viewSite': 'عرض الموقع',
+  'brand.poweredBy': 'يعمل بـ New Aeon CMS',
   'brand.logout': 'تسجيل الخروج',
   'brand.site': 'الموقع',
   'brand.headerTitle': 'إدارة {site} — كل شيء من مكان واحد',
@@ -977,6 +978,7 @@ export const en: Partial<Record<MessageKey, string>> = {
 
   'brand.subtitle': 'Control centre',
   'brand.viewSite': 'View site',
+  'brand.poweredBy': 'Powered by New Aeon CMS',
   'brand.logout': 'Sign out',
   'brand.site': 'Site',
   'brand.headerTitle': '{site} admin — everything in one place',

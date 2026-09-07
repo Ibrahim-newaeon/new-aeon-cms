@@ -1,17 +1,12 @@
 // lib/sms/index.ts
 
 /**
- * Sending an SMS.
- *
- * An interface with a console transport rather than a provider integration,
- * because choosing one is a commercial decision — it costs money per message
- * and the right vendor differs by country. Everything around it is finished, so
- * plugging in Twilio or a local Jordanian gateway is one function.
- *
- * The console transport is not a stub that pretends to work: it prints the
- * message and reports success, which is right for local development and
- * unmistakable in a log if it ever ran in production.
+ * SMS delivery. Drivers mirror mail: `log` for local, `twilio` for production.
+ * PHP is never involved — this is account OTP for customer phone login.
  */
+
+import { createTwilioTransport } from './twilio';
+
 export interface SmsMessage {
   to: string;
   body: string;
@@ -23,23 +18,56 @@ export interface SmsTransport {
 }
 
 const consoleTransport: SmsTransport = {
-  name: 'console',
+  name: 'log',
   async send({ to, body }) {
-    console.info(`[sms:console] to ${to}: ${body}`);
+    console.info(`[sms:log] to ${to}: ${body}`);
   },
 };
 
-let transport: SmsTransport = consoleTransport;
+let transport: SmsTransport | null = null;
 
-/** Swap in a real provider at startup. */
+function resolveTransport(): SmsTransport {
+  if (transport) return transport;
+
+  const driver = (process.env.SMS_DRIVER || 'log').toLowerCase();
+
+  if (driver === 'twilio') {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+    const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+    const from = process.env.TWILIO_FROM_NUMBER?.trim();
+    if (!accountSid || !authToken || !from) {
+      throw new Error('TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER are required when SMS_DRIVER=twilio');
+    }
+    transport = createTwilioTransport({ accountSid, authToken, from });
+    return transport;
+  }
+
+  if (driver !== 'log' && driver !== 'console') {
+    throw new Error(`Unknown SMS_DRIVER: ${driver}`);
+  }
+
+  transport = consoleTransport;
+  return transport;
+}
+
+/** Swap in a transport (tests). */
 export function setSmsTransport(next: SmsTransport): void {
   transport = next;
 }
 
 export function smsTransportName(): string {
-  return transport.name;
+  try {
+    return resolveTransport().name;
+  } catch {
+    return 'unconfigured';
+  }
+}
+
+/** True when production would deliver real SMS (not log-only). */
+export function smsIsProductionReady(): boolean {
+  return smsTransportName() === 'twilio';
 }
 
 export async function sendSms(message: SmsMessage): Promise<void> {
-  await transport.send(message);
+  await resolveTransport().send(message);
 }

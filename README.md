@@ -49,6 +49,18 @@ Settings → Appearance → **Convert PHP theme**: upload a WordPress-style them
 It is rewritten into an HTML pack (never executed). Review conversion warnings,
 then activate like any other pack. Sample: `themes/samples/php-starter.zip`.
 
+## Production
+
+See **[docs/production.md](docs/production.md)** for the deploy checklist and
+**[docs/sales.md](docs/sales.md)** for what is / is not included.
+
+Highlights:
+
+- Set `REDIS_URL` in production (or `ALLOW_IN_MEMORY_RATE_LIMIT=true` for one instance)
+- Set `SMS_DRIVER=twilio` for customer OTP (or allow console SMS explicitly)
+- Use `STORAGE_DRIVER=s3` and a real mail driver — not `log`
+- Never seed a public URL with default passwords
+
 ## Run locally
 
 ```bash

@@ -49,13 +49,14 @@ worth more as a sales line than any restriction is worth as a lock.
 
 ## Before issuing a licence
 
-1. Put a real contact address at the foot of `LICENSE` — it currently says
-   `<set a contact address here before issuing>`.
+1. Confirm the contact address at the foot of `LICENSE` (`ibrahim@new-aeon.com`).
 2. Confirm the Licensor name in clause 1 and the copyright line.
 3. Re-run `npx tsx scripts/generate-notices.ts` so `THIRD-PARTY-NOTICES.md`
    matches what you are actually shipping.
 4. Name the tier and the Instance on the invoice. `LICENSE` defers to it
    (clause 13), so the invoice is where "which tier" is recorded.
+5. For white-label tier, set `WHITE_LABEL=true` on the instance so the admin
+   sidebar hides "Powered by New Aeon CMS".
 
 ## Third-party obligations
 

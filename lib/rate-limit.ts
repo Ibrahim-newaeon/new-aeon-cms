@@ -148,6 +148,7 @@ export async function rateLimit(
   limit: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
+  warnIfInMemoryRateLimitInProduction();
   const redis = await getRedis();
   if (!redis) return memoryLimit(key, limit, windowSeconds);
 
@@ -204,10 +205,36 @@ export async function rateLimitBackend(): Promise<'redis' | 'memory'> {
   return (await getRedis()) ? 'redis' : 'memory';
 }
 
+/**
+ * Production readiness for shared rate limits.
+ * Multi-instance hosts must set REDIS_URL (or explicitly ALLOW_IN_MEMORY_RATE_LIMIT).
+ */
+export function rateLimitConfigOk(): { ok: boolean; reason?: string } {
+  if (env.NODE_ENV !== 'production') return { ok: true };
+  if (env.REDIS_URL) return { ok: true };
+  if (env.ALLOW_IN_MEMORY_RATE_LIMIT === 'true') return { ok: true };
+  return {
+    ok: false,
+    reason:
+      'REDIS_URL is required in production (or set ALLOW_IN_MEMORY_RATE_LIMIT=true for a single instance)',
+  };
+}
+
+let warnedMemoryInProd = false;
+export function warnIfInMemoryRateLimitInProduction(): void {
+  if (warnedMemoryInProd) return;
+  const check = rateLimitConfigOk();
+  if (!check.ok) {
+    warnedMemoryInProd = true;
+    console.error(`[rate-limit] ${check.reason}`);
+  }
+}
+
 /** Test hook — drops the memoised client and the in-process buckets. */
 export function __resetRateLimit(): void {
   clientPromise = null;
   memory.clear();
+  warnedMemoryInProd = false;
 }
 
 /** Exported for tests; the Redis path is exercised against a real server. */

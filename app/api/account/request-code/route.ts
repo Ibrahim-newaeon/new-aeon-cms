@@ -54,6 +54,27 @@ export async function POST(request: Request) {
     }
 
     const phone = normalisePhone(data.phone, country);
+
+    // Production must not log OTP codes to stdout unless explicitly allowed.
+    const { env } = await import('@/lib/env');
+    const { smsIsProductionReady } = await import('@/lib/sms');
+    if (
+      env.NODE_ENV === 'production' &&
+      !smsIsProductionReady() &&
+      env.ALLOW_CONSOLE_SMS !== 'true'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message:
+              'SMS is not configured. Set SMS_DRIVER=twilio (or ALLOW_CONSOLE_SMS=true for a single-instance emergency).',
+          },
+        },
+        { status: 503 }
+      );
+    }
+
     await requestCode(phone, data.locale);
 
     /**

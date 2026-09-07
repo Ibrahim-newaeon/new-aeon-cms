@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { redeemResetToken, PASSWORD_MIN_LENGTH } from '@/lib/auth/password-reset';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { isSameOrigin } from '@/lib/auth/api-guard';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +13,13 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: { message: 'Cross-site request blocked' } },
+      { status: 403 }
+    );
+  }
+
   // A token is 32 random bytes, so guessing is not the threat — but an
   // unlimited endpoint that runs Argon2 on every call is a cheap way to burn
   // the server's CPU.

@@ -24,6 +24,11 @@ const envSchema = z.object({
 
   UPLOAD_DIR: z.string().default('./public/uploads'),
   REDIS_URL: z.string().url().optional(),
+  /**
+   * Escape hatch: allow in-process rate limits in production (single instance).
+   * Multi-instance deploys must set REDIS_URL instead.
+   */
+  ALLOW_IN_MEMORY_RATE_LIMIT: z.enum(['true', 'false']).optional(),
 
   /**
    * Storage driver. Defaults to `local` on purpose: a developer who clones this
@@ -60,6 +65,20 @@ const envSchema = z.object({
 
   RESEND_API_KEY: z.string().min(1).optional(),
 
+  /** SMS: log (default/local) or twilio. */
+  SMS_DRIVER: z.enum(['log', 'console', 'twilio']).default('log'),
+  TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
+  TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
+  /** E.164 sender, e.g. +9627… */
+  TWILIO_FROM_NUMBER: z.string().min(1).optional(),
+  /** Escape hatch: allow SMS_DRIVER=log in production (OTP codes in server logs). */
+  ALLOW_CONSOLE_SMS: z.enum(['true', 'false']).optional(),
+
+  /**
+   * When true, admin UI hides "Powered by New Aeon" (white-label licence tier).
+   */
+  WHITE_LABEL: z.enum(['true', 'false']).optional(),
+
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
@@ -91,6 +110,18 @@ const withStorageRules = envSchema.superRefine((cfg, ctx) => {
     require('RESEND_API_KEY', 'MAIL_DRIVER=resend');
     require('MAIL_FROM', 'MAIL_DRIVER=resend');
   }
+
+  if (cfg.SMS_DRIVER === 'twilio') {
+    require('TWILIO_ACCOUNT_SID', 'SMS_DRIVER=twilio');
+    require('TWILIO_AUTH_TOKEN', 'SMS_DRIVER=twilio');
+    require('TWILIO_FROM_NUMBER', 'SMS_DRIVER=twilio');
+  }
+
+  // Production SMS: refuse silent console OTP unless explicitly allowed.
+  // Not applied during `next build` alone — NODE_ENV=production there too — so
+  // we only enforce when a runtime marker is set OR when not building.
+  // Practical rule: if SMS_DRIVER is log/console in production runtime, OTP
+  // endpoints refuse; boot stays up. Twilio secrets validated above.
 
   if (cfg.STORAGE_DRIVER !== 's3') return;
 

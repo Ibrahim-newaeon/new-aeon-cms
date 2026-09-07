@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { mediaAssets } from '@/lib/db/schema';
+import { resolveMediaDownloadSource } from '@/lib/media/download-url';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,7 @@ export const runtime = 'nodejs';
  *
  * Public on purpose: these are documents a shop is publishing. The id is a
  * UUID rather than a guessable path, and only assets already in the library
- * can be fetched — this is not an arbitrary file proxy.
+ * can be fetched — and only URLs our storage drivers own (no open proxy / SSRF).
  */
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -39,11 +40,11 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ success: false, error: { message: 'Not found' } }, { status: 404 });
   }
 
-  // Absolute for S3/R2, relative for local disk. Resolved against this request
-  // so a local file is fetched from our own origin rather than guessed at.
-  const source = /^https?:\/\//i.test(asset.url)
-    ? asset.url
-    : new URL(asset.url, _request.url).toString();
+  const source = resolveMediaDownloadSource(asset.url, _request.url);
+  if (!source) {
+    console.error('[media/download] blocked URL not owned by storage:', asset.url);
+    return NextResponse.json({ success: false, error: { message: 'File is unavailable' } }, { status: 400 });
+  }
 
   const upstream = await fetch(source);
   if (!upstream.ok || !upstream.body) {

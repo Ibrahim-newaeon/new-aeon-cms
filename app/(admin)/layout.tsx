@@ -19,6 +19,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 
 import { adminBrandCss } from '@/lib/theme/admin-brand';
 import { needsSetup } from '@/lib/setup/status';
+import { env } from '@/lib/env';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 
@@ -116,6 +117,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             // adminLogo, not logo: the storefront mark is drawn for a light
             // page and disappears on the near-black sidebar.
             logo={settings?.adminLogo}
+            hidePoweredBy={env.WHITE_LABEL === 'true'}
           >
             {children}
           </AdminShell>

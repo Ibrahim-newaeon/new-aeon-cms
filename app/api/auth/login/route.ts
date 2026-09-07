@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { verifyPassword, hashPassword } from '@/lib/auth/password';
 import { createAccessToken, createRefreshToken, setAuthCookies } from '@/lib/auth/session';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { isSameOrigin } from '@/lib/auth/api-guard';
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email('Invalid email').max(255),
@@ -27,6 +28,13 @@ function getDummyHash() {
 const INVALID_CREDENTIALS = { message: 'Invalid credentials' };
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: { message: 'Cross-site request blocked' } },
+      { status: 403 }
+    );
+  }
+
   // 5 attempts per 15 minutes per IP.
   const limit = await rateLimit(clientKey(request, 'login'), 5, 900);
   if (!limit.allowed) {

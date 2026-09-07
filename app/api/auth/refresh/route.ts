@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyRefreshToken, setAuthCookies, clearAuthCookies } from '@/lib/auth/session';
 import { rotateRefreshToken } from '@/lib/auth/rotation';
+import { isSameOrigin } from '@/lib/auth/api-guard';
 
 export const runtime = 'nodejs';
 
@@ -35,8 +36,7 @@ async function rotate(): Promise<{ ok: boolean; reason?: string }> {
 
 /** Called by the client-side keeper before the access token expires. */
 export async function POST(request: Request) {
-  const origin = request.headers.get('origin');
-  if (origin && new URL(origin).host !== request.headers.get('host')) {
+  if (!isSameOrigin(request)) {
     return NextResponse.json({ success: false }, { status: 403 });
   }
 

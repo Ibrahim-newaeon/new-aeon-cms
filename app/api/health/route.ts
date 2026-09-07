@@ -14,15 +14,9 @@ export async function GET() {
   // Imported for its side effect, and deliberately inside the handler so a
   // config failure becomes a 503 here rather than an unhandled throw at module
   // load. lib/env validates on import and throws on bad config.
-  //
-  // This check exists because of a real failure found while first running the
-  // container: env validation happens when a route module is imported, and in
-  // a standalone server that is lazy and per-route. A deploy with a broken
-  // STORAGE_DRIVER=s3 config had every page returning 500 while this endpoint
-  // happily returned 200 — so the healthcheck passed and an orchestrator would
-  // have routed live traffic straight at it.
+  let envMod: typeof import('@/lib/env');
   try {
-    await import('@/lib/env');
+    envMod = await import('@/lib/env');
   } catch (error) {
     console.error('[health] invalid environment configuration:', error);
     return NextResponse.json(
@@ -40,5 +34,28 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const { rateLimitBackend, rateLimitConfigOk } = await import('@/lib/rate-limit');
+  const rlOk = rateLimitConfigOk();
+  const backend = await rateLimitBackend();
+
+  // Production without Redis (and without the single-instance escape hatch)
+  // is not ready for traffic — login/checkout limits would be per-process.
+  if (!rlOk.ok) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        message: rlOk.reason,
+        rateLimit: backend,
+      },
+      { status: 503 }
+    );
+  }
+
+  return NextResponse.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    rateLimit: backend,
+    smsDriver: envMod.env.SMS_DRIVER === 'console' ? 'log' : envMod.env.SMS_DRIVER,
+    whiteLabel: envMod.env.WHITE_LABEL === 'true',
+  });
 }

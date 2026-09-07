@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { issueResetToken, RESET_TOKEN_TTL_MINUTES } from '@/lib/auth/password-reset';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+import { isSameOrigin } from '@/lib/auth/api-guard';
 import { sendMail } from '@/lib/email/send';
 import { passwordReset } from '@/lib/email/templates/password-reset';
 import { getSettings } from '@/lib/db/queries';
@@ -24,6 +25,13 @@ const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
  * account, which must not be re-openable by its former owner.
  */
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json(
+      { success: false, error: { message: 'Cross-site request blocked' } },
+      { status: 403 }
+    );
+  }
+
   // Rate limited on the same scale as login. Without it this is a free
   // email-sending relay aimed at any address an attacker chooses.
   const limit = await rateLimit(clientKey(request, 'forgot'), 5, 900);

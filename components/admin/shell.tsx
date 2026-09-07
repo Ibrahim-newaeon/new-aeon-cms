@@ -15,6 +15,7 @@ interface AdminShellProps {
   adminPath: string;
   eCommerceEnabled?: boolean;
   logo?: string | null;
+  hidePoweredBy?: boolean;
 }
 
 export function AdminShell({
@@ -24,6 +25,7 @@ export function AdminShell({
   adminPath,
   eCommerceEnabled = false,
   logo,
+  hidePoweredBy = false,
 }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const t = useT();
@@ -64,6 +66,7 @@ export function AdminShell({
           adminPath={adminPath}
           eCommerceEnabled={eCommerceEnabled}
           logo={logo}
+          hidePoweredBy={hidePoweredBy}
         />
       </aside>
 

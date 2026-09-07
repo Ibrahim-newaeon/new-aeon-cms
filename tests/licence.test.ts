@@ -50,13 +50,9 @@ describe('LICENSE', () => {
     }
   });
 
-  it('still carries the placeholder that must be filled before issuing', () => {
-    /**
-     * Deliberately asserted PRESENT. This test is the reminder: when the
-     * contact address is filled in, this expectation flips and whoever changes
-     * it has to read LICENSING.md's issuing checklist to know why.
-     */
-    expect(text).toContain('<set a contact address here before issuing>');
+  it('lists a real licensing contact', () => {
+    expect(text).toContain('ibrahim@new-aeon.com');
+    expect(text).not.toContain('<set a contact address here before issuing>');
   });
 });
 

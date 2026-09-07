@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { themeSchema, themeModeSchema } from './theme/slots';
 import { themeDriverSchema, DEFAULT_THEME_DRIVER, isThemeDriverImplemented } from './theme/driver';
 import { HTML_PASTE_MODES } from './blocks/sanitize';
+import { isCustomCssSafe, sanitizeCustomCss } from './css/custom-css';
 
 export const SOCIAL_PLATFORMS = [
   'facebook',
@@ -85,6 +86,11 @@ export const settingsSchema = z.object({
     .string()
     .max(20000, 'CSS طويل جداً')
     .refine((v) => !/<\/?\s*style/i.test(v), 'لا يُسمح بوسوم <style> داخل الحقل')
+    .refine(
+      (v) => !v || isCustomCssSafe(v),
+      'CSS يحتوي على أنماط غير مسموحة (@import، expression، javascript:، data:)'
+    )
+    .transform((v) => (v ? sanitizeCustomCss(v) : v))
     .optional(),
 
   /**
