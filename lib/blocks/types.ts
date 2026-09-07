@@ -42,7 +42,16 @@ export type ContentBlock =
   | { type: 'button'; text: string; url: string; variant: 'primary' | 'secondary' | 'outline' | 'ghost'; size: 'sm' | 'md' | 'lg'; fullWidth?: boolean }
   | { type: 'divider'; style: 'line' | 'space' | 'dots' | 'stars' }
   | { type: 'spacer'; height: number }
-  | { type: 'html'; content: string }
+  /**
+   * Raw / pasted HTML. Sanitised by the site `htmlPasteMode` setting.
+   *
+   * `isolate` (default true): wrap in a scope class and prefix extracted CSS
+   * so legacy styles cannot restyle the site chrome.
+   *
+   * `fullPage`: ask the site layout to hide nav/footer/announcement/WhatsApp
+   * so a pasted landing page can own the viewport.
+   */
+  | { type: 'html'; content: string; isolate?: boolean; fullPage?: boolean }
   /**
    * Prose. The TipTap document is stored VERBATIM and treated as opaque —
    * we never walk its internals. Rendering goes through TipTap's own

@@ -43,6 +43,8 @@ export async function PUT(request: Request) {
       themeDark: data.themeDark ?? null,
       themeMode: data.themeMode ?? 'light',
       customCss: empty(data.customCss),
+      htmlPasteMode: data.htmlPasteMode ?? 'safe',
+      themeDriver: data.themeDriver ?? 'builtin',
       comingSoonMode: data.comingSoonMode,
       comingSoonMessage: empty(data.comingSoonMessage),
       eCommerceEnabled: data.eCommerceEnabled,

@@ -9,6 +9,7 @@ import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 import { TypeArchive, archiveMetadata } from './type-archive';
+import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 
 interface Params {
   params: Promise<{ locale: string; segment: string }>;
@@ -69,6 +70,15 @@ export default async function ContentPage({ params }: Params) {
   if (!loaded) return <TypeArchive locale={locale} prefix={segment} />;
 
   const { i18n } = loaded.record;
+  const blocks = asContentBlocks(i18n?.body);
+
+  if (blocksRequestBlankChrome(blocks)) {
+    return (
+      <div data-test-id="full-page-html">
+        <ContentRenderer blocks={blocks} locale={loaded.locale} />
+      </div>
+    );
+  }
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-16">
@@ -77,7 +87,7 @@ export default async function ContentPage({ params }: Params) {
         {i18n?.excerpt && <p className="mt-2 text-lg text-site-ink-muted">{i18n.excerpt}</p>}
       </header>
 
-      <ContentRenderer blocks={asContentBlocks(i18n?.body)} locale={loaded.locale} />
+      <ContentRenderer blocks={blocks} locale={loaded.locale} />
     </article>
   );
 }

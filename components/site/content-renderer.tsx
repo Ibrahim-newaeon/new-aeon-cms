@@ -10,7 +10,9 @@ import StarterKit from '@tiptap/starter-kit';
 import TiptapImage from '@tiptap/extension-image';
 import TiptapLink from '@tiptap/extension-link';
 import { cn } from '@/lib/utils'; // was used but never imported — build failure
-import { sanitizeRichHtml } from '@/lib/blocks/sanitize';
+import { sanitizeRichHtml, type HtmlPasteMode } from '@/lib/blocks/sanitize';
+import { processHtmlPaste } from '@/lib/blocks/html-paste';
+import { getSettings } from '@/lib/db/queries';
 import { TestimonialBlock } from '@/components/site/blocks/testimonial';
 import {
   VideoBlock, EmbedBlock, TeamBlock, TimelineBlock, PricingBlock,
@@ -31,13 +33,16 @@ interface ContentRendererProps {
   locale?: 'ar' | 'en';
 }
 
-export function ContentRenderer({ blocks, locale = 'ar' }: ContentRendererProps) {
+export async function ContentRenderer({ blocks, locale = 'ar' }: ContentRendererProps) {
   if (!blocks || !Array.isArray(blocks)) return null;
+
+  const settings = await getSettings();
+  const pasteMode = (settings?.htmlPasteMode as HtmlPasteMode | null) ?? 'safe';
 
   return (
     <div className="space-y-6" data-test-id="content-renderer">
       {blocks.map((block, idx) => (
-        <BlockRenderer key={idx} block={block} locale={locale} />
+        <BlockRenderer key={idx} block={block} locale={locale} pasteMode={pasteMode} />
       ))}
     </div>
   );
@@ -53,7 +58,15 @@ const HEADING_SIZE = {
   4: 'text-lg',
 } as const;
 
-function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 'en' }) {
+function BlockRenderer({
+  block,
+  locale,
+  pasteMode,
+}: {
+  block: ContentBlock;
+  locale: 'ar' | 'en';
+  pasteMode: HtmlPasteMode;
+}) {
   switch (block.type) {
     case 'heading': {
       const Tag = HEADING_TAG[block.level];
@@ -99,9 +112,25 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
       );
     }
 
-    case 'html':
-      // Was rendered raw under a comment claiming it was sanitized.
-      return <div dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(block.content) }} />;
+    case 'html': {
+      const scoped = processHtmlPaste(block.content, {
+        mode: pasteMode,
+        isolate: block.isolate !== false,
+      });
+      return (
+        <div
+          className={scoped.scopeClass ?? undefined}
+          data-html-block
+          data-full-page={block.fullPage ? 'true' : undefined}
+          data-test-id="html-block"
+        >
+          {scoped.css ? (
+            <style dangerouslySetInnerHTML={{ __html: scoped.css }} />
+          ) : null}
+          <div dangerouslySetInnerHTML={{ __html: scoped.html }} />
+        </div>
+      );
+    }
 
     case 'image':
       return (
@@ -381,7 +410,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
               <summary className="cursor-pointer font-medium text-site-ink">{item.title}</summary>
               <div className="mt-3 space-y-4">
                 {item.content.map((child, i) => (
-                  <BlockRenderer key={i} block={child} locale={locale} />
+                  <BlockRenderer key={i} block={child} locale={locale} pasteMode={pasteMode} />
                 ))}
               </div>
             </details>
@@ -399,7 +428,7 @@ function BlockRenderer({ block, locale }: { block: ContentBlock; locale: 'ar' | 
               </h3>
               <div className="space-y-4">
                 {item.content.map((child, i) => (
-                  <BlockRenderer key={i} block={child} locale={locale} />
+                  <BlockRenderer key={i} block={child} locale={locale} pasteMode={pasteMode} />
                 ))}
               </div>
             </section>

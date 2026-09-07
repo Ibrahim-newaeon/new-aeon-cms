@@ -444,6 +444,41 @@ export function SettingsForm({
               data-test-id="settings-custom-css"
               />
             </Field>
+
+            <Field label={t('settings.htmlPasteMode')} hint={t('settings.htmlPasteModeHint')}>
+              <select
+                className="admin-input"
+                value={value.htmlPasteMode ?? 'safe'}
+                onChange={(e) =>
+                  patch({
+                    htmlPasteMode: e.target.value as SettingsInput['htmlPasteMode'],
+                  })
+                }
+                data-test-id="settings-html-paste-mode"
+              >
+                <option value="safe">{t('settings.htmlPasteMode.safe')}</option>
+                <option value="designer">{t('settings.htmlPasteMode.designer')}</option>
+                <option value="trusted">{t('settings.htmlPasteMode.trusted')}</option>
+              </select>
+            </Field>
+
+            <Field label={t('settings.themeDriver')} hint={t('settings.themeDriverHint')}>
+              <select
+                className="admin-input"
+                value={value.themeDriver ?? 'builtin'}
+                onChange={(e) =>
+                  patch({
+                    themeDriver: e.target.value as SettingsInput['themeDriver'],
+                  })
+                }
+                data-test-id="settings-theme-driver"
+              >
+                <option value="builtin">{t('settings.themeDriver.builtin')}</option>
+                <option value="html-pack" disabled>
+                  {t('settings.themeDriver.html-pack')}
+                </option>
+              </select>
+            </Field>
           </>
         )}
 

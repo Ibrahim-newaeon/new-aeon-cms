@@ -1,6 +1,8 @@
 // lib/settings-schema.ts
 import { z } from 'zod';
 import { themeSchema, themeModeSchema } from './theme/slots';
+import { themeDriverSchema, DEFAULT_THEME_DRIVER, isThemeDriverImplemented } from './theme/driver';
+import { HTML_PASTE_MODES } from './blocks/sanitize';
 
 export const SOCIAL_PLATFORMS = [
   'facebook',
@@ -84,6 +86,23 @@ export const settingsSchema = z.object({
     .max(20000, 'CSS طويل جداً')
     .refine((v) => !/<\/?\s*style/i.test(v), 'لا يُسمح بوسوم <style> داخل الحقل')
     .optional(),
+
+  /**
+   * How aggressive the HTML-block sanitiser is. Default `safe` preserves the
+   * pre–Paste-HTML-v2 behaviour for every existing install.
+   */
+  htmlPasteMode: z.enum(HTML_PASTE_MODES).optional().default('safe'),
+
+  /**
+   * Storefront presentation driver. Only `builtin` is live; `html-pack` is
+   * reserved for the theme-zip runtime and rejected until implemented.
+   */
+  themeDriver: themeDriverSchema
+    .optional()
+    .default(DEFAULT_THEME_DRIVER)
+    .refine(isThemeDriverImplemented, {
+      message: 'HTML theme packs are not enabled yet — keep Builtin React',
+    }),
 
   comingSoonMode: z.boolean(),
   comingSoonMessage: z.string().trim().max(500).optional(),

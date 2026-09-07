@@ -78,6 +78,8 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('content-security-policy', csp);
+  // Used by the site layout to decide blank-chrome (full-page HTML pastes).
+  requestHeaders.set('x-pathname', pathname);
 
   const withCsp = (response: NextResponse) => {
     response.headers.set('content-security-policy', csp);

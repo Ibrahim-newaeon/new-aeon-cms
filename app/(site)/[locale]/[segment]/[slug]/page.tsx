@@ -11,6 +11,7 @@ import { buildMetadata } from '@/lib/seo/metadata';
 import { getDefaultLocale } from '@/lib/default-locale';
 import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
+import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 
 interface Params {
   params: Promise<{ locale: string; segment: string; slug: string }>;
@@ -88,6 +89,15 @@ export default async function CustomTypeEntry({ params }: Params) {
   if (!loaded) notFound();
 
   const { row } = loaded;
+  const blocks = asContentBlocks(row.body);
+
+  if (blocksRequestBlankChrome(blocks)) {
+    return (
+      <div data-test-id="full-page-html">
+        <ContentRenderer blocks={blocks} locale={loaded.locale} />
+      </div>
+    );
+  }
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-16" data-test-id="type-entry">
@@ -95,7 +105,7 @@ export default async function CustomTypeEntry({ params }: Params) {
         <h1 className="text-3xl font-bold text-site-ink">{row.title ?? slug}</h1>
         {row.excerpt && <p className="mt-2 text-site-ink-muted">{row.excerpt}</p>}
       </header>
-      <ContentRenderer blocks={asContentBlocks(row.body)} locale={loaded.locale} />
+      <ContentRenderer blocks={blocks} locale={loaded.locale} />
     </article>
   );
 }

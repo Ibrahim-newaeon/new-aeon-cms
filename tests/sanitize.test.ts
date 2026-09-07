@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeRichHtml } from '@/lib/blocks/sanitize';
+import { sanitizeRichHtml, sanitizeHtmlForMode, sanitizeScopedCss } from '@/lib/blocks/sanitize';
+import {
+  unwrapHtmlDocument,
+  scopeCss,
+  processHtmlPaste,
+  blocksRequestBlankChrome,
+  extractStyleTagContents,
+  stripStyleTags,
+} from '@/lib/blocks/html-paste';
+import { themeDriverSchema, isThemeDriverImplemented } from '@/lib/theme/driver';
+import { settingsSchema } from '@/lib/settings-schema';
 
 /**
  * This is the only thing between a stored `<script>` and every visitor to a
@@ -29,8 +39,6 @@ describe('sanitizeRichHtml', () => {
   });
 
   it('drops javascript: and data: hrefs', () => {
-    // TipTap's generateHTML faithfully reproduces whatever href is in the
-    // stored JSON, and that JSON is not trusted input.
     for (const href of [
       'javascript:alert(1)',
       'JaVaScRiPt:alert(1)',
@@ -57,7 +65,6 @@ describe('sanitizeRichHtml', () => {
   });
 
   it('adds noopener noreferrer to any link that opens a new tab', () => {
-    // Without it the opened page can navigate the opener via window.opener.
     const out = sanitizeRichHtml('<a href="https://example.com" target="_blank">x</a>');
     expect(out).toContain('rel="noopener noreferrer"');
   });
@@ -101,5 +108,117 @@ describe('sanitizeRichHtml', () => {
   it('handles empty and malformed input without throwing', () => {
     expect(sanitizeRichHtml('')).toBe('');
     expect(() => sanitizeRichHtml('<p><div><span>unclosed')).not.toThrow();
+  });
+});
+
+describe('sanitizeHtmlForMode (paste tiers)', () => {
+  it('safe still strips class and style', () => {
+    const out = sanitizeHtmlForMode(
+      '<section class="hero" style="color:red"><p>x</p></section>',
+      'safe'
+    );
+    expect(out).not.toContain('section');
+    expect(out).not.toContain('class=');
+    expect(out).not.toContain('style=');
+    expect(out).toContain('<p>x</p>');
+  });
+
+  it('designer keeps section, class and colour styles', () => {
+    const out = sanitizeHtmlForMode(
+      '<section class="hero" style="color:#112233"><p>x</p></section>',
+      'designer'
+    );
+    expect(out).toContain('<section');
+    expect(out).toContain('class="hero"');
+    expect(out).toContain('color:#112233');
+  });
+
+  it('trusted still never allows script', () => {
+    const out = sanitizeHtmlForMode('<p>ok</p><script>alert(1)</script>', 'trusted');
+    expect(out).not.toContain('<script');
+    expect(out).not.toContain('alert(1)');
+  });
+});
+
+describe('html paste pipeline', () => {
+  it('unwraps a full HTML document to body contents', () => {
+    const { body, headCss } = unwrapHtmlDocument(
+      '<!doctype html><html><head><style>.a{color:red}</style></head><body><h1>Hi</h1></body></html>'
+    );
+    expect(body).toContain('<h1>Hi</h1>');
+    expect(headCss).toContain('.a{color:red}');
+  });
+
+  it('scopes CSS under a selector and remaps body/html', () => {
+    const css = scopeCss('body { color: red } .card { padding: 1rem }', '.html-scope-x');
+    expect(css).toContain('.html-scope-x{');
+    expect(css).toContain('.html-scope-x .card{');
+    expect(css).not.toMatch(/(^|[,{]\s*)body\s*\{/);
+  });
+
+  it('extracts and strips style tags', () => {
+    const raw = '<style>.x{}</style><p>y</p><style>.z{}</style>';
+    expect(extractStyleTagContents(raw)).toEqual(['.x{}', '.z{}']);
+    expect(stripStyleTags(raw)).toBe('<p>y</p>');
+  });
+
+  it('processHtmlPaste scopes designer CSS and drops scripts', () => {
+    const result = processHtmlPaste(
+      '<style>.hero{color:red}</style><section class="hero"><p>Hi<script>bad()</script></p></section>',
+      { mode: 'designer', isolate: true, scopeId: 'html-scope-test' }
+    );
+    expect(result.scopeClass).toBe('html-scope-test');
+    expect(result.css).toContain('.html-scope-test .hero');
+    expect(result.html).toContain('class="hero"');
+    expect(result.html).not.toContain('script');
+    expect(result.html).not.toContain('bad()');
+  });
+
+  it('safe mode drops extracted CSS entirely', () => {
+    const result = processHtmlPaste('<style>.x{color:red}</style><p>y</p>', {
+      mode: 'safe',
+      isolate: true,
+    });
+    expect(result.css).toBe('');
+    expect(result.html).toContain('<p>y</p>');
+  });
+
+  it('blocksRequestBlankChrome reads fullPage on html blocks', () => {
+    expect(blocksRequestBlankChrome([{ type: 'paragraph' }])).toBe(false);
+    expect(blocksRequestBlankChrome([{ type: 'html', fullPage: true }])).toBe(true);
+    expect(blocksRequestBlankChrome([{ type: 'html', fullPage: false }])).toBe(false);
+  });
+
+  it('sanitizeScopedCss strips @import and style breakouts', () => {
+    expect(sanitizeScopedCss('@import url("https://evil.test/x.css"); .a{}')).not.toContain('@import');
+    expect(sanitizeScopedCss('</style><script>x</script>')).not.toMatch(/<\/?\s*style/i);
+  });
+});
+
+describe('theme driver foundation', () => {
+  it('accepts builtin and rejects unimplemented html-pack at settings boundary', () => {
+    expect(themeDriverSchema.parse('builtin')).toBe('builtin');
+    expect(isThemeDriverImplemented('builtin')).toBe(true);
+    expect(isThemeDriverImplemented('html-pack')).toBe(false);
+
+    const base = {
+      siteName: 'Shop',
+      comingSoonMode: false,
+      eCommerceEnabled: false,
+      currency: 'JOD',
+    };
+    expect(settingsSchema.parse({ ...base, themeDriver: 'builtin' }).themeDriver).toBe('builtin');
+    expect(settingsSchema.safeParse({ ...base, themeDriver: 'html-pack' }).success).toBe(false);
+  });
+
+  it('defaults htmlPasteMode to safe', () => {
+    const parsed = settingsSchema.parse({
+      siteName: 'Shop',
+      comingSoonMode: false,
+      eCommerceEnabled: false,
+      currency: 'JOD',
+    });
+    expect(parsed.htmlPasteMode).toBe('safe');
+    expect(parsed.themeDriver).toBe('builtin');
   });
 });

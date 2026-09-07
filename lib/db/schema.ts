@@ -347,6 +347,15 @@ export const settings = pgTable('settings', {
   /** One hex colour. The admin's greys are structure, not brand. */
   adminAccent: varchar('admin_accent', { length: 7 }),
   customCss: text('custom_css'),
+  /**
+   * Paste-HTML sanitiser tier for `html` blocks: safe | designer | trusted.
+   * Default safe = pre-v2 behaviour.
+   */
+  htmlPasteMode: varchar('html_paste_mode', { length: 16 }).default('safe'),
+  /**
+   * Storefront driver: builtin (React) today; html-pack reserved for theme zips.
+   */
+  themeDriver: varchar('theme_driver', { length: 16 }).default('builtin'),
   comingSoonMode: boolean('coming_soon_mode').default(false),
   comingSoonMessage: text('coming_soon_message'),
   eCommerceEnabled: boolean('ecommerce_enabled').default(false),

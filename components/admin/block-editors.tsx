@@ -280,20 +280,48 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
 
     case 'html':
       return (
-        <Field label="HTML" htmlFor="html-content">
-          <textarea
-            id="html-content"
-            rows={8}
-            dir="ltr"
-            className="admin-input resize-y font-mono text-xs text-start"
-            value={block.content}
-            onChange={(e) => onChange({ ...block, content: e.target.value })}
-            data-test-id="html-content"
-          />
-          <p className="mt-1 text-xs text-[var(--admin-warning)]">
-            {t('be.htmlSanitised')}
-          </p>
-        </Field>
+        <div className="space-y-3">
+          <Field label="HTML" htmlFor="html-content">
+            <textarea
+              id="html-content"
+              rows={8}
+              dir="ltr"
+              className="admin-input resize-y font-mono text-xs text-start"
+              value={block.content}
+              onChange={(e) => onChange({ ...block, content: e.target.value })}
+              data-test-id="html-content"
+            />
+            <p className="mt-1 text-xs text-[var(--admin-warning)]">
+              {t('be.htmlSanitised')}
+            </p>
+          </Field>
+          <label className="flex items-start gap-2 text-sm text-[var(--admin-text-secondary)]">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={block.isolate !== false}
+              onChange={(e) => onChange({ ...block, isolate: e.target.checked })}
+              data-test-id="html-isolate"
+            />
+            <span>
+              <span className="block text-[var(--admin-text)]">{t('be.htmlIsolate')}</span>
+              <span className="text-xs text-[var(--admin-text-muted)]">{t('be.htmlIsolateHint')}</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-[var(--admin-text-secondary)]">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={block.fullPage === true}
+              onChange={(e) => onChange({ ...block, fullPage: e.target.checked })}
+              data-test-id="html-full-page"
+            />
+            <span>
+              <span className="block text-[var(--admin-text)]">{t('be.htmlFullPage')}</span>
+              <span className="text-xs text-[var(--admin-text-muted)]">{t('be.htmlFullPageHint')}</span>
+            </span>
+          </label>
+        </div>
       );
 
     case 'cta':

@@ -25,6 +25,7 @@ import { buildMetadata } from '@/lib/seo/metadata';
 import { getDefaultLocale } from '@/lib/default-locale';
 import { SiteSchema } from '@/components/site/site-schema';
 import { WhatsAppButton } from '@/components/site/whatsapp-button';
+import { resolveChromeMode } from '@/lib/site/chrome';
 import '../../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -164,6 +165,10 @@ export default async function SiteLayout({
     )
   );
 
+  const pathname = headerList.get('x-pathname') ?? `/${typedLocale}`;
+  const chromeMode = await resolveChromeMode(pathname);
+  const showChrome = chromeMode === 'default';
+
 
   return (
     <html
@@ -191,17 +196,19 @@ export default async function SiteLayout({
 
             {/* Above the navbar and outside its sticky container, so it
                 scrolls away instead of costing a second pinned row. */}
-            <AnnouncementBar locale={typedLocale} />
+            {showChrome && <AnnouncementBar locale={typedLocale} />}
 
-            <Navbar
-              navigation={headerNav}
-              logo={settings?.logo ?? null}
-              siteName={settings?.siteName ?? 'CMS'}
-              locale={typedLocale}
-              commerceOn={Boolean(settings?.eCommerceEnabled)}
-              // Nothing to toggle between when the site has no dark colours.
-              showThemeToggle={darkAvailable}
-            />
+            {showChrome && (
+              <Navbar
+                navigation={headerNav}
+                logo={settings?.logo ?? null}
+                siteName={settings?.siteName ?? 'CMS'}
+                locale={typedLocale}
+                commerceOn={Boolean(settings?.eCommerceEnabled)}
+                // Nothing to toggle between when the site has no dark colours.
+                showThemeToggle={darkAvailable}
+              />
+            )}
             {/* clip, not hidden: `hidden` would make this a scroll container
                 and break any position: sticky inside it. This absorbs the few
                 pixels a full-bleed block overhangs by, because 100vw counts
@@ -209,8 +216,8 @@ export default async function SiteLayout({
             <main className="flex-1 overflow-x-clip">{children}</main>
 
             {/* A link, not a widget. Renders nothing when no number is set. */}
-            <WhatsAppButton locale={typedLocale} />
-            <Footer navigation={footerNav} settings={settings} locale={typedLocale} />
+            {showChrome && <WhatsAppButton locale={typedLocale} />}
+            {showChrome && <Footer navigation={footerNav} settings={settings} locale={typedLocale} />}
           </div>
         </NextIntlClientProvider>
 

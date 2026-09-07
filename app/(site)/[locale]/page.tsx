@@ -5,6 +5,7 @@ import { ContentRenderer } from '@/components/site/content-renderer';
 import { notFound } from 'next/navigation';
 import { locales, type Locale } from '@/lib/env';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
+import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -17,6 +18,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   const homeContent = await getContentBySlug('home', typedLocale);
   const blocks = asContentBlocks(homeContent?.i18n?.body);
+  const blankChrome = blocksRequestBlankChrome(blocks);
 
   /**
    * The hero's last resort is the store's OWN name, not this CMS's.
@@ -40,6 +42,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
    * is "the slider takes over", not "the banner is gone".
    */
   const leadsWithSlider = blocks[0]?.type === 'slider';
+
+  if (blankChrome) {
+    return (
+      <div data-test-id="full-page-html">
+        <ContentRenderer blocks={blocks} locale={typedLocale} />
+      </div>
+    );
+  }
 
   return (
     <div>

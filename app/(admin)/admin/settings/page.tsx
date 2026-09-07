@@ -65,6 +65,8 @@ export default async function SettingsPage() {
     // dark stylesheet to every visitor whose device is dark.
     themeMode: (s?.themeMode as ThemeMode | null) ?? 'light',
     customCss: s?.customCss ?? '',
+    htmlPasteMode: (s?.htmlPasteMode as SettingsInput['htmlPasteMode']) ?? 'safe',
+    themeDriver: (s?.themeDriver as SettingsInput['themeDriver']) ?? 'builtin',
     comingSoonMode: s?.comingSoonMode ?? false,
     comingSoonMessage: s?.comingSoonMessage ?? '',
     eCommerceEnabled: s?.eCommerceEnabled ?? false,
