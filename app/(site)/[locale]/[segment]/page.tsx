@@ -10,6 +10,9 @@ import { getSettings } from '@/lib/db/queries';
 import { locales, type Locale } from '@/lib/env';
 import { TypeArchive, archiveMetadata } from './type-archive';
 import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
+import { tryRenderThemePack } from '@/lib/themes/present';
+import { ThemePackView } from '@/components/site/theme-pack-view';
+import { contentKindForTypeId } from '@/lib/themes/content-kind';
 
 interface Params {
   params: Promise<{ locale: string; segment: string }>;
@@ -69,8 +72,21 @@ export default async function ContentPage({ params }: Params) {
   // No page by that slug — it may be a content type's index instead.
   if (!loaded) return <TypeArchive locale={locale} prefix={segment} />;
 
-  const { i18n } = loaded.record;
+  const { i18n, content: contentRow } = loaded.record;
   const blocks = asContentBlocks(i18n?.body);
+
+  const kind = await contentKindForTypeId(contentRow.typeId);
+  const themed = await tryRenderThemePack({
+    kind,
+    locale: loaded.locale,
+    title: i18n?.title ?? segment,
+    excerpt: i18n?.excerpt,
+    slug: segment,
+    body: i18n?.body,
+  });
+  if (themed) {
+    return <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />;
+  }
 
   if (blocksRequestBlankChrome(blocks)) {
     return (

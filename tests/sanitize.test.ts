@@ -196,10 +196,10 @@ describe('html paste pipeline', () => {
 });
 
 describe('theme driver foundation', () => {
-  it('accepts builtin and rejects unimplemented html-pack at settings boundary', () => {
+  it('accepts builtin and html-pack at settings boundary', () => {
     expect(themeDriverSchema.parse('builtin')).toBe('builtin');
     expect(isThemeDriverImplemented('builtin')).toBe(true);
-    expect(isThemeDriverImplemented('html-pack')).toBe(false);
+    expect(isThemeDriverImplemented('html-pack')).toBe(true);
 
     const base = {
       siteName: 'Shop',
@@ -208,7 +208,7 @@ describe('theme driver foundation', () => {
       currency: 'JOD',
     };
     expect(settingsSchema.parse({ ...base, themeDriver: 'builtin' }).themeDriver).toBe('builtin');
-    expect(settingsSchema.safeParse({ ...base, themeDriver: 'html-pack' }).success).toBe(false);
+    expect(settingsSchema.parse({ ...base, themeDriver: 'html-pack' }).themeDriver).toBe('html-pack');
   });
 
   it('defaults htmlPasteMode to safe', () => {

@@ -10,21 +10,15 @@ Single-repo plan (no `cms-package` fork). Baseline tag: `v1.0.0-baseline`.
 - Block flags: `isolate`, `fullPage` (blank chrome)
 - Migration `0016_paste_html_v2`
 
-## Phase 2 — HTML theme zip v1 (next)
+## Phase 2 — HTML theme zip v1 ✅
 
-Package format (draft):
-
-```text
-theme.zip
-  theme.json          # name, version, templates map
-  assets/
-  templates/          # layout, home, page, post
-  partials/           # header, footer
-```
-
-Scope for v1: marketing pages + home + blog. Cart, checkout, account stay on builtin React.
-
-Needs: zip validate/store, template engine (Liquid/Handlebars-class), route→template map, asset serving, activate/rollback to builtin.
+- Package: `theme.json` + `templates/` + `partials/` + `assets/`
+- Upload / activate / delete via Settings → Appearance (`ThemesPanel`)
+- Liquid templates for `home` | `page` | `post` | `blog`
+- Cart, checkout, account, shop stay on builtin React
+- Sample pack: `themes/samples/minimal.zip`
+- Migration `0017_html_theme_packs`
+- Static assets: `/theme-assets/{themeId}/...`
 
 ## Phase 3 — PHP theme convert
 

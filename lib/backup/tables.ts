@@ -57,6 +57,7 @@ export const BACKUP_TABLES = [
   'media_folders',
   'media_assets',
   'settings',
+  'themes',
   'form_submissions',
   'audit_log',
   'users',

@@ -13,7 +13,8 @@ dist/
 .env.*.local
 
 # Local uploads — user content, not source
-public/uploads/
+data/themes/
+
 
 # Rendered mail from the log driver — holds real customer names and addresses
 .mail-outbox/

@@ -353,7 +353,7 @@ export const settings = pgTable('settings', {
    */
   htmlPasteMode: varchar('html_paste_mode', { length: 16 }).default('safe'),
   /**
-   * Storefront driver: builtin (React) today; html-pack reserved for theme zips.
+   * Storefront driver: builtin (React) or html-pack (uploaded theme zip).
    */
   themeDriver: varchar('theme_driver', { length: 16 }).default('builtin'),
   comingSoonMode: boolean('coming_soon_mode').default(false),
@@ -416,6 +416,22 @@ export const settings = pgTable('settings', {
   whatsappNumber: varchar('whatsapp_number', { length: 32 }),
   /** Opening line. Blank means the chat opens empty, which is fine. */
   whatsappGreeting: text('whatsapp_greeting'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ─── HTML THEME PACKS ─────────────────────────────────────
+/**
+ * Uploaded HTML theme zips (marketing storefront). Files live under
+ * THEMES_DIR/{id}/; this row is the catalogue + active flag.
+ */
+export const themes = pgTable('themes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 100 }).notNull(),
+  version: varchar('version', { length: 32 }).notNull(),
+  /** Parsed theme.json */
+  manifest: jsonb('manifest').notNull(),
+  isActive: boolean('is_active').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

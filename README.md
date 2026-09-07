@@ -9,14 +9,14 @@ Tag **`v1.0.0-baseline`** marks the stable product before the theme-engine inves
 | Driver | Status |
 |--------|--------|
 | `builtin` | Live — React storefront (default) |
-| `html-pack` | Reserved — HTML theme zip runtime (next) |
+| `html-pack` | Live — uploaded HTML theme zip for marketing pages |
 
 ## Paste HTML v2 (shipped)
 
 Settings → Appearance:
 
 - **HTML paste mode:** `safe` (default) · `designer` · `trusted`
-- **Storefront driver:** Builtin React (HTML packs coming next)
+- **Storefront driver:** Builtin React or HTML pack
 
 HTML blocks in the page editor:
 
@@ -24,6 +24,24 @@ HTML blocks in the page editor:
 - **Full page** — hides site chrome (nav, footer, announcement, WhatsApp) for legacy full-page pastes
 
 Scripts, event handlers, and dangerous URLs are always stripped.
+
+## HTML theme packs (shipped)
+
+Upload a `theme.zip` under Settings → Appearance:
+
+```text
+theme.zip
+  theme.json
+  templates/   layout.html, home.html, page.html, post.html, blog.html
+  partials/    header.html, footer.html
+  assets/      theme.css, …
+```
+
+Liquid variables: `site`, `page`, `navigation`, `posts`, `locale`, `dir`, `content`.  
+Asset filter: `{{ 'assets/theme.css' | asset }}`.  
+Sample: `themes/samples/minimal.zip`.
+
+Shop, cart, checkout, and account always use the builtin React storefront.
 
 ## Run locally
 

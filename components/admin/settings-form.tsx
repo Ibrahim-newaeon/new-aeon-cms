@@ -10,6 +10,7 @@ import { MediaField } from './media-field';
 import { useT } from './i18n-provider';
 import { BackupPanel } from './backup-panel';
 import { ThemeEditor } from './theme-editor';
+import { ThemesPanel } from './themes-panel';
 import type { ThemeMode } from '@/lib/theme/slots';
 import { ADMIN_ACCENT_FALLBACK } from '@/lib/theme/admin-brand';
 import type { MessageKey } from '@/lib/admin-i18n';
@@ -474,11 +475,11 @@ export function SettingsForm({
                 data-test-id="settings-theme-driver"
               >
                 <option value="builtin">{t('settings.themeDriver.builtin')}</option>
-                <option value="html-pack" disabled>
-                  {t('settings.themeDriver.html-pack')}
-                </option>
+                <option value="html-pack">{t('settings.themeDriver.html-pack')}</option>
               </select>
             </Field>
+
+            <ThemesPanel />
           </>
         )}
 

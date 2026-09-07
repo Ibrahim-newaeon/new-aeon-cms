@@ -1,0 +1,11 @@
+<section class="pack-blog">
+  <h1>{{ page.title }}</h1>
+  <ul class="pack-post-list">
+    {% for post in posts %}
+    <li>
+      <a href="{{ post.url }}">{{ post.title }}</a>
+      {% if post.excerpt %}<p>{{ post.excerpt }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { listByType } from '@/lib/db/archives';
 import { ArchiveList } from '@/components/site/archive-list';
 import { locales, type Locale } from '@/lib/env';
+import { tryRenderThemePack } from '@/lib/themes/present';
+import { ThemePackView } from '@/components/site/theme-pack-view';
 
 const COPY = {
   ar: { title: 'المدونة', empty: 'لا توجد مقالات منشورة بعد.' },
@@ -26,6 +28,21 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
 
   const entries = await listByType('post', typedLocale);
   const copy = COPY[typedLocale];
+
+  const themed = await tryRenderThemePack({
+    kind: 'blog',
+    locale: typedLocale,
+    title: copy.title,
+    body: [],
+    posts: entries.map((e) => ({
+      title: e.title,
+      excerpt: e.excerpt,
+      url: `/${typedLocale}/${e.slug}`,
+    })),
+  });
+  if (themed) {
+    return <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />;
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">

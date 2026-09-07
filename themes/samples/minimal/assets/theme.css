@@ -1,0 +1,18 @@
+.pack-header, .pack-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+.pack-footer { border-bottom: 0; border-top: 1px solid #e5e5e5; margin-top: 3rem; }
+.pack-brand { font-weight: 700; text-decoration: none; color: inherit; }
+.pack-nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+.pack-nav a { text-decoration: none; color: inherit; opacity: 0.8; }
+.pack-main { max-width: 48rem; margin: 0 auto; padding: 2rem 1.5rem; }
+.pack-hero { margin-bottom: 2rem; }
+.pack-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; opacity: 0.6; }
+.pack-lead { opacity: 0.75; font-size: 1.125rem; }
+.pack-post-list { list-style: none; padding: 0; }
+.pack-post-list li { padding: 1rem 0; border-bottom: 1px solid #eee; }

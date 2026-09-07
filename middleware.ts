@@ -99,6 +99,9 @@ export async function middleware(request: NextRequest) {
   // error — so a fresh install could not reach its own installer.
   if (pathname === '/setup') return next();
 
+  // Extracted HTML theme pack assets (outside the locale tree).
+  if (pathname.startsWith('/theme-assets/')) return next();
+
   // API routes authenticate themselves via lib/auth/api-guard — middleware
   // cannot, because it must not import Node-only modules. Still apply CSP.
   if (pathname.startsWith('/api/')) return next();

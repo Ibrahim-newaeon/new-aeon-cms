@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import { locales, type Locale } from '@/lib/env';
 import { asContentBlocks } from '@/lib/blocks/content-schema';
 import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
+import { tryRenderThemePack } from '@/lib/themes/present';
+import { ThemePackView } from '@/components/site/theme-pack-view';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -31,6 +33,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
    */
   const settings = await getSettings();
   const fallbackTitle = settings?.siteName?.trim() || 'New Aeon';
+
+  const themed = await tryRenderThemePack({
+    kind: 'home',
+    locale: typedLocale,
+    title: homeContent?.i18n?.title || fallbackTitle,
+    excerpt: homeContent?.i18n?.excerpt || settings?.siteDescription,
+    slug: 'home',
+    body: homeContent?.i18n?.body,
+  });
+  if (themed) {
+    return <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />;
+  }
 
   /**
    * A slider in the first position IS the hero.

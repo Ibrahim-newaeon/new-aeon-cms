@@ -26,6 +26,8 @@ import { getDefaultLocale } from '@/lib/default-locale';
 import { SiteSchema } from '@/components/site/site-schema';
 import { WhatsAppButton } from '@/components/site/whatsapp-button';
 import { resolveChromeMode } from '@/lib/site/chrome';
+import { resolveStorefrontPresentation } from '@/lib/themes/active';
+import { themeableKindForPath } from '@/lib/themes/package';
 import '../../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -167,7 +169,11 @@ export default async function SiteLayout({
 
   const pathname = headerList.get('x-pathname') ?? `/${typedLocale}`;
   const chromeMode = await resolveChromeMode(pathname);
-  const showChrome = chromeMode === 'default';
+  const presentation = await resolveStorefrontPresentation();
+  const themable = themeableKindForPath(pathname, locales);
+  const showChrome =
+    chromeMode === 'default' &&
+    !(presentation.driver === 'html-pack' && themable !== null);
 
 
   return (
