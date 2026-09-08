@@ -79,6 +79,15 @@ const envSchema = z.object({
    */
   WHITE_LABEL: z.enum(['true', 'false']).optional(),
 
+  /**
+   * Paddle Billing (hosted checkout for card + wallets). Both API key and
+   * webhook secret required to offer online payment; COD remains available.
+   * Store currency must be on Paddle's list (USD/EUR/… — not JOD/SAR/AED).
+   */
+  PADDLE_API_KEY: z.string().min(1).optional(),
+  PADDLE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  PADDLE_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
@@ -115,6 +124,17 @@ const withStorageRules = envSchema.superRefine((cfg, ctx) => {
     require('TWILIO_ACCOUNT_SID', 'SMS_DRIVER=twilio');
     require('TWILIO_AUTH_TOKEN', 'SMS_DRIVER=twilio');
     require('TWILIO_FROM_NUMBER', 'SMS_DRIVER=twilio');
+  }
+
+  // Paddle: half-configured secrets must fail at boot, not mid-checkout.
+  const paddleKey = Boolean(cfg.PADDLE_API_KEY);
+  const paddleWebhook = Boolean(cfg.PADDLE_WEBHOOK_SECRET);
+  if (paddleKey !== paddleWebhook) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [paddleKey ? 'PADDLE_WEBHOOK_SECRET' : 'PADDLE_API_KEY'],
+      message: 'PADDLE_API_KEY and PADDLE_WEBHOOK_SECRET must both be set (or both unset)',
+    });
   }
 
   // Production SMS: refuse silent console OTP unless explicitly allowed.

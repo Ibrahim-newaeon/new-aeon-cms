@@ -188,6 +188,12 @@ export default async function SiteLayout({
         {/* GTM requires its noscript iframe first inside <body>. */}
         <TrackingNoScript gtmId={settings?.gtmId} />
         <NextIntlClientProvider messages={messages} locale={typedLocale}>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-site-surface focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-site-ink focus:shadow-lg"
+          >
+            {typedLocale === 'ar' ? 'تخطّي إلى المحتوى' : 'Skip to content'}
+          </a>
           <div className="min-h-screen flex flex-col">
             {staffPreview && (
                 <p className="bg-[var(--site-accent)] px-4 py-2 text-center text-sm font-medium text-[var(--site-accent-ink)]">
@@ -220,7 +226,9 @@ export default async function SiteLayout({
                 and break any position: sticky inside it. This absorbs the few
                 pixels a full-bleed block overhangs by, because 100vw counts
                 the scrollbar and the visible area does not. */}
-            <main className="flex-1 overflow-x-clip">{children}</main>
+            <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-clip outline-none">
+              {children}
+            </main>
 
             {/* A link, not a widget. Renders nothing when no number is set. */}
             {showChrome && <WhatsAppButton locale={typedLocale} />}

@@ -22,10 +22,16 @@ const COPY = {
     coupon: 'كود الخصم',
     apply: 'تطبيق',
     subtotal: 'المجموع الفرعي',
-    place: 'تأكيد الطلب — الدفع عند الاستلام',
+    placeCod: 'تأكيد الطلب — الدفع عند الاستلام',
+    placePay: 'المتابعة إلى الدفع',
     placing: 'جارٍ إرسال الطلب…',
     shippingNote: 'تُحتسب أجرة التوصيل بعد اختيار المحافظة عند تأكيد الطلب.',
     codNote: 'الدفع نقداً عند استلام الطلب.',
+    payNote: 'ستُحوَّل إلى صفحة دفع آمنة (بطاقة أو محفظة).',
+    payment: 'طريقة الدفع',
+    cod: 'الدفع عند الاستلام',
+    card: 'بطاقة ائتمان / خصم',
+    wallet: 'محفظة رقمية (Apple Pay / Google Pay / PayPal)',
   },
   en: {
     title: 'Checkout',
@@ -41,10 +47,16 @@ const COPY = {
     coupon: 'Discount code',
     apply: 'Apply',
     subtotal: 'Subtotal',
-    place: 'Place order — cash on delivery',
+    placeCod: 'Place order — cash on delivery',
+    placePay: 'Continue to payment',
     placing: 'Placing your order…',
     shippingNote: 'Delivery is calculated from your governorate when you confirm.',
     codNote: 'Payment is in cash when your order arrives.',
+    payNote: 'You will continue on a secure payment page (card or wallet).',
+    payment: 'Payment method',
+    cod: 'Cash on delivery',
+    card: 'Credit / debit card',
+    wallet: 'Digital wallet (Apple Pay / Google Pay / PayPal)',
   },
 } as const;
 
@@ -55,6 +67,7 @@ export function CheckoutForm({
   token,
   regions,
   prefill,
+  onlinePayments = false,
 }: {
   locale: 'ar' | 'en';
   currency: string;
@@ -80,12 +93,15 @@ export function CheckoutForm({
     name?: string; phone?: string; governorate?: string;
     city?: string; addressLine?: string; landmark?: string | null;
   } | null;
+  /** When true, card/wallet options appear (Paddle configured + supported currency). */
+  onlinePayments?: boolean;
 }) {
   const router = useRouter();
   const copy = COPY[locale];
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState<string[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'wallet'>('cod');
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -114,6 +130,7 @@ export function CheckoutForm({
           couponCode: form.get('couponCode') || undefined,
           locale,
           token,
+          paymentMethod: onlinePayments ? paymentMethod : 'cod',
         }),
       });
 
@@ -124,12 +141,25 @@ export function CheckoutForm({
         throw new Error(data?.error?.message ?? 'تعذّر إتمام الطلب.');
       }
 
+      if (typeof data.data?.paymentUrl === 'string' && data.data.paymentUrl) {
+        window.location.assign(data.data.paymentUrl);
+        return;
+      }
+
+      if (typeof data.data?.paymentError === 'string') {
+        setError(data.data.paymentError);
+        router.push(`/${locale}/order/${data.data.orderNumber}`);
+        return;
+      }
+
       router.push(`/${locale}/order/${data.data.orderNumber}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر إتمام الطلب.');
       setSaving(false);
     }
   };
+
+  const placeLabel = onlinePayments && paymentMethod !== 'cod' ? copy.placePay : copy.placeCod;
 
   return (
     <form onSubmit={submit} method="post" className="grid gap-8 lg:grid-cols-3" data-test-id="checkout-form">
@@ -190,7 +220,37 @@ export function CheckoutForm({
           </span>
         </div>
         <p className="text-xs text-site-ink-muted">{copy.shippingNote}</p>
-        <p className="text-xs text-site-ink-muted">{copy.codNote}</p>
+
+        {onlinePayments ? (
+          <fieldset className="space-y-2" data-test-id="checkout-payment-method">
+            <legend className="mb-1 text-sm text-site-ink-muted">{copy.payment}</legend>
+            {(
+              [
+                ['cod', copy.cod],
+                ['card', copy.card],
+                ['wallet', copy.wallet],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className="flex cursor-pointer items-start gap-2 text-sm text-site-ink">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={value}
+                  checked={paymentMethod === value}
+                  onChange={() => setPaymentMethod(value)}
+                  className="mt-1"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <p className="text-xs text-site-ink-muted">{copy.codNote}</p>
+        )}
+
+        {onlinePayments && paymentMethod !== 'cod' && (
+          <p className="text-xs text-site-ink-muted">{copy.payNote}</p>
+        )}
 
         {unavailable.length > 0 && (
           <ul role="alert" className="space-y-1 text-sm text-site-danger">
@@ -203,7 +263,7 @@ export function CheckoutForm({
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-site-accent px-6 py-3 text-sm font-medium text-site-accent-ink hover:bg-site-accent-hover disabled:opacity-50"
           data-test-id="checkout-submit">
           {saving && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-          {saving ? copy.placing : copy.place}
+          {saving ? copy.placing : placeLabel}
         </button>
       </aside>
     </form>

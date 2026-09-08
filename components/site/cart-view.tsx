@@ -181,21 +181,28 @@ export function CartViewClient({
         <p className="mt-2 text-xs text-site-ink-muted">{copy.shippingNote}</p>
 
         {cart.hasUnavailable && (
-          <p className="mt-3 text-sm text-site-danger">{copy.fixFirst}</p>
+          <p className="mt-3 text-sm text-site-danger" role="alert">{copy.fixFirst}</p>
         )}
 
-        <Link
-          href={cart.hasUnavailable || cart.itemCount === 0 ? '#' : `/${locale}/checkout`}
-          aria-disabled={cart.hasUnavailable || cart.itemCount === 0}
-          className={`mt-4 block rounded-lg px-6 py-3 text-center text-sm font-medium text-site-ink-inverted ${
-            cart.hasUnavailable || cart.itemCount === 0
-              ? 'pointer-events-none bg-site-line'
-              : 'bg-site-accent hover:bg-site-accent-hover'
-          }`}
-          data-test-id="cart-checkout"
-        >
-          {pending ? '…' : copy.checkout}
-        </Link>
+        {cart.hasUnavailable || cart.itemCount === 0 ? (
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="mt-4 block w-full cursor-not-allowed rounded-lg bg-site-line px-6 py-3 text-center text-sm font-medium text-site-ink-inverted"
+            data-test-id="cart-checkout"
+          >
+            {pending ? '…' : copy.checkout}
+          </button>
+        ) : (
+          <Link
+            href={`/${locale}/checkout`}
+            className="mt-4 block rounded-lg bg-site-accent px-6 py-3 text-center text-sm font-medium text-site-ink-inverted hover:bg-site-accent-hover"
+            data-test-id="cart-checkout"
+          >
+            {pending ? '…' : copy.checkout}
+          </Link>
+        )}
       </aside>
     </div>
   );

@@ -99,7 +99,7 @@ export function ProfileForm({
         </span>
       </label>
 
-      {error && <p className="text-sm text-site-danger" data-test-id="profile-error">{error}</p>}
+      {error && <p className="text-sm text-site-danger" role="alert" data-test-id="profile-error">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className="site-btn-primary" data-test-id="profile-save">

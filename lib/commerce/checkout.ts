@@ -53,12 +53,15 @@ function applyCoupon(
  * The caller passes ONLY the cart cookie, an address and a coupon code. No price
  * or total crosses the boundary — every figure below is read from the database.
  */
+export type PlaceOrderPaymentMethod = 'cod' | 'card' | 'wallet';
+
 export async function placeOrder(
   cart: CartCookie,
   address: CheckoutAddress,
   couponCode: string | undefined,
   locale: 'ar' | 'en',
-  idempotencyKey: string
+  idempotencyKey: string,
+  paymentMethod: PlaceOrderPaymentMethod = 'cod'
 ): Promise<CheckoutResult> {
   // A repeat submit must return the original order, not place a second one.
   // Checked here for the common case; the UNIQUE index below is what actually
@@ -222,7 +225,8 @@ export async function placeOrder(
         landmark: address.landmark || null,
         notes: address.notes || null,
         couponCode: couponRow?.code ?? null,
-        paymentMethod: 'cod',
+        paymentMethod,
+        // Online methods stay pending until Paddle webhook marks paid/failed.
         paymentStatus: 'pending',
       })
       .returning({ id: orders.id });

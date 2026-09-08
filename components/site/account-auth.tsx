@@ -270,7 +270,7 @@ export function AccountAuth({ locale }: { locale: 'ar' | 'en' }) {
         </button>
       )}
 
-      {error && <p className="mt-3 text-sm text-site-danger" data-test-id="account-error">{error}</p>}
+      {error && <p className="mt-3 text-sm text-site-danger" role="alert" data-test-id="account-error">{error}</p>}
     </div>
   );
 }

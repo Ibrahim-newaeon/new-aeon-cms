@@ -231,16 +231,19 @@ export function OrderDetail({
             <p className="mb-3 text-xs text-[var(--admin-text-muted)]">
               {t('order.paymentHint')}
             </p>
-            <select
-              value={order.paymentStatus}
-              disabled={busy}
-              onChange={(e) => patch({ action: 'payment', paymentStatus: e.target.value })}
-              className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] disabled:opacity-50"
-            >
-              {PAYMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>{PAYMENT_LABEL[s][locale]}</option>
-              ))}
-            </select>
+            <label className="block">
+              <span className="sr-only">{t('order.paymentStatus')}</span>
+              <select
+                value={order.paymentStatus}
+                disabled={busy}
+                onChange={(e) => patch({ action: 'payment', paymentStatus: e.target.value })}
+                className="w-full rounded-lg border border-[var(--admin-line)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] disabled:opacity-50"
+              >
+                {PAYMENT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{PAYMENT_LABEL[s][locale]}</option>
+                ))}
+              </select>
+            </label>
           </Card>
         </div>
       </div>

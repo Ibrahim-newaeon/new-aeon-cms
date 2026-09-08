@@ -24,8 +24,8 @@ Before pointing a client domain at this app:
 
 ## Explicitly not included (sell honestly)
 
-- Card / wallet payments — COD only today
+- Card / wallet payments — optional via **Paddle Billing** (see `.env.example`); COD always available. Paddle does not support JOD/SAR/AED — store currency must be on Paddle’s list (e.g. USD)
 - Running PHP themes live — convert to HTML packs only
 - Multi-tenant SaaS — one licence, one production instance
 
-See also `.env.example` and `docs/sales.md`.
+See also `.env.example` and `docs/sales.md`. For Railway migrate failures see **[docs/railway-migrate.md](railway-migrate.md)**.

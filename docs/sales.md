@@ -18,7 +18,7 @@ One-page overview for sales and client kickoff.
 
 ## Not included (today)
 
-- Online card or wallet payments (enums exist; checkout is COD)
+- Online card or wallet payments **unless** Paddle is configured (`PADDLE_API_KEY` + webhook) and Settings → currency is Paddle-supported (USD/EUR/… — not JOD/SAR/AED). COD remains the default path.
 - Live PHP theme runtime
 - Multi-tenant hosting (one instance per licence)
 - SMS by default — wire Twilio (or allow console SMS only for emergencies)

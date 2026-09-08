@@ -9,6 +9,7 @@ import { CheckoutForm } from '@/components/site/checkout-form';
 import { getShippingRegions } from '@/lib/commerce/regions';
 import { checkoutPrefill } from '@/lib/account/prefill';
 import { locales, type Locale } from '@/lib/env';
+import { onlinePaymentsEnabled } from '@/lib/payments';
 
 /**
  * Locale-aware because static `metadata` is not: Next evaluates it once,
@@ -45,6 +46,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
   // Signed and rendered into the form. A cookie cannot be set during a Server
   // Component render, and would collide across tabs anyway.
   const token = await mintCheckoutToken();
+  const currency = settings?.currency ?? 'JOD';
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
@@ -55,9 +57,10 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
         regions={await getShippingRegions()}
         prefill={await checkoutPrefill()}
         locale={typedLocale}
-        currency={settings?.currency ?? 'JOD'}
+        currency={currency}
         subtotal={cart.subtotal}
         token={token}
+        onlinePayments={onlinePaymentsEnabled(currency)}
       />
     </div>
   );

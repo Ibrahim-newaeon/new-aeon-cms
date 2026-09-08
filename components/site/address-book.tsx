@@ -167,7 +167,7 @@ export function AddressBook({
             <input type="checkbox" name="isDefault" data-test-id="address-is-default" />
             {c.makeDefault}
           </label>
-          {error && <p className="text-sm text-site-danger" data-test-id="address-error">{error}</p>}
+          {error && <p className="text-sm text-site-danger" role="alert" data-test-id="address-error">{error}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={busy} className="site-btn-primary" data-test-id="address-save">
               {busy && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}

@@ -30,6 +30,7 @@ export function ShopFilterSheet({
 }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -43,8 +44,31 @@ export function ShopFilterSheet({
   useEffect(() => {
     if (!open) return;
 
+    const panel = panelRef.current;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab' || !panel) return;
+
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
 
@@ -52,22 +76,25 @@ export function ShopFilterSheet({
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    panelRef.current?.focus();
+    panel?.focus();
 
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previous;
+      openButtonRef.current?.focus();
     };
   }, [open]);
 
   return (
     <div className="lg:hidden">
       <button
+        ref={openButtonRef}
         type="button"
         onClick={() => setOpen(true)}
         className="site-btn-outline inline-flex items-center gap-2 py-1.5 text-sm"
         data-test-id="shop-filter-open"
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         <SlidersHorizontal size={16} aria-hidden="true" />
         {label}
@@ -92,7 +119,7 @@ export function ShopFilterSheet({
             aria-modal="true"
             aria-label={label}
             tabIndex={-1}
-            className="relative max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-site-surface p-4 pb-8 shadow-xl"
+            className="relative max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-site-surface p-4 pb-8 shadow-xl outline-none"
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold text-site-ink">{label}</h2>

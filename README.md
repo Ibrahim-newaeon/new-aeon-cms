@@ -1,6 +1,6 @@
 # New Aeon CMS
 
-Bilingual (Arabic/English) CMS and COD e-commerce platform. Next.js 15, PostgreSQL/Drizzle, Redis rate limits, S3-compatible media.
+Bilingual (Arabic/English) CMS and COD e-commerce platform (optional **Paddle** card/wallet checkout). Next.js 15, PostgreSQL/Drizzle, Redis rate limits, S3-compatible media.
 
 ## Baseline
 
@@ -53,13 +53,16 @@ then activate like any other pack. Sample: `themes/samples/php-starter.zip`.
 
 See **[docs/production.md](docs/production.md)** for the deploy checklist and
 **[docs/sales.md](docs/sales.md)** for what is / is not included.
+Railway migrate failures: **[docs/railway-migrate.md](docs/railway-migrate.md)**.
 
 Highlights:
 
 - Set `REDIS_URL` in production (or `ALLOW_IN_MEMORY_RATE_LIMIT=true` for one instance)
 - Set `SMS_DRIVER=twilio` for customer OTP (or allow console SMS explicitly)
+- Optional online pay: `PADDLE_API_KEY` + `PADDLE_WEBHOOK_SECRET` (currency must be Paddle-supported — not JOD)
 - Use `STORAGE_DRIVER=s3` and a real mail driver — not `log`
 - Never seed a public URL with default passwords
+- Schema tables live under `lib/db/schema/` (barrel at `lib/db/schema.ts`)
 
 ## Run locally
 

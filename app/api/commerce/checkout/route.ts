@@ -11,6 +11,13 @@ import { getShippingRegions, getStoreCountry } from '@/lib/commerce/regions';
 import type { CountryCode } from 'libphonenumber-js';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 import { notifyOrderPlaced } from '@/lib/email/notify';
+import { getSettings } from '@/lib/db/queries';
+import { env } from '@/lib/env';
+import {
+  createPaddleCheckout,
+  isCheckoutPaymentMethod,
+  onlinePaymentsEnabled,
+} from '@/lib/payments';
 
 export const runtime = 'nodejs';
 
@@ -24,24 +31,32 @@ export const runtime = 'nodejs';
  * and which regions exist both depend on the store's own settings, and a shop
  * that changes country must not need a redeploy to accept its customers.
  */
-const buildCheckoutSchema = (country: CountryCode, regions: readonly ShippingRegion[]) =>
+const buildCheckoutSchema = (
+  country: CountryCode,
+  regions: readonly ShippingRegion[],
+  onlineEnabled: boolean
+) =>
   z.object({
-  name: z.string().trim().min(2, 'الاسم مطلوب').max(255),
-  phone: z.string().trim().refine((v) => isValidMobile(v, country), 'رقم هاتف غير صالح'),
-  email: z.union([z.literal(''), z.string().email('بريد غير صالح')]).optional(),
-  governorate: z.string().refine((v) => isRegionOf(regions, v), 'اختر المحافظة'),
-  city: z.string().trim().min(2, 'المدينة مطلوبة').max(100),
-  addressLine: z.string().trim().min(5, 'العنوان مطلوب').max(500),
-  landmark: z.string().trim().max(255).optional(),
-  notes: z.string().trim().max(1000).optional(),
-  couponCode: z.string().trim().max(50).optional(),
-  locale: z.enum(['ar', 'en']).default('ar'),
-  /**
-   * One-time token, so a double-submitted form cannot create two orders.
-   * A signed JWT, ~200 characters — not the UUID an earlier draft minted.
-   */
-  token: z.string().min(20).max(1024),
-});
+    name: z.string().trim().min(2, 'الاسم مطلوب').max(255),
+    phone: z.string().trim().refine((v) => isValidMobile(v, country), 'رقم هاتف غير صالح'),
+    email: z.union([z.literal(''), z.string().email('بريد غير صالح')]).optional(),
+    governorate: z.string().refine((v) => isRegionOf(regions, v), 'اختر المحافظة'),
+    city: z.string().trim().min(2, 'المدينة مطلوبة').max(100),
+    addressLine: z.string().trim().min(5, 'العنوان مطلوب').max(500),
+    landmark: z.string().trim().max(255).optional(),
+    notes: z.string().trim().max(1000).optional(),
+    couponCode: z.string().trim().max(50).optional(),
+    locale: z.enum(['ar', 'en']).default('ar'),
+    /**
+     * One-time token, so a double-submitted form cannot create two orders.
+     * A signed JWT, ~200 characters — not the UUID an earlier draft minted.
+     */
+    token: z.string().min(20).max(1024),
+    paymentMethod: z
+      .string()
+      .default('cod')
+      .refine((v) => isCheckoutPaymentMethod(v, onlineEnabled), 'طريقة الدفع غير متاحة'),
+  });
 
 const FAILURE_MESSAGE: Record<string, string> = {
   EMPTY_CART: 'سلتك فارغة.',
@@ -87,8 +102,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [country, regions] = await Promise.all([getStoreCountry(), getShippingRegions()]);
-    const data = buildCheckoutSchema(country, regions).parse(await request.json());
+    const [country, regions, settings] = await Promise.all([
+      getStoreCountry(),
+      getShippingRegions(),
+      getSettings(),
+    ]);
+    const currency = settings?.currency ?? 'JOD';
+    const onlineEnabled = onlinePaymentsEnabled(currency);
+    const data = buildCheckoutSchema(country, regions, onlineEnabled).parse(await request.json());
+    const paymentMethod = isCheckoutPaymentMethod(data.paymentMethod, onlineEnabled)
+      ? data.paymentMethod
+      : 'cod';
 
     // The token is signed by us; its jti becomes the idempotency key, and the
     // UNIQUE index on orders.idempotency_key makes a repeat submit return the
@@ -116,7 +140,8 @@ export async function POST(request: Request) {
       },
       data.couponCode,
       data.locale,
-      idempotencyKey
+      idempotencyKey,
+      paymentMethod
     );
 
     if (!result.ok) {
@@ -154,9 +179,53 @@ export async function POST(request: Request) {
     // something must still be able to see what they bought.
     await rememberOrder(result.orderNumber);
 
+    // Online: redirect to Paddle hosted checkout. Order stays paymentStatus
+    // pending until the webhook marks it paid (or failed).
+    if (paymentMethod !== 'cod' && !result.duplicate) {
+      try {
+        const returnUrl = `${env.NEXT_PUBLIC_APP_URL}/${data.locale}/order/${result.orderNumber}`;
+        const session = await createPaddleCheckout({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          totalMinor: result.total,
+          currency,
+          customerEmail: data.email || null,
+          locale: data.locale,
+          returnUrl,
+        });
+        return NextResponse.json({
+          success: true,
+          data: {
+            orderNumber: result.orderNumber,
+            duplicate: false,
+            paymentUrl: session.url,
+            paymentMethod,
+          },
+        });
+      } catch (err) {
+        console.error('Paddle checkout create failed:', err);
+        return NextResponse.json({
+          success: true,
+          data: {
+            orderNumber: result.orderNumber,
+            duplicate: false,
+            paymentMethod,
+            paymentError:
+              data.locale === 'ar'
+                ? 'تم إنشاء الطلب لكن تعذّر فتح الدفع الإلكتروني. تواصل معنا لإتمام الدفع.'
+                : 'Order placed, but online payment could not be started. Contact us to pay.',
+          },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: { orderNumber: result.orderNumber, duplicate: result.duplicate ?? false },
+      data: {
+        orderNumber: result.orderNumber,
+        duplicate: result.duplicate ?? false,
+        paymentMethod,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
