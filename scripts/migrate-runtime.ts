@@ -40,5 +40,12 @@ main().catch((err) => {
   // Loud and non-zero: Railway aborts the release rather than promoting a
   // container whose schema does not match its code.
   console.error('❌ migration failed:', err instanceof Error ? err.message : err);
+  // Drizzle's message is only "Failed query: <sql>". Postgres's reason — the
+  // part that says WHY (42P07 already exists, 42501 permission denied) — is on
+  // `cause`, and without it a crash-looping deploy is undiagnosable from logs.
+  const cause = err instanceof Error ? (err.cause as { code?: string; message?: string; detail?: string } | undefined) : undefined;
+  if (cause) {
+    console.error(`   postgres ${cause.code ?? '?'}: ${cause.message ?? cause}${cause.detail ? ` — ${cause.detail}` : ''}`);
+  }
   process.exit(1);
 });
