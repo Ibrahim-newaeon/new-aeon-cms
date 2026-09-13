@@ -64,6 +64,11 @@ jobs:
       AVAILABLE_LOCALES: ar,en
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
       MAIL_DRIVER: log
+      # The browser suite serves a production build, and production refuses to
+      # send a phone code through the log driver (request-code returns 503).
+      # The specs seed codes straight into customer_otp, so they only need the
+      # request to be accepted — never set this on a real deploy.
+      ALLOW_CONSOLE_SMS: 'true'
       STORAGE_DRIVER: local
       # next start refuses to serve a standalone build, and the browser suite's
       # webServer is exactly that.
