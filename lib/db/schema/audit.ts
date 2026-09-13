@@ -1,10 +1,5 @@
 // lib/db/schema/audit.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
-} from 'drizzle-orm/pg-core';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { pgTable, uuid, varchar, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { users } from './auth';
 
 // ─── AUDIT LOG ────────────────────────────────────────────

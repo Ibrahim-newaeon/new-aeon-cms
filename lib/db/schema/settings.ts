@@ -1,8 +1,5 @@
 // lib/db/schema/settings.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb
-} from 'drizzle-orm/pg-core';
+import { pgTable, varchar, text, integer, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import type { Theme } from '../../theme/slots';
 import type { ShippingRegion } from '../../commerce/phone';
 

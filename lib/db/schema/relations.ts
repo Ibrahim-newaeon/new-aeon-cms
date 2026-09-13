@@ -16,7 +16,6 @@ import {
   products,
   productVariants,
   productImages,
-  productOptions,
   productSpecs,
   productCategories,
   productI18n,

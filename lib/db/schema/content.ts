@@ -4,10 +4,8 @@ import {
   timestamp, jsonb, index, uniqueIndex, primaryKey
 } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 import { contentStatusEnum, localeEnum } from './enums';
 import { users } from './auth';
-import { mediaAssets } from './media';
 import type { ContentBlock } from '../../blocks/types';
 
 export const contentTypes = pgTable('content_types', {

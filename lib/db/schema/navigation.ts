@@ -1,10 +1,6 @@
 // lib/db/schema/navigation.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, integer, boolean, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 import { navLocationEnum, localeEnum } from './enums';
 
 // ─── NAVIGATION ───────────────────────────────────────────

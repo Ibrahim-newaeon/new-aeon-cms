@@ -1,10 +1,6 @@
 // lib/db/schema/media.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, integer, timestamp } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 import { users } from './auth';
 
 // ─── MEDIA ──────────────────────────────────────────────

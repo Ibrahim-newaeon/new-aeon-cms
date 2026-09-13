@@ -3,10 +3,8 @@ import {
   pgTable, uuid, varchar, text, integer, boolean,
   timestamp, jsonb, index, uniqueIndex, primaryKey
 } from 'drizzle-orm/pg-core';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { couponTypeEnum, localeEnum, orderStatusEnum, paymentMethodEnum, paymentStatusEnum } from './enums';
-import { mediaAssets } from './media';
 import { categories } from './content';
 import { users } from './auth';
 

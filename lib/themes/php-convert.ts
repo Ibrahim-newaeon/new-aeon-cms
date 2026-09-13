@@ -336,7 +336,9 @@ export async function convertPhpThemeZip(zipBuffer: Buffer): Promise<ConvertedTh
 
     const ext = extOf(entry.name);
     if (ext === '.php' || ext === '.phtml' || ext === '.inc') {
-      let { html, warnings: w } = convertPhpSource(entry.data.toString('utf8'));
+      const converted = convertPhpSource(entry.data.toString('utf8'));
+      let html = converted.html;
+      const w = converted.warnings;
       warnings.push(...w.map((msg) => `${entry.name}: ${msg}`));
       // Layout owns chrome — strip header/footer includes from page templates
       // so activating the pack does not double-render nav.

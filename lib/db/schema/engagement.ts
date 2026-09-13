@@ -1,12 +1,10 @@
 // lib/db/schema/engagement.ts
 import {
   pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
+  timestamp, index, uniqueIndex
 } from 'drizzle-orm/pg-core';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 import { reviewStatusEnum, localeEnum } from './enums';
-import { products, productVariants, customers } from './commerce';
+import { products, productVariants } from './commerce';
 import { users } from './auth';
 import { relations } from 'drizzle-orm';
 

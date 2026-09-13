@@ -1,10 +1,5 @@
 // lib/db/schema/auth.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
-} from 'drizzle-orm/pg-core';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { pgTable, uuid, varchar, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { userRoleEnum } from './enums';
 
 export const users = pgTable('users', {

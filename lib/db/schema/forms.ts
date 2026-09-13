@@ -1,10 +1,5 @@
 // lib/db/schema/forms.ts
-import {
-  pgTable, uuid, varchar, text, integer, boolean,
-  timestamp, jsonb, index, uniqueIndex, primaryKey
-} from 'drizzle-orm/pg-core';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { formTypeEnum, localeEnum } from './enums';
 
 export const formSubmissions = pgTable('form_submissions', {
