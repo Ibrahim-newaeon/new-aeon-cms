@@ -1,0 +1,42 @@
+{#
+  Outer chrome for every themed page.
+
+  Next owns <html>/<body>, so this is a fragment. The original site relied on
+  four classes being on <body> (tt-transition, tt-noise, tt-magic-cursor,
+  tt-smooth-scroll) — theme.js reads them with hasClass(). The CMS renders its
+  own <body>, so the bundle re-applies them at runtime; see the prelude in
+  scripts/build-theme-pack.mjs.
+#}
+<div id="body-inner">
+
+  <div id="al-loader" role="status" aria-live="polite" aria-label="Loading {{ site.name }}">
+    <div class="al-stage">
+      <div class="al-ring al-ring-1"></div>
+      <div class="al-ring al-ring-2"></div>
+      <img src="{{ 'assets/img/al-ai.png' | asset }}" class="al-logo" alt="{{ site.name }}">
+    </div>
+    <div class="al-label">Loading</div>
+  </div>
+
+  <div id="tt-page-transition">
+    <div class="tt-ptr-overlay-top tt-noise"></div>
+    <div class="tt-ptr-overlay-bottom tt-noise"></div>
+    <div class="tt-ptr-preloader">
+      <div class="tt-ptr-prel-content">
+        <img src="{{ 'assets/img/al-ai.png' | asset }}" class="tt-ptr-prel-image" alt="{{ site.name }}">
+      </div>
+    </div>
+  </div>
+
+  <div id="magic-cursor">
+    <div id="ball"></div>
+  </div>
+
+  {% render 'partials/header.html' %}
+
+  <div id="tt-content-wrap">
+    {{ content }}
+    {% render 'partials/footer.html' %}
+  </div>
+
+</div>

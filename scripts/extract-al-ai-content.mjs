@@ -1,0 +1,147 @@
+#!/usr/bin/env node
+// scripts/extract-al-ai-content.mjs
+//
+// Lifts the body of each original al-ai.ai page into a standalone HTML fragment
+// that can be pasted into Admin → Pages as an `html` block.
+//
+// The pack's templates deliberately hold only the chrome. Everything between
+// <div id="tt-content-wrap"> and <footer id="tt-footer"> — the hero and every
+// section — is page CONTENT, so that an editor can change it without a redeploy.
+// This script performs that split once.
+//
+// Two rewrites happen on the way out:
+//
+//   1. Inter-page links lose their .html suffix and gain a locale prefix, so
+//      about.html becomes /en/about. Slugs are mapped explicitly below rather
+//      than derived, because three of them differ in case from their filename
+//      and a lowercasing rule alone would silently produce dead links.
+//
+//   2. Image sources move to /uploads/<prefix>/<file>. Content images cannot
+//      live in the theme pack: content is stored in the database and rendered
+//      without Liquid, so it can never resolve the `asset` filter or the
+//      pack's /theme-assets/<uuid>/ path. The media library is where they go.
+//
+// Usage:
+//   node scripts/extract-al-ai-content.mjs --src <dir-of-html> --out <dir> [--locale en] [--prefix al-ai]
+
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+
+/** Original filename → CMS slug. Home is '' because it renders at /<locale>. */
+const SLUGS = {
+  'index.html': '',
+  'about.html': 'about',
+  'services.html': 'services',
+  'contact.html': 'contact',
+  'data-driven.html': 'data-driven',
+  'digital-media.html': 'digital-media',
+  'search-engine.html': 'search-engine',
+  'agentic-AI-and-multi-agent-systems.html': 'agentic-ai-and-multi-agent-systems',
+  'automated-decision-making-and-BPA.html': 'automated-decision-making-and-bpa',
+  'behavioral-intelligence.html': 'behavioral-intelligence',
+  'conversational-and-edge-analytics.html': 'conversational-and-edge-analytics',
+  'polarization-and-pre-indoctrination.html': 'polarization-and-pre-indoctrination',
+  'blog-post-sidebar.html': 'blog-post-sidebar',
+};
+
+function parseArgs(argv) {
+  const out = { src: null, out: null, locale: 'en', prefix: 'al-ai' };
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--src') out.src = argv[i + 1] ?? null;
+    if (argv[i] === '--out') out.out = argv[i + 1] ?? null;
+    if (argv[i] === '--locale') out.locale = argv[i + 1] ?? out.locale;
+    if (argv[i] === '--prefix') out.prefix = argv[i + 1] ?? out.prefix;
+  }
+  return out;
+}
+
+/**
+ * The page body: everything inside #tt-content-wrap, minus the footer.
+ *
+ * Located by string search rather than a DOM parse because the markers are
+ * unique and stable across all 13 files, and adding a parser dependency to
+ * read a fixed slice would buy nothing.
+ */
+function extractBody(html) {
+  const open = html.indexOf('<div id="tt-content-wrap">');
+  if (open === -1) return null;
+  const start = open + '<div id="tt-content-wrap">'.length;
+  const footer = html.indexOf('<footer id="tt-footer"', start);
+  if (footer === -1) return null;
+  return html.slice(start, footer).trim();
+}
+
+function rewrite(body, locale, prefix) {
+  let out = body;
+
+  // Inter-page links, longest filename first so no name is a prefix of another.
+  for (const name of Object.keys(SLUGS).sort((a, b) => b.length - a.length)) {
+    const slug = SLUGS[name];
+    const target = slug ? `/${locale}/${slug}` : `/${locale}`;
+    out = out.split(`"${name}"`).join(`"${target}"`);
+    out = out.split(`'${name}'`).join(`'${target}'`);
+  }
+
+  // The two pages that 404 on the live site are linked but were never built.
+  out = out.split('"privacy-policy.html"').join(`"/${locale}/privacy-policy"`);
+  out = out.split('"terms-and-conditions.html"').join(`"/${locale}/terms-and-conditions"`);
+
+  // The demo post links a blog index that never existed as a file; the CMS
+  // serves one at /<locale>/blog, so point it there.
+  out = out.split('"blog-archive.html"').join(`"/${locale}/blog"`);
+
+  // Content media moves to the media library; keep the basename so a human can
+  // match a file on disk to a reference in the markup. Covers assets/img and
+  // assets/vids — the demo post pulls video from the latter.
+  out = out.replace(
+    /(["'(])assets\/(?:img|vids)\/[^"')]*?\/?([^/"')]+\.(?:png|jpe?g|webp|gif|mp4|webm|ico))/gi,
+    (_m, quote, file) => `${quote}/uploads/${prefix}/${file}`
+  );
+
+  return out;
+}
+
+async function main() {
+  const { src, out, locale, prefix } = parseArgs(process.argv.slice(2));
+  if (!src || !out) {
+    console.error('Usage: node scripts/extract-al-ai-content.mjs --src <dir> --out <dir> [--locale en] [--prefix al-ai]');
+    process.exit(1);
+  }
+
+  await fs.mkdir(out, { recursive: true });
+  const written = [];
+  const skipped = [];
+
+  for (const [name, slug] of Object.entries(SLUGS)) {
+    let html;
+    try {
+      html = await fs.readFile(path.join(src, name), 'utf8');
+    } catch {
+      skipped.push(`${name} (not found)`);
+      continue;
+    }
+
+    const body = extractBody(html);
+    if (!body) {
+      skipped.push(`${name} (no #tt-content-wrap)`);
+      continue;
+    }
+
+    const file = `${slug || 'home'}.html`;
+    await fs.writeFile(path.join(out, file), `${rewrite(body, locale, prefix)}\n`, 'utf8');
+    written.push(`${file}  (${(body.length / 1024).toFixed(1)} KB)`);
+  }
+
+  console.log(`Wrote ${written.length} page bodies to ${out}`);
+  for (const w of written) console.log(`  ${w}`);
+  if (skipped.length) {
+    console.log(`Skipped ${skipped.length}:`);
+    for (const s of skipped) console.log(`  ${s}`);
+  }
+}
+
+main().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
+});

@@ -1,0 +1,9 @@
+{#
+  Home. The whole body of the original index.html — hero (#page-header) and
+  every section under #tt-page-content — is stored as page content in the CMS,
+  so an editor can change any of it without touching this pack.
+
+  That requires Settings → htmlPasteMode = 'trusted'; on 'safe' the sanitiser
+  strips the structural markup these sections depend on.
+#}
+{{ page.content }}
