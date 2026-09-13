@@ -35,7 +35,11 @@ ENV S3_PUBLIC_URL=${S3_PUBLIC_URL}
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ENV JWT_ACCESS_SECRET="build-time-placeholder-not-a-real-secret-1"
 ENV JWT_REFRESH_SECRET="build-time-placeholder-not-a-real-secret-2"
-RUN npm run db:generate
+# No `db:generate` here. The image must apply exactly the migrations committed
+# to git: generating at build time diffs the schema against the newest snapshot
+# and writes whatever it finds into the image. Hand-written 0016/0017 shipped
+# without snapshots, so every build invented a 0018 that re-created "themes"
+# and the boot migration crash-looped on 42P07. CI now fails on that drift.
 # Requires `output: 'standalone'` in next.config.ts, which is now set.
 RUN npm run build
 

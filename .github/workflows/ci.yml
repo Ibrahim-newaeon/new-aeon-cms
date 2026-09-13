@@ -100,6 +100,20 @@ jobs:
         # again, then ten concurrently.
         run: npx tsx scripts/setup-check.ts
 
+      - name: Schema and committed migrations agree
+        # A hand-written migration without its snapshot leaves drizzle-kit
+        # believing the schema is still pending, and the next generate re-emits
+        # it as a duplicate — which is how a build-time 0018 re-created "themes"
+        # and crash-looped staging. If generate writes anything, a migration
+        # (or snapshot) is missing from the commit.
+        run: |
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain lib/db/migrations)" ]; then
+            git status --porcelain lib/db/migrations
+            echo "::error::lib/db/schema has changes with no committed migration. Run npm run db:generate and commit the result."
+            exit 1
+          fi
+
       - name: Migrate
         # migrate, NOT push. Production runs migrations, so CI has to run the
         # same thing or it tests a schema that is never deployed — which is how
