@@ -1,6 +1,8 @@
 # .github/workflows/deploy.yml
 #
-# Ships master to Railway — but only after CI has gone green.
+# Ships master to every Railway service in RAILWAY_SERVICES — but only after CI
+# has gone green. One codebase, one release, N sites: each has its own service,
+# its own database and its own environment variables, and shares everything else.
 #
 # This waits on the CI workflow rather than duplicating its steps, and rather
 # than using Railway's own "deploy on push" integration, which would ship a red
@@ -16,8 +18,10 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # One deploy at a time, and never cancel one midway: a half-applied release is
-  # worse than a queued one.
+  # One release at a time, and never cancel one midway: a half-applied release
+  # is worse than a queued one. The matrix legs inside a release run together —
+  # they target different services, so they cannot collide — and the group keeps
+  # a second release from starting on top of them.
   group: deploy-production
   cancel-in-progress: false
 
@@ -31,6 +35,35 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
 
+    strategy:
+      # One leg per Railway service, so every site ships from the same green CI
+      # run rather than each drifting to whenever someone remembered it.
+      #
+      # The list is a repository variable, not a literal here, because a service
+      # has to EXIST in Railway before it can be deployed to: `railway up
+      # --service <unknown>` exits non-zero, which would turn this job red on
+      # master and make a working pipeline look broken. Naming a site in a file
+      # cannot conjure it in Railway, so the file ships the sites that are
+      # ready and the variable adds the next one the day it is.
+      #
+      # To add al-ai.ai, once its service exists in the Railway project:
+      #
+      #   Settings → Secrets and variables → Actions → Variables
+      #   RAILWAY_SERVICES = ["new-aeon-cms","al-ai"]
+      #
+      # Singular RAILWAY_SERVICE still works and still means one site; it is
+      # the fallback below so an existing setup keeps deploying untouched.
+
+      # The sites are independent. One failing to build is a reason to look at
+      # that site, never a reason to cancel a release the others were mid-way
+      # through — the default would leave them on mismatched versions.
+      fail-fast: false
+      matrix:
+        # Kept on one line on purpose: in a folded (>-) scalar a more-indented
+        # continuation is preserved literally rather than folded to a space, so
+        # wrapping this would embed a newline inside the ${{ }} expression.
+        service: ${{ fromJSON(vars.RAILWAY_SERVICES || format('["{0}"]', vars.RAILWAY_SERVICE || 'new-aeon-cms')) }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -41,12 +74,16 @@ jobs:
       - name: Install the Railway CLI
         run: npm i -g @railway/cli
 
-      - name: Deploy
+      - name: Deploy ${{ matrix.service }}
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         # --ci streams the build log and exits non-zero if the build fails, so a
         # broken release fails this job instead of being reported as shipped.
-        run: railway up --service "${{ vars.RAILWAY_SERVICE || 'new-aeon-cms' }}" --ci
+        #
+        # One token covers every service in the same Railway project. Sites in a
+        # SEPARATE project need their own, and this step is where that would be
+        # selected — the matrix leg knows which site it is.
+        run: railway up --service "${{ matrix.service }}" --ci
 
       # Migrations are NOT run from here.
       #
@@ -62,6 +99,10 @@ jobs:
       #
       # so the server only starts if the migration succeeded, and a container
       # whose schema does not match its code never reaches the healthcheck.
+      #
+      # That also scales to N sites without a line here: each service boots its
+      # own container against its own DATABASE_URL, so each migrates its own
+      # database and a failure is contained to the site that hit it.
       #
       # This used to say `preDeployCommand: node migrate.cjs` in railway.json.
       # It is not there any more, and it would not help if it were: Railway
