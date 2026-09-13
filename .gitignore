@@ -13,8 +13,10 @@ dist/
 .env.*.local
 
 # Local uploads — user content, not source
-data/themes/
+public/uploads/
 
+# Extracted HTML theme packs (THEMES_DIR) — installed artefacts, not source
+data/themes/
 
 # Rendered mail from the log driver — holds real customer names and addresses
 .mail-outbox/
