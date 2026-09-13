@@ -45,6 +45,51 @@ const SLUGS = {
   'blog-post-sidebar.html': 'blog-post-sidebar',
 };
 
+/**
+ * Stand-ins for media the live server no longer has.
+ *
+ * `ai-driven.png` is referenced by services.html and returns 404 on al-ai.ai —
+ * it was deleted from the server at some point, so there is nothing to
+ * re-download and no copy in the source drop. bg-brain2.mp4 is live, supplied,
+ * and fills the same slot, so it stands in.
+ *
+ * `as: 'video'` is not decoration. An <img> cannot play an MP4 — pointing its
+ * src at one renders the alt text — so the whole element is replaced, not just
+ * the path. `muted` is required or the browser refuses to autoplay, and
+ * object-fit keeps the video filling the box the image used to fill.
+ */
+const MEDIA_REPLACEMENTS = [
+  { missing: 'ai-driven.png', replacement: 'bg-brain2.mp4', as: 'video', label: 'AI-driven systems' },
+];
+
+/** Replace an <img> whose src is a missing file with a looping muted video. */
+function applyMediaReplacements(html, prefix) {
+  let out = html;
+
+  for (const rule of MEDIA_REPLACEMENTS) {
+    if (rule.as !== 'video') continue;
+
+    const src = `/uploads/${prefix}/${rule.missing}`;
+    // Any <img> tag carrying that src, whatever order its attributes are in.
+    const tag = new RegExp(`<img\\b[^>]*\\bsrc=["']${escapeRe(src)}["'][^>]*>`, 'gi');
+
+    out = out.replace(
+      tag,
+      '<video autoplay="" muted="" loop="" playsinline="" webkit-playsinline="" ' +
+        'preload="metadata" style="width: 100%; height: 100%; object-fit: cover;" ' +
+        `aria-label="${rule.label}">` +
+        `<source src="/uploads/${prefix}/${rule.replacement}" type="video/mp4">` +
+        '</video>'
+    );
+  }
+
+  return out;
+}
+
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function parseArgs(argv) {
   const out = { src: null, out: null, locale: 'en', prefix: 'al-ai' };
   for (let i = 0; i < argv.length; i += 1) {
@@ -98,6 +143,9 @@ function rewrite(body, locale, prefix) {
     /(["'(])assets\/(?:img|vids)\/[^"')]*?\/?([^/"')]+\.(?:png|jpe?g|webp|gif|mp4|webm|ico))/gi,
     (_m, quote, file) => `${quote}/uploads/${prefix}/${file}`
   );
+
+  // Runs last: it matches on the rewritten /uploads/ paths.
+  out = applyMediaReplacements(out, prefix);
 
   return out;
 }
