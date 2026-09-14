@@ -21,16 +21,22 @@ assembled from ~2 MB of third-party libraries that do not belong in git.
 | `partials/header.html` | Nav, including the Services dropdown and Blog. |
 | `partials/footer.html` | Addresses, phone numbers, social, policy links. |
 | `assets/loader.css` | The loader styles that were inline in `index.html`. |
+| `shims/*.js` | The three inline scripts the original had, which a template cannot run. |
+| `site.config.json` | Everything the onboarding scripts would otherwise hard-code. |
 | `content/*.html` | Starter copy for Privacy Policy and Terms. |
 
-Two scripts outside this directory belong to the same job:
-`scripts/extract-al-ai-content.mjs` turns the original pages into content
-fragments, and `scripts/publish-al-ai-pages.mjs` puts them into a running CMS.
+The scripts outside this directory are **generic**: they read
+`site.config.json` and know nothing about al-ai.ai.
+`scripts/extract-site-content.mjs` turns the original pages into content
+fragments, and `scripts/publish-site-pages.mjs` puts them into a running CMS.
+
+**Doing this for another site? Read [docs/onboarding-a-site.md](../../docs/onboarding-a-site.md).**
+This README documents al-ai.ai's own decisions; that one is the process.
 
 ## Building the pack
 
 ```bash
-node scripts/build-theme-pack.mjs --src <drop> --out dist/themes
+node scripts/build-theme-pack.mjs --site al-ai --src <drop> --out dist/themes
 ```
 
 `<drop>` is the unpacked site source, shaped like this:
@@ -78,8 +84,8 @@ the CMS, so an editor can change any of it without a redeploy.
 Generate the starting bodies from the original HTML:
 
 ```bash
-node scripts/extract-al-ai-content.mjs \
-  --src <dir-of-original-html> --out dist/content --locale en --prefix al-ai
+node scripts/extract-site-content.mjs \
+  --site al-ai --src <dir-of-original-html> --out dist/content
 ```
 
 That writes 15 fragments — 12 marketing pages, the demo blog post, and the two
@@ -127,8 +133,8 @@ Two ways in, and they produce the same rows.
 ```bash
 export CMS_EMAIL='you@example.com'
 export CMS_PASSWORD='…'          # never on the command line: argv is public
-node scripts/publish-al-ai-pages.mjs --url https://<site> --dir dist/content --dry-run
-node scripts/publish-al-ai-pages.mjs --url https://<site> --dir dist/content
+node scripts/publish-site-pages.mjs --url https://<site> --dir dist/content --dry-run
+node scripts/publish-site-pages.mjs --url https://<site> --dir dist/content
 ```
 
 It logs in and drives the same HTTP API the admin screens drive, so the origin

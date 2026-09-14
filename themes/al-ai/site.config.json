@@ -1,0 +1,82 @@
+{
+  "$comment": "Everything about al-ai.ai that the onboarding scripts would otherwise hard-code. See docs/onboarding-a-site.md.",
+  "name": "al-ai.ai",
+  "prefix": "al-ai",
+  "locale": "en",
+
+  "content": {
+    "open": "<div id=\"tt-content-wrap\">",
+    "close": "<footer id=\"tt-footer\"",
+    "stripSvg": true,
+    "titleSeparator": "|"
+  },
+
+  "slugs": {
+    "index.html": "",
+    "about.html": "about",
+    "services.html": "services",
+    "contact.html": "contact",
+    "data-driven.html": "data-driven",
+    "digital-media.html": "digital-media",
+    "search-engine.html": "search-engine",
+    "agentic-AI-and-multi-agent-systems.html": "agentic-ai-and-multi-agent-systems",
+    "automated-decision-making-and-BPA.html": "automated-decision-making-and-bpa",
+    "behavioral-intelligence.html": "behavioral-intelligence",
+    "conversational-and-edge-analytics.html": "conversational-and-edge-analytics",
+    "polarization-and-pre-indoctrination.html": "polarization-and-pre-indoctrination",
+    "blog-post-sidebar.html": "blog-post-sidebar"
+  },
+
+  "postSlugs": ["blog-post-sidebar"],
+
+  "linkRewrites": {
+    "privacy-policy.html": "/{locale}/privacy-policy",
+    "terms-and-conditions.html": "/{locale}/terms-and-conditions",
+    "blog-archive.html": "/{locale}/blog"
+  },
+
+  "packPages": {
+    "privacy-policy.html": "Privacy Policy",
+    "terms-and-conditions.html": "Terms & Conditions"
+  },
+
+  "mediaReplacements": [
+    {
+      "missing": "ai-driven.png",
+      "replacement": "bg-brain2.mp4",
+      "as": "video",
+      "label": "AI-driven systems"
+    }
+  ],
+
+  "build": {
+    "cssOrder": [
+      "vendor/fontawesome/css/all.min.css",
+      "vendor/fancybox/css/fancybox.css",
+      "vendor/swiper/css/swiper-bundle.min.css",
+      "css/helper.css",
+      "css/theme-black.css"
+    ],
+    "jsOrder": [
+      "vendor/jquery/jquery.min.js",
+      "vendor/gsap/gsap.min.js",
+      "vendor/gsap/ScrollToPlugin.min.js",
+      "vendor/gsap/ScrollTrigger.min.js",
+      "vendor/lenis.min.js",
+      "vendor/isotope/imagesloaded.pkgd.min.js",
+      "vendor/isotope/isotope.pkgd.min.js",
+      "vendor/isotope/packery-mode.pkgd.min.js",
+      "vendor/fancybox/js/fancybox.umd.js",
+      "vendor/swiper/js/swiper-bundle.min.js",
+      "js/theme.js"
+    ],
+    "packCss": ["assets/loader.css"],
+    "shims": {
+      "before": ["shims/prelude.js"],
+      "after": ["shims/postlude.js", "shims/loader.js"]
+    },
+    "chromeImages": ["al-ai.png", "Revacity.png"],
+    "cssSiblingImages": ["bg-noise.png", "hero3-overlay.png"],
+    "webfonts": "vendor/fontawesome/webfonts"
+  }
+}

@@ -4,7 +4,7 @@
 // Rewrites the media paths in extracted page content to the URLs the media
 // library actually issued.
 //
-// scripts/extract-al-ai-content.mjs points every image at
+// scripts/extract-site-content.mjs points every image at
 // `/uploads/<prefix>/<original filename>` — a placeholder, because at
 // extraction time nobody knows where the file will end up. The media library
 // then stores it under a generated name (lib/media/storage.ts): a UUID, an

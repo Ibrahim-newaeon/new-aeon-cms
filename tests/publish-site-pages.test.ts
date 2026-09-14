@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { blockArraySchema, contentPayloadSchema } from '@/lib/blocks/content-schema';
-import { buildPayload, validateEntry, parseArgs } from '../scripts/publish-al-ai-pages.mjs';
+import { buildPayload, validateEntry, parseArgs } from '../scripts/publish-site-pages.mjs';
 
 const entry = {
   file: 'about.html',

@@ -6,7 +6,7 @@
 // pinning down.
 
 import { describe, it, expect } from 'vitest';
-import { extractTitle, extractDescription, titleFromSlug } from '../scripts/extract-al-ai-content.mjs';
+import { extractTitle, extractDescription, titleFromSlug } from '../scripts/extract-site-content.mjs';
 
 describe('extractTitle', () => {
   /** Every original reads "al-ai.ai | Something"; the prefix is the layout's job. */

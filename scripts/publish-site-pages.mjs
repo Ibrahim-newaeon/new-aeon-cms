@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/publish-al-ai-pages.mjs
+// scripts/publish-site-pages.mjs
 //
 // Publishes every extracted page into a running CMS in one command, instead of
 // opening Admin → Pages → New thirteen times and pasting by hand.
@@ -10,7 +10,7 @@
 // runs at render. Nothing here touches the database directly, and nothing here
 // can publish something a logged-in editor could not.
 //
-// Input is the output of scripts/extract-al-ai-content.mjs: a directory of
+// Input is the output of scripts/extract-site-content.mjs: a directory of
 // HTML fragments plus the pages.json manifest that names each one's slug,
 // title and content type.
 //
@@ -23,8 +23,8 @@
 //
 //   export CMS_EMAIL='admin@example.com'
 //   export CMS_PASSWORD='…'
-//   node scripts/publish-al-ai-pages.mjs --url https://al-ai.example --dir dist/content --dry-run
-//   node scripts/publish-al-ai-pages.mjs --url https://al-ai.example --dir dist/content
+//   node scripts/publish-site-pages.mjs --url https://al-ai.example --dir dist/content --dry-run
+//   node scripts/publish-site-pages.mjs --url https://al-ai.example --dir dist/content
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -158,7 +158,7 @@ async function main() {
 
   if (!url || !dir) {
     fail(
-      'Usage: node scripts/publish-al-ai-pages.mjs --url <site> --dir <content dir>\n' +
+      'Usage: node scripts/publish-site-pages.mjs --url <site> --dir <content dir>\n' +
         '       [--locale en] [--status published|draft] [--only slug,slug] [--dry-run]\n' +
         '       CMS_EMAIL and CMS_PASSWORD must be set in the environment.'
     );
@@ -172,7 +172,7 @@ async function main() {
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
   } catch {
-    fail(`No manifest at ${manifestPath}. Run scripts/extract-al-ai-content.mjs first.`);
+    fail(`No manifest at ${manifestPath}. Run scripts/extract-site-content.mjs first.`);
   }
 
   const wanted = only.length ? manifest.filter((e) => only.includes(e.slug)) : manifest;
@@ -273,7 +273,7 @@ async function main() {
 }
 
 // Importable for tests; only the CLI path runs main().
-if (process.argv[1] && process.argv[1].endsWith('publish-al-ai-pages.mjs')) {
+if (process.argv[1] && process.argv[1].endsWith('publish-site-pages.mjs')) {
   main().catch((err) => {
     console.error(err.message);
     process.exit(1);
