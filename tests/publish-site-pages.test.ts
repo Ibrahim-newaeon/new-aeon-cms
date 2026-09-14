@@ -30,12 +30,18 @@ describe('publish-al-ai-pages payload', () => {
     expect(() => contentPayloadSchema.parse(payload)).not.toThrow();
   });
 
-  /** The html block's field is `content`. `html` parses as an unknown key. */
-  it('puts the markup in the html block content field', () => {
+  /**
+   * The html block's field is `content`. `html` parses as an unknown key.
+   *
+   * `isolate: false` rides along: a migrated fragment carries no <style> of its
+   * own, so the default scoping has nothing to scope and leaves only a wrapper
+   * div that a direct-child selector stops matching through.
+   */
+  it('puts the markup in the html block content field, unisolated', () => {
     const payload = buildPayload(entry, '<section>Hi</section>', opts);
     const parsed = contentPayloadSchema.parse(payload);
     expect(blockArraySchema.parse(parsed.translations[0]?.body)).toEqual([
-      { type: 'html', content: '<section>Hi</section>' },
+      { type: 'html', content: '<section>Hi</section>', isolate: false },
     ]);
   });
 

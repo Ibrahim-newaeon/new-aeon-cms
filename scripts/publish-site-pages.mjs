@@ -115,10 +115,28 @@ export function buildPayload(entry, html, { locale, status, split = false }) {
  * never publishes markup it has reshaped.
  */
 export function htmlBlocks(html, split) {
-  if (!split) return [{ type: 'html', content: html }];
+  if (!split) return [htmlBlock(html)];
   const parts = splitTopLevel(html);
-  if (!parts || parts.length < 2) return [{ type: 'html', content: html }];
-  return parts.map((content) => ({ type: 'html', content }));
+  if (!parts || parts.length < 2) return [htmlBlock(html)];
+  return parts.map(htmlBlock);
+}
+
+/**
+ * One html block, with isolation OFF.
+ *
+ * `isolate` defaults to ON, which wraps the block in a `html-scope-…` div and
+ * prefixes any pasted `<style>` rules with that class, so legacy CSS cannot
+ * restyle the site chrome. That is the right default for a paste of unknown
+ * provenance.
+ *
+ * It is the wrong one here. A migrated fragment carries no <style> at all —
+ * its CSS is in the theme pack — so scoping has nothing to scope and all that
+ * survives is the extra div. Harmless for a descendant selector and not for a
+ * direct-child one: `#tt-page-content > .tt-section` stops matching through it,
+ * and the failure is a layout that is subtly wrong rather than an error.
+ */
+function htmlBlock(content) {
+  return { type: 'html', content, isolate: false };
 }
 
 /** Reasons a manifest entry cannot be published, as sentences. */
