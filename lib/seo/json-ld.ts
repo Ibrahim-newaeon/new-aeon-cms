@@ -121,6 +121,72 @@ export function productJsonLd(input: ProductInput): Record<string, unknown> {
 }
 
 /** Trail for the breadcrumb line search engines show under the title. */
+/**
+ * A content page, as a machine-readable fact.
+ *
+ * Content pages emitted no structured data at all: a search engine saw a title
+ * tag and a wall of markup, and an answer engine had nothing to attribute a
+ * claim to. This is the node that says who published this, when, in what
+ * language, and what it is about.
+ *
+ * `Article` for posts, `WebPage` for pages. The distinction matters to the
+ * engines reading it — an Article is datable, quotable editorial content and
+ * carries a headline; a marketing page is neither.
+ *
+ * `mainEntityOfPage` and `inLanguage` are what an answer engine uses to decide
+ * this page IS the canonical source for its subject, rather than one of many
+ * copies. `dateModified` is what it uses to decide the claim is still current,
+ * which is why it falls back to the publication date rather than being omitted.
+ */
+export function contentPageJsonLd(input: {
+  kind: 'article' | 'page';
+  path: string;
+  title: string;
+  description?: string | null;
+  image?: string | null;
+  locale: string;
+  publishedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  publisher?: { name: string; logo?: string | null } | null;
+}): Record<string, unknown> {
+  const url = absoluteUrl(input.path);
+  const iso = (v: Date | string | null | undefined) => {
+    if (!v) return undefined;
+    const d = v instanceof Date ? v : new Date(v);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
+  const published = iso(input.publishedAt);
+  const modified = iso(input.updatedAt) ?? published;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': input.kind === 'article' ? 'Article' : 'WebPage',
+    '@id': url,
+    url,
+    // Both names: Article reads headline, WebPage reads name, and an engine
+    // given the wrong one falls back to the <title> tag.
+    ...(input.kind === 'article' ? { headline: input.title } : { name: input.title }),
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.image ? { image: absoluteUrl(input.image) } : {}),
+    inLanguage: input.locale,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    ...(published ? { datePublished: published } : {}),
+    ...(modified ? { dateModified: modified } : {}),
+    ...(input.publisher
+      ? {
+          publisher: {
+            '@type': 'Organization',
+            name: input.publisher.name,
+            ...(input.publisher.logo
+              ? { logo: { '@type': 'ImageObject', url: absoluteUrl(input.publisher.logo) } }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 export function breadcrumbJsonLd(
   trail: { name: string; path: string }[]
 ): Record<string, unknown> {

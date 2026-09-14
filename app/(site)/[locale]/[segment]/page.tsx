@@ -12,6 +12,8 @@ import { TypeArchive, archiveMetadata } from './type-archive';
 import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 import { tryRenderThemePack } from '@/lib/themes/present';
 import { ThemePackView } from '@/components/site/theme-pack-view';
+import { JsonLd } from '@/components/site/json-ld';
+import { contentPageJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import { contentKindForTypeId } from '@/lib/themes/content-kind';
 
 interface Params {
@@ -76,6 +78,42 @@ export default async function ContentPage({ params }: Params) {
   const blocks = asContentBlocks(i18n?.body);
 
   const kind = await contentKindForTypeId(contentRow.typeId);
+  const settings = await getSettings();
+
+  /*
+   * Structured data, built from the values this page renders rather than from a
+   * second query — a rich result that disagrees with the visible page is worse
+   * than none.
+   *
+   * Emitted on every branch below, the theme-pack one included. A pack renders
+   * the body, not the document, so without this a themed site is the one that
+   * publishes nothing machine-readable — the opposite of what an operator
+   * choosing a designed theme expects.
+   */
+  const pageSchema = contentPageJsonLd({
+    kind: kind === 'post' ? 'article' : 'page',
+    path: `/${loaded.locale}/${segment}`,
+    title: i18n?.metaTitle || i18n?.title || segment,
+    description: i18n?.metaDescription || i18n?.excerpt,
+    image: i18n?.ogImage ?? contentRow.featuredImage ?? settings?.logo,
+    locale: loaded.locale,
+    publishedAt: contentRow.publishedAt,
+    updatedAt: contentRow.updatedAt,
+    publisher: settings?.siteName ? { name: settings.siteName, logo: settings.logo } : null,
+  });
+
+  const trail = breadcrumbJsonLd([
+    { name: settings?.siteName || 'Home', path: `/${loaded.locale}` },
+    { name: i18n?.title || segment, path: `/${loaded.locale}/${segment}` },
+  ]);
+
+  const schema = (
+    <>
+      <JsonLd data={pageSchema} />
+      <JsonLd data={trail} />
+    </>
+  );
+
   const themed = await tryRenderThemePack({
     kind,
     locale: loaded.locale,
@@ -85,12 +123,18 @@ export default async function ContentPage({ params }: Params) {
     body: i18n?.body,
   });
   if (themed) {
-    return <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />;
+    return (
+      <>
+        {schema}
+        <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />
+      </>
+    );
   }
 
   if (blocksRequestBlankChrome(blocks)) {
     return (
       <div data-test-id="full-page-html">
+        {schema}
         <ContentRenderer blocks={blocks} locale={loaded.locale} />
       </div>
     );
@@ -98,6 +142,7 @@ export default async function ContentPage({ params }: Params) {
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-16">
+      {schema}
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-site-ink">{i18n?.title ?? segment}</h1>
         {i18n?.excerpt && <p className="mt-2 text-lg text-site-ink-muted">{i18n.excerpt}</p>}

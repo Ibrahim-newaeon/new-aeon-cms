@@ -34,8 +34,9 @@ import { splitTopLevel } from './lib/split-sections.mjs';
 /** Zod rejects anything else, and a 400 per page is a poor way to find out. */
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** contentPayloadSchema caps metaDescription; longer is dropped, not truncated. */
+/** contentPayloadSchema caps these; longer is dropped, not truncated. */
 const META_DESCRIPTION_MAX = 500;
+const META_TITLE_MAX = 255;
 
 export function parseArgs(argv) {
   const out = {
@@ -68,6 +69,9 @@ export function parseArgs(argv) {
  */
 export function buildPayload(entry, html, { locale, status, split = false }) {
   const meta = (entry.metaDescription ?? '').trim();
+  const metaTitle = (entry.metaTitle ?? '').trim();
+  const ogImage = (entry.ogImage ?? '').trim();
+
   return {
     slug: entry.slug,
     status,
@@ -78,7 +82,19 @@ export function buildPayload(entry, html, { locale, status, split = false }) {
         // No isolate/fullPage: both only matter when the site shell renders the
         // block, and with the theme pack active the pack's template does.
         body: htmlBlocks(html, split),
+        /*
+         * The SEO/AEO fields. generateMetadata() prefers metaTitle over title
+         * and metaDescription over excerpt, so a page with these set controls
+         * its own search and share appearance; without them it falls back to
+         * the on-page heading, which is usually too short to be a good result.
+         *
+         * Each is omitted when blank rather than sent empty: the route writes
+         * what it receives, and an empty string would overwrite a value an
+         * editor had typed in the admin.
+         */
+        ...(metaTitle && metaTitle.length <= META_TITLE_MAX ? { metaTitle } : {}),
         ...(meta && meta.length <= META_DESCRIPTION_MAX ? { metaDescription: meta } : {}),
+        ...(ogImage ? { ogImage } : {}),
       },
     ],
   };
@@ -120,6 +136,9 @@ export function validateEntry(entry) {
   }
   if ((entry.metaDescription ?? '').length > META_DESCRIPTION_MAX) {
     problems.push(`metaDescription is ${entry.metaDescription.length} chars, over the ${META_DESCRIPTION_MAX} limit — it will be left unset`);
+  }
+  if ((entry.metaTitle ?? '').length > META_TITLE_MAX) {
+    problems.push(`metaTitle is ${entry.metaTitle.length} chars, over the ${META_TITLE_MAX} limit — it will be left unset`);
   }
   return problems;
 }
