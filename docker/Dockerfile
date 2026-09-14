@@ -55,7 +55,8 @@ FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # wget is in alpine's busybox; curl is NOT installed by default.
-RUN apk add --no-cache libc6-compat
+# su-exec drops privileges in the entrypoint — see docker/entrypoint.sh.
+RUN apk add --no-cache libc6-compat su-exec
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -67,9 +68,18 @@ COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
 # Read by migrate.cjs, which resolves ./lib/db/migrations relative to WORKDIR.
 COPY --from=builder /app/migrate.cjs ./migrate.cjs
 
+COPY --from=builder /app/docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 RUN mkdir -p public/uploads && chown -R nextjs:nodejs public/uploads
 
-USER nextjs
+# No `USER nextjs` here, deliberately.
+#
+# A mounted volume arrives root-owned and replaces whatever the image put
+# at that path, so a container that has already dropped privileges cannot
+# create THEMES_DIR inside it. The entrypoint fixes ownership and then drops
+# to nextjs itself — the app process is unprivileged either way, the only
+# difference is that the chown now has a chance to run.
 
 EXPOSE 3000
 ENV PORT=3000
@@ -109,4 +119,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 #
 # A container that boots against an empty database serves the wizard; the app
 # tolerates having no settings row until someone completes it.
-CMD ["sh", "-c", "node migrate.cjs && node server.js"]
+# Ownership of the mounts, then migrate, then serve — as nextjs.
+CMD ["./entrypoint.sh"]
