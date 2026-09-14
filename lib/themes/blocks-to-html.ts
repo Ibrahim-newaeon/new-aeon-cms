@@ -23,12 +23,41 @@ function escapeText(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export function blocksToHtml(
+/**
+ * A pack's own rendering for one block, or null when it ships none.
+ *
+ * Supplied by lib/themes/present.ts, which is the only caller that knows which
+ * theme is active. Kept as a parameter rather than an import so this module
+ * stays free of theme lookup and remains unit-testable without a theme on disk.
+ */
+export type BlockPartialRenderer = (block: ContentBlock) => Promise<string | null>;
+
+export async function blocksToHtml(
   blocks: ContentBlock[] | null | undefined,
-  pasteMode: HtmlPasteMode = 'safe'
-): string {
+  pasteMode: HtmlPasteMode = 'safe',
+  renderPartial?: BlockPartialRenderer
+): Promise<string> {
   if (!blocks?.length) return '';
-  return blocks.map((b) => blockToHtml(b, pasteMode)).filter(Boolean).join('\n');
+
+  const out: string[] = [];
+  for (const block of blocks) {
+    /*
+     * The pack's own markup wins when it has some — including for the 23 types
+     * the switch below drops. That is the whole point: a pack shipping
+     * partials/block-faq.html makes `faq` work for that pack, with its classes
+     * and its JS hooks, rather than rendering as nothing.
+     */
+    if (renderPartial) {
+      const custom = await renderPartial(block);
+      if (custom !== null) {
+        if (custom.trim()) out.push(custom);
+        continue;
+      }
+    }
+    const generic = blockToHtml(block, pasteMode);
+    if (generic) out.push(generic);
+  }
+  return out.join('\n');
 }
 
 function blockToHtml(block: ContentBlock, pasteMode: HtmlPasteMode): string {

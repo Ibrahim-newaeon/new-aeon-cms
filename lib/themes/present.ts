@@ -7,7 +7,7 @@ import type { ContentBlock } from '@/lib/blocks/types';
 import type { HtmlPasteMode } from '@/lib/blocks/sanitize';
 import { blocksToHtml } from './blocks-to-html';
 import { resolveStorefrontPresentation } from './active';
-import { renderThemePage } from './render';
+import { renderThemePage, renderBlockPartial } from './render';
 import type { ThemeableKind } from './package';
 
 export async function tryRenderThemePack(opts: {
@@ -26,7 +26,24 @@ export async function tryRenderThemePack(opts: {
   const nav = await getNavigation('header', opts.locale);
   const pasteMode = (settings?.htmlPasteMode as HtmlPasteMode | null) ?? 'safe';
   const blocks = asContentBlocks(opts.body) as ContentBlock[];
-  const content = blocksToHtml(blocks, pasteMode);
+  /*
+   * Let the pack render any block it has a `block-<type>` partial for. Falls
+   * through to the shared rendering otherwise, so a pack that ships none
+   * behaves exactly as before.
+   */
+  const content = await blocksToHtml(blocks, pasteMode, (block) =>
+    renderBlockPartial(
+      presentation.theme!.id,
+      presentation.theme!.manifest,
+      // ContentBlock is a discriminated union; the partial renderer only needs
+      // "an object with a type", which every member satisfies.
+      block as unknown as { type: string } & Record<string, unknown>,
+      {
+        locale: opts.locale,
+        dir: opts.locale === 'ar' ? 'rtl' : 'ltr',
+      }
+    )
+  );
 
   return renderThemePage(presentation.theme.id, presentation.theme.manifest, opts.kind, {
     locale: opts.locale,

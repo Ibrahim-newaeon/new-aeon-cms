@@ -39,11 +39,11 @@ interface PageFormProps {
     hasTags: boolean;
   };
   /**
-   * The site's storefront driver, read from settings by the page that renders
-   * this form. Only the block picker uses it, to warn that a theme pack will
-   * not render most block types.
+   * Block types the active presentation will not render, computed by the page
+   * that renders this form. Only the block picker uses it, to warn before an
+   * editor builds something that would never appear.
    */
-  themeDriver?: 'builtin' | 'html-pack';
+  unsupportedBlocks?: readonly string[];
 }
 
 const TYPE_LABEL: Record<
@@ -62,7 +62,7 @@ export function PageForm({
   adminPath,
   contentType = 'page',
   taxonomy,
-  themeDriver,
+  unsupportedBlocks,
 }: PageFormProps) {
   const t = useT();
   const labels = TYPE_LABEL[contentType];
@@ -357,7 +357,7 @@ export function PageForm({
         <BlockBuilder
           key={`${activeLocale}:${structureEpoch}`}
           blocks={active.body}
-          themeDriver={themeDriver}
+          unsupportedBlocks={unsupportedBlocks}
           onChange={(body) => patchTranslation({ body })}
         />
 
