@@ -257,6 +257,26 @@ async function main() {
   const existing = new Map();
   for (const type of new Set(wanted.map((e) => e.type))) {
     const list = await call(url, `/api/content?type=${encodeURIComponent(type)}`, { jar });
+
+    /*
+     * 405 and 404 mean the route is there but has no GET — a deployment from
+     * before the listing endpoint existed. Worth naming, because the generic
+     * message ("no message", since the 405 carries no JSON body) reads like a
+     * bug in this script and the fix is a deploy.
+     *
+     * Proceeding without the listing is NOT offered. Telling an update from a
+     * create is the whole reason for this call, and content.slug has an index
+     * but no unique constraint: creating blindly would leave two pages at one
+     * address with row order deciding which the site serves.
+     */
+    if (list.res.status === 405 || list.res.status === 404) {
+      fail(
+        `${url} has no GET /api/content — it is running a build from before that ` +
+          `endpoint existed.\n  Deploy the current branch to this service, then run ` +
+          `this again.\n  Without the listing there is no way to tell an update from a ` +
+          `create, and slugs are not unique, so publishing would duplicate pages.`
+      );
+    }
     if (!list.res.ok) {
       fail(`Could not list "${type}" (${list.res.status}): ${list.json?.error?.message ?? 'no message'}`);
     }
