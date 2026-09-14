@@ -245,6 +245,41 @@ The old site served `.html` paths and search engines still hold them. Set
 
 ---
 
+## What the client can actually edit afterwards
+
+Worth agreeing before you build the templates, because it decides how much
+goes into a template and how much goes into content.
+
+| Thing | Editable from the admin? |
+|---|---|
+| Page sections, headings, images, text | **Yes** — they are page content |
+| Site name, description, logo, favicon | **Yes** — Settings |
+| Social links, contact email and phone | **Yes** — Settings |
+| Theme colours, custom CSS, announcement bar | **Yes** — Settings |
+| Navigation items | **Yes** — Admin → Navigation, add and remove |
+| **Header and footer markup** | **No, with a theme pack** — see below |
+
+### The theme-pack trade-off
+
+With `themeDriver = html-pack`, the header and footer are **Liquid files inside
+the pack**. Changing a phone number in the footer means editing
+`partials/footer.html`, rebuilding the zip, re-uploading and re-activating.
+
+That is the cost of reproducing a bespoke design exactly. Decide it
+deliberately:
+
+- **Put in the templates** what is structural and near-permanent — layout,
+  the nav skeleton, the loader.
+- **Put in page content** anything the client will want to change — every
+  section of every page, which is what Step 4 extracts.
+- **Put in Settings** anything that repeats site-wide: social links, contact
+  details, colours.
+
+A partial can read `{{ site.name }}`, `{{ locale }}` and the CMS `navigation`
+list, so lean on those instead of hardcoding. Contact details in a footer are
+the usual regret — they change, and they are in the one place that needs a
+redeploy.
+
 ## Why images split in two
 
 This catches everybody once.
@@ -271,6 +306,7 @@ re-uploaded, so a content image pointed at it would break on the next upload.
 - [ ] Media uploaded; remap dry run matches **everything**
 - [ ] Pages published; `--dry-run` clean first
 - [ ] Theme colours set in the admin
+- [ ] Footer contact details agreed — they need a redeploy to change
 - [ ] `LEGACY_REDIRECTS` set
 - [ ] Deployment pipeline knows about the new service
 
@@ -289,3 +325,21 @@ re-uploaded, so a content image pointed at it would break on the next upload.
 | Theme pack gone after a deploy | No volume, or `THEMES_DIR` is not on it |
 | `Upload failed` on the pack | Volume is root-owned; the container runs as uid 1001 |
 | Loose sentences down the right margin | Inline SVG kept; set `content.stripSvg` |
+| A setting saves, then reloads blank | The field is missing from one of the two field-by-field lists — see below |
+
+### The settings round trip has two lists
+
+A setting has to appear in **both** of these, and they are in different files:
+
+1. `app/api/settings/route.ts` — the `values` object that is written.
+2. `app/(admin)/admin/settings/page.tsx` — the `initial` object the form is
+   seeded from.
+
+Missing from the first, the value is discarded on save. Missing from the
+second, it is written but loads blank — **and is then erased**, because the
+form submits one object seeded from `initial`, so an absent field goes back as
+`undefined` and is written as null by the next unrelated save.
+
+`tests/settings-persistence.test.ts` checks both lists against
+`settingsSchema`. Four fields had been in that state, and one fix that covered
+only the first list looked complete and was not.
