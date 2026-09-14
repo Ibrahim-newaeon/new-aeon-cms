@@ -126,6 +126,7 @@ section-heading:
   ctaText    text        -> the .tt-big-round-ptn badge
   ctaUrl     url         -> its href
   image      media       -> via MediaField, into the theme's figure markup
+  imageAlt   text        -> the alt attribute on that image, never omitted
 ```
 
 The editor fills in fields and writes body copy; the pack supplies every class
@@ -144,7 +145,8 @@ unrecognised as an `html` block. Unrecognised must stay `html` — a migration
 that silently drops a section it did not understand is worse than one that
 leaves it as markup.
 
-**Do not** convert a section to any block unless the words survive the trip.
+**Do not** convert a section to any block unless the words survive the trip —
+and "the words" includes the alt text on every image in it.
 Round-trip every conversion and diff the rendered output against the original
 fragment. A conversion that loses a link, a line break or an image is a failed
 conversion, not an acceptable one.
@@ -227,6 +229,46 @@ Neither may ship. Where a value is deliberately ignored in some configuration �
 as block types outside a pack's support are — the UI must say so at the moment
 of choosing, not leave it to be discovered on the live site.
 
+### 7. Metadata and alt text survive the conversion
+
+The current `html`-block path carries both. A structured path that loses either
+is a regression, and each loss is silent.
+
+**Every image field needs an alt field beside it.** In an `html` block the alt
+text lives in the markup, so it converts with the section. The moment an image
+becomes a typed `media` field its description has nowhere to go unless the
+block defines one — and a section rendering `<img>` with no `alt` has no admin
+input for it, which is criterion 1's exact failure wearing a new hat. Pair them
+in the block type, render the field into the tag, and test the pair the way
+`tests/block-field-coverage.test.ts` tests its five.
+
+**Carry existing alt text across; do not retype it.** al-ai.ai's 60 images are
+all described. A migration that starts from blank alt fields throws that away.
+`scripts/apply-image-alt.mjs --report` reads what is already in the markup, and
+`--media` resolves original file names against the uuids the media library
+issued — pass it whenever `scripts/remap-content-media.mjs` has already run, or
+every key is a uuid and nothing matches.
+
+**Per-page metadata is already plumbed and must stay populated.**
+`contentI18n` carries `metaTitle`, `metaDescription`, `ogImage` and `noIndex`;
+`generateMetadata()` prefers `metaTitle` over the on-page heading and
+`metaDescription` over the excerpt; `scripts/publish-site-pages.mjs` sets them
+from `pages.json`. These belong to the PAGE, not to any section, so splitting a
+page should not touch them — verify that rather than assuming it.
+
+Two traps, both found the hard way:
+
+- The layout applies a title template (`%s · <site name>`), so a `metaTitle`
+  repeating the brand renders it twice.
+- Blank is not absent. The publisher omits an empty field rather than sending
+  `''`, because the route writes what it receives and an empty string would
+  erase copy an editor had typed.
+
+**Structured data must keep coming out on the theme-pack branch.** Content
+pages emit `WebPage`/`Article` and `BreadcrumbList` from the route, not from
+the template, and that has to hold for whichever branch renders the sections.
+A themed site publishing nothing machine-readable is the opposite of the point.
+
 ---
 
 ## How to verify
@@ -256,6 +298,7 @@ Do not run `npm run setup:check`. It drops and recreates a database.
 | `{# … #}` in a template | Jinja, not Liquid. liquidjs prints it onto the page |
 | A `<script>` in a template | Never runs — content reaches the page via `innerHTML` |
 | `htmlPasteMode` left at `safe` | Strips `id`, `class` and `style`; every migrated page renders as loose text |
+| A media field with no alt field | Alt text becomes unreachable the moment a section stops being raw markup |
 | Assuming a media folder is a path | It is a label. The URL is a UUID under a year/month prefix |
 | No volume on the instance | Theme packs live on local disk under `THEMES_DIR` and die on every deploy |
 
