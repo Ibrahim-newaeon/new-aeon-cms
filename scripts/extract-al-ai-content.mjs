@@ -144,6 +144,21 @@ function rewrite(body, locale, prefix) {
     (_m, quote, file) => `${quote}/uploads/${prefix}/${file}`
   );
 
+  /*
+   * Drop inline SVG.
+   *
+   * The sanitiser allows no SVG in any paste mode — not even trusted — because
+   * an SVG is a document that can carry <script>, the same reason
+   * image/svg+xml is refused by the media library. It strips the tags and keeps
+   * the text inside them, which is worse than dropping both: al-ai.ai curves
+   * "Scroll to Explore" around a circle with <textpath>, and what reached the
+   * page was that sentence wrapped down the right-hand margin as prose.
+   *
+   * Every SVG in this site is decoration — a scroll indicator and an arrow —
+   * so removing them loses nothing a reader wants.
+   */
+  out = out.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '');
+
   // Runs last: it matches on the rewritten /uploads/ paths.
   out = applyMediaReplacements(out, prefix);
 
