@@ -31,12 +31,28 @@ export interface TestimonialBlock {
   columns?: 1 | 2 | 3;
 }
 
+/*
+ * Four fields were removed here after an audit of all 137 fields against their
+ * editors and renderers: video.autoplay, team.members[].social,
+ * timeline.items[].icon and recent-posts.category. Each was declared and then
+ * implemented nowhere — no admin input, and no renderer reading it — so they
+ * described features the CMS did not have. Keeping them would have gone on
+ * suggesting to the next reader that the work was done.
+ *
+ * Nothing to migrate: blocks are jsonb validated by a passthrough schema
+ * (lib/blocks/content-schema.ts), so a stored block that still carries one of
+ * these keys parses exactly as before and the extra key is ignored.
+ *
+ * Not to be confused with the fields that survive and look similar:
+ * feature-grid items DO have an icon, and slider DOES have autoplay — both are
+ * editable and both render.
+ */
 export type ContentBlock =
   | { type: 'heading'; level: 1 | 2 | 3 | 4; text: string; anchor?: string }
   | { type: 'paragraph'; text: string; align?: 'left' | 'center' | 'right' | 'justify' }
   | { type: 'image'; src: string; alt: string; caption?: string; width?: number; height?: number; layout: 'full' | 'wide' | 'normal' }
   | { type: 'gallery'; images: { src: string; alt: string }[]; layout: 'grid' | 'masonry' | 'carousel' | 'slideshow' }
-  | { type: 'video'; url: string; provider: 'youtube' | 'vimeo' | 'self'; poster?: string; autoplay?: boolean }
+  | { type: 'video'; url: string; provider: 'youtube' | 'vimeo' | 'self'; poster?: string }
   | { type: 'quote'; text: string; author?: string; source?: string; style: 'bordered' | 'pull' }
   | { type: 'embed'; url: string; provider: 'instagram' | 'twitter' | 'tiktok' | 'facebook' }
   | { type: 'button'; text: string; url: string; variant: 'primary' | 'secondary' | 'outline' | 'ghost'; size: 'sm' | 'md' | 'lg'; fullWidth?: boolean }
@@ -131,16 +147,16 @@ export type ContentBlock =
   | { type: 'cta'; title: string; text: string; button: { text: string; url: string }; backgroundImage?: string; overlay?: boolean }
   | { type: 'feature-grid'; items: { icon?: string; title: string; description: string }[]; columns: 2 | 3 | 4 }
   | TestimonialBlock
-  | { type: 'team'; members: { name: string; role: string; bio?: string; photo?: string; social?: Record<string, string> }[] }
+  | { type: 'team'; members: { name: string; role: string; bio?: string; photo?: string }[] }
   | { type: 'stats'; items: { value: string; label: string; prefix?: string; suffix?: string }[] }
-  | { type: 'timeline'; items: { date: string; title: string; description: string; icon?: string }[] }
+  | { type: 'timeline'; items: { date: string; title: string; description: string }[] }
   | { type: 'comparison'; items: { feature: string; values: Record<string, string | boolean> }[]; columns: string[] }
   | { type: 'pricing'; plans: { name: string; price: string; period?: string; features: string[]; cta: { text: string; url: string }; highlighted?: boolean }[] }
   | { type: 'map'; location: { lat: number; lng: number }; zoom?: number; marker?: string }
   | { type: 'contact-form'; fields: ('name' | 'email' | 'phone' | 'message' | 'subject')[]; submitLabel?: string; successMessage?: string }
   | { type: 'newsletter'; title: string; description?: string; buttonText?: string; privacyNote?: string }
   | { type: 'social-links'; platforms: ('facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok')[]; style: 'icons' | 'buttons' | 'floating' }
-  | { type: 'recent-posts'; title: string; category?: string; count: number; layout: 'list' | 'grid' | 'carousel' }
+  | { type: 'recent-posts'; title: string; count: number; layout: 'list' | 'grid' | 'carousel' }
   | { type: 'product-grid'; productIds: string[]; layout: 'grid' | 'list' | 'carousel' }
   | { type: 'custom'; component: string; props: Record<string, unknown> };
 

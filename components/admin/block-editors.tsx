@@ -131,6 +131,19 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               {t('be.altHint')}
             </p>
           </Field>
+          <Field label={t('be.caption')} htmlFor="image-caption">
+            <input
+              id="image-caption"
+              type="text"
+              className="admin-input"
+              value={block.caption ?? ''}
+              onChange={(e) => onChange({ ...block, caption: e.target.value })}
+              data-test-id="image-caption"
+            />
+            <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
+              {t('be.captionHint')}
+            </p>
+          </Field>
           <Field label={t('be.width')} htmlFor="image-layout">
             <select
               id="image-layout"
@@ -169,6 +182,19 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               value={block.author ?? ''}
               onChange={(e) => onChange({ ...block, author: e.target.value || undefined })}
             />
+          </Field>
+          <Field label={t('be.quoteSource')} htmlFor="quote-source">
+            <input
+              id="quote-source"
+              type="text"
+              className="admin-input"
+              value={block.source ?? ''}
+              onChange={(e) => onChange({ ...block, source: e.target.value })}
+              data-test-id="quote-source"
+            />
+            <p className="mt-1 text-xs text-[var(--admin-text-muted)]">
+              {t('be.quoteSourceHint')}
+            </p>
           </Field>
           <Field label={t('be.style')} htmlFor="quote-style">
             <select
@@ -236,6 +262,15 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
               </select>
             </Field>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={block.fullWidth ?? false}
+              onChange={(e) => onChange({ ...block, fullWidth: e.target.checked })}
+              data-test-id="btn-full-width"
+            />
+            {t('be.fullWidth')}
+          </label>
         </div>
       );
 
@@ -841,6 +876,8 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
             onChange={(v) => onChange({ ...block, description: v || undefined })} />
           <MiniField label={t('be.buttonText')} value={block.buttonText ?? ''}
             onChange={(v) => onChange({ ...block, buttonText: v || undefined })} />
+          <MiniField label={t('be.privacyNote')} value={block.privacyNote ?? ''}
+            onChange={(v) => onChange({ ...block, privacyNote: v || undefined })} />
         </div>
       );
 
@@ -856,6 +893,8 @@ export function BlockEditor({ block, onChange }: BlockEditorProps) {
           />
           <MiniField label={t('be.submitLabel')} value={block.submitLabel ?? ''}
             onChange={(v) => onChange({ ...block, submitLabel: v || undefined })} />
+          <MiniField label={t('be.successMessage')} value={block.successMessage ?? ''}
+            onChange={(v) => onChange({ ...block, successMessage: v || undefined })} />
         </div>
       );
 
