@@ -170,9 +170,33 @@ async function main() {
   const manifestPath = path.join(dir, 'pages.json');
   let manifest;
   try {
-    manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-  } catch {
-    fail(`No manifest at ${manifestPath}. Run scripts/extract-site-content.mjs first.`);
+    // Read and parse as separate steps. Collapsing them reports a file that is
+    // present but malformed as a file that is missing, which sends somebody
+    // looking for it in the wrong place — it did exactly that once.
+    const text = await fs.readFile(manifestPath, 'utf8');
+    try {
+      manifest = JSON.parse(text);
+    } catch (err) {
+      fail(`${manifestPath} is not valid JSON: ${err.message}`);
+    }
+  } catch (err) {
+    if (err?.code === 'ENOENT') {
+      let sibling = '';
+      try {
+        const names = (await fs.readdir(dir)).filter((n) => n.endsWith('.html'));
+        sibling = names.length
+          ? `\n  ${dir} does hold ${names.length} .html file(s), so only the manifest is missing.`
+          : `\n  ${dir} holds no .html files either — is that the right directory?`;
+      } catch {
+        sibling = `\n  ${dir} could not be listed — is that the right directory?`;
+      }
+      fail(`No manifest at ${manifestPath}.${sibling}\n  Run scripts/extract-site-content.mjs to write one.`);
+    }
+    fail(`Could not read ${manifestPath}: ${err.message}`);
+  }
+
+  if (!Array.isArray(manifest)) {
+    fail(`${manifestPath} must be a JSON array of page entries.`);
   }
 
   const wanted = only.length ? manifest.filter((e) => only.includes(e.slug)) : manifest;
