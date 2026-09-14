@@ -22,6 +22,22 @@ COPY . .
 # image 400s. Not a secret: it is the public read URL.
 ARG S3_PUBLIC_URL=""
 ENV S3_PUBLIC_URL=${S3_PUBLIC_URL}
+# mediaRemotePattern() falls back to S3_ENDPOINT when S3_PUBLIC_URL is unset,
+# so an install that configures only the endpoint — MinIO, a self-hosted
+# bucket — needs it here for the same reason. Undeclared it was a latent copy
+# of the same bug, waiting for the first such deployment.
+ARG S3_ENDPOINT=""
+ENV S3_ENDPOINT=${S3_ENDPOINT}
+# Same trap, same reason: next.config.ts turns LEGACY_REDIRECTS into Next's
+# `redirects()` at BUILD time, so the table is baked into the output. Set only
+# on the running container it is invisible here, legacyRedirects() reads
+# undefined, returns [], and every old URL 404s — silently, because an empty
+# redirect table is indistinguishable from one that was never wanted.
+#
+# That is what happened on al-ai.ai: the variable was set correctly on the
+# service and every .html from the previous site still 404'd.
+ARG LEGACY_REDIRECTS=""
+ENV LEGACY_REDIRECTS=${LEGACY_REDIRECTS}
 # Build-time placeholders ONLY.
 #
 # `next build` imports every route module to collect page data, and lib/env.ts
