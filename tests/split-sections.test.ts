@@ -100,19 +100,32 @@ describe('htmlBlocks', () => {
 
   it('makes one block per section when splitting', () => {
     expect(htmlBlocks(page, true)).toEqual([
-      { type: 'html', content: '<section>a</section>' },
-      { type: 'html', content: '<section>b</section>' },
+      { type: 'html', content: '<section>a</section>', isolate: false },
+      { type: 'html', content: '<section>b</section>', isolate: false },
     ]);
   });
 
   it('makes a single block when not splitting', () => {
-    expect(htmlBlocks(page, false)).toEqual([{ type: 'html', content: page }]);
+    expect(htmlBlocks(page, false)).toEqual([{ type: 'html', content: page, isolate: false }]);
   });
 
   /** A page that will not split cleanly is published whole, not mangled. */
   it('falls back to one block when the markup will not split', () => {
     const broken = '<div><p>a</div>';
-    expect(htmlBlocks(broken, true)).toEqual([{ type: 'html', content: broken }]);
+    expect(htmlBlocks(broken, true)).toEqual([{ type: 'html', content: broken, isolate: false }]);
+  });
+
+  /**
+   * Isolation wraps a block in a `html-scope-…` div and prefixes its pasted
+   * CSS. A migrated fragment has no <style> of its own — the theme pack holds
+   * the CSS — so the scoping has nothing to scope and only the wrapper
+   * survives, which a direct-child selector like `#tt-page-content >
+   * .tt-section` then stops matching through.
+   */
+  it('turns isolation off on every block it makes', () => {
+    for (const block of [...htmlBlocks(page, true), ...htmlBlocks(page, false)]) {
+      expect(block).toHaveProperty('isolate', false);
+    }
   });
 
   it('does not split a page that is one element', () => {
