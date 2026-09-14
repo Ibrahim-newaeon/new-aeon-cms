@@ -1,0 +1,46 @@
+{% comment %}
+  A `faq` block, in this theme's own accordion.
+
+  Named `block-faq` so lib/themes/render.ts finds it: a partial keyed
+  `block-<type>` is rendered INSTEAD of the shared markup in
+  lib/themes/blocks-to-html.ts, which would otherwise emit nothing at all for
+  this type. The block's fields are the scope, so `block.items` is the
+  question-and-answer list the editor filled in.
+
+  The DOM is what theme.js binds to, and all four parts are load-bearing:
+  .tt-accordion is the container it scans, .tt-accordion-item is what gains
+  .active, .tt-accordion-heading is the click target, and
+  .tt-accordion-content is the sibling it slides. Renaming any of them leaves
+  a list that renders and never opens.
+
+  The first item carries `is-open` because theme.js reads that class on load to
+  decide which item starts expanded — an accordion where everything is shut
+  looks broken rather than tidy.
+
+  `| escape` on both fields is not optional. liquidjs does NOT escape by
+  default, these two are editor input, and this markup reaches the page through
+  dangerouslySetInnerHTML — so an answer containing a tag would be markup, not
+  text. The shared renderer escapes the same way (escapeText in
+  lib/themes/blocks-to-html.ts); a pack partial has to do it itself.
+{% endcomment %}
+{% if block.items and block.items.size > 0 %}
+<div class="tt-section tt-wrap padding-top-xlg-80 padding-bottom-xlg-80">
+  <div class="tt-row">
+    <div class="tt-col-xl-9">
+      <div class="tt-accordion">
+        {% for item in block.items %}
+        <div class="tt-accordion-item">
+          <div class="tt-accordion-heading">
+            <h4>{{ item.question | escape }}</h4>
+            <div class="tt-accordion-caret"><div class="tt-accordion-caret-inner"></div></div>
+          </div>
+          <div class="tt-accordion-content{% if forloop.first %} is-open{% endif %}">
+            <p>{{ item.answer | escape }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

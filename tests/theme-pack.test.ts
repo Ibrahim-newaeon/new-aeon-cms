@@ -116,8 +116,8 @@ describe('theme zip extract + render', () => {
 });
 
 describe('blocksToHtml', () => {
-  it('serialises basic blocks and sanitises html blocks', () => {
-    const html = blocksToHtml(
+  it('serialises basic blocks and sanitises html blocks', async () => {
+    const html = await blocksToHtml(
       [
         { type: 'heading', level: 2, text: 'Hi' },
         { type: 'paragraph', text: 'There' },

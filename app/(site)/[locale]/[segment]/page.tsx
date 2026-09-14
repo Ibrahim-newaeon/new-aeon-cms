@@ -13,7 +13,7 @@ import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 import { tryRenderThemePack } from '@/lib/themes/present';
 import { ThemePackView } from '@/components/site/theme-pack-view';
 import { JsonLd } from '@/components/site/json-ld';
-import { contentPageJsonLd, breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import { contentPageJsonLd, breadcrumbJsonLd, faqJsonLd } from '@/lib/seo/json-ld';
 import { contentKindForTypeId } from '@/lib/themes/content-kind';
 
 interface Params {
@@ -107,10 +107,26 @@ export default async function ContentPage({ params }: Params) {
     { name: i18n?.title || segment, path: `/${loaded.locale}/${segment}` },
   ]);
 
+  /*
+   * FAQPage, from the page's own faq blocks.
+   *
+   * Emitted HERE rather than from the renderer, and that matters: content-
+   * renderer.tsx already does this for the builtin React path, but a theme-pack
+   * page never reaches it — so the site with the designed theme was the one
+   * publishing no FAQ schema at all. Reading the blocks directly makes it work
+   * on both branches, whatever renders the markup.
+   *
+   * Several faq blocks on one page merge into one node: schema.org expects a
+   * single FAQPage per document, and two would leave a validator to guess.
+   */
+  const faqItems = blocks.flatMap((b) => (b.type === 'faq' ? b.items : []));
+  const faq = faqItems.length > 0 ? faqJsonLd(faqItems) : null;
+
   const schema = (
     <>
       <JsonLd data={pageSchema} />
       <JsonLd data={trail} />
+      {faq && <JsonLd data={faq} />}
     </>
   );
 

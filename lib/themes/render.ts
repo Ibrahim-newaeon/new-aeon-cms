@@ -57,6 +57,57 @@ export async function expandPartials(src: string, root: string, depth = 0): Prom
 }
 
 /**
+ * Render ONE block through a pack-supplied partial, or null when it ships none.
+ *
+ * The seam that lets a pack style a block type the shared renderer cannot.
+ * `blocksToHtml()` emits plain semantic HTML — `<div class="prose">`,
+ * `<figure>` — which is correct for any theme and native to none, and it
+ * returns '' outright for the 23 types it does not handle. A pack that ships
+ * `partials/block-faq.html` gets its own markup for `faq`, with its own
+ * classes and its own JS hooks, without a line of theme-specific code in a
+ * shared module.
+ *
+ * The block's fields are the scope, so the partial reads `{{ block.items }}`
+ * the way a template reads `{{ page.title }}`.
+ *
+ * Returns null rather than throwing when the partial is absent: absence is the
+ * normal case and means "fall back to the generic rendering".
+ */
+export async function renderBlockPartial(
+  themeId: string,
+  manifest: ThemeManifest,
+  block: { type: string } & Record<string, unknown>,
+  scope: { locale: string; dir: string } = { locale: 'en', dir: 'ltr' }
+): Promise<string | null> {
+  const rel = manifest.partials?.[`block-${block.type}`];
+  if (!rel) return null;
+
+  const root = themeDir(themeId);
+  let src: string;
+  try {
+    src = await expandPartials(await readTemplate(root, rel), root);
+  } catch {
+    // A manifest naming a partial that is not in the zip must not take the
+    // page down — the rest of the content is still correct without it.
+    return null;
+  }
+
+  const engine = new Liquid({
+    cache: false,
+    strictFilters: false,
+    strictVariables: false,
+    ownPropertyOnly: true,
+  });
+  engine.registerFilter('asset', (r: unknown) => {
+    if (typeof r !== 'string' || !r.trim()) return '';
+    const cleaned = r.replace(/^\/+/, '').split('/').filter((x) => x && x !== '..').join('/');
+    return themeAssetUrl(themeId, cleaned);
+  });
+
+  return engine.parseAndRender(src, { block, ...scope });
+}
+
+/**
  * Render a themable page.
  * - layout.html wraps with {{ content }}
  * - home/page/post/blog templates are the inner body

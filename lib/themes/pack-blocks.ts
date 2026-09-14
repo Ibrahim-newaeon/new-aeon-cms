@@ -27,3 +27,35 @@ export const PACK_SUPPORTED_BLOCKS: ReadonlySet<ContentBlock['type']> = new Set(
   'heading', 'paragraph', 'image', 'html', 'rich-text',
   'button', 'divider', 'spacer', 'quote', 'cta',
 ] as const);
+
+/**
+ * What a SPECIFIC pack renders: the shared ten, plus every type it ships a
+ * `block-<type>` partial for.
+ *
+ * The fixed set alone became a lie the moment partials could extend it — the
+ * picker would go on badging `faq` as "not in theme" for a pack whose FAQ
+ * renders perfectly. A warning that is wrong in that direction is worse than
+ * none: it talks an editor out of a feature that works.
+ */
+export function packSupportedBlocks(
+  partials: Record<string, string> | undefined
+): ReadonlySet<ContentBlock['type']> {
+  const out = new Set<ContentBlock['type']>(PACK_SUPPORTED_BLOCKS);
+  for (const key of Object.keys(partials ?? {})) {
+    const match = /^block-([a-z-]+)$/.exec(key);
+    if (match?.[1]) out.add(match[1] as ContentBlock['type']);
+  }
+  return out;
+}
+
+/**
+ * The inverse, which is what the picker actually needs: types this pack will
+ * drop. Computed on the server, where the active manifest is known.
+ */
+export function unsupportedPackBlocks(
+  allTypes: ReadonlyArray<ContentBlock['type']>,
+  partials: Record<string, string> | undefined
+): ContentBlock['type'][] {
+  const supported = packSupportedBlocks(partials);
+  return allTypes.filter((t) => !supported.has(t));
+}

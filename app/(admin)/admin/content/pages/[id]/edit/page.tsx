@@ -8,15 +8,27 @@ import {
   listTaxonomyOptions, getTypeTaxonomyFlags, getContentTaxonomy,
 } from '@/lib/content/taxonomy';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
-import { getSettings } from '@/lib/db/queries';
+import { resolveStorefrontPresentation } from '@/lib/themes/active';
+import { unsupportedPackBlocks } from '@/lib/themes/pack-blocks';
+import { ALL_BLOCK_TYPES } from '@/lib/blocks/defaults';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 const LOCALES = ['ar', 'en'] as const;
 
 export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
-  // Only the block picker uses this: under a theme pack most block
-  // types render as nothing, and the picker says so.
-  const driver = (await getSettings())?.themeDriver;
+  /*
+   * What the active presentation will NOT render, for the block picker.
+   *
+   * Computed here because only the server knows the active pack, and what a
+   * pack renders is the shared ten plus whatever `block-<type>` partials it
+   * ships. On the builtin driver nothing is unsupported, so the list is empty
+   * and the picker stays silent.
+   */
+  const presentation = await resolveStorefrontPresentation();
+  const unsupportedBlocks =
+    presentation.driver === 'html-pack'
+      ? unsupportedPackBlocks(ALL_BLOCK_TYPES, presentation.theme?.manifest.partials)
+      : [];
   const { id } = await params;
   const record = await getContentById(id);
 
@@ -47,7 +59,7 @@ export default async function EditPage({ params }: { params: Promise<{ id: strin
 
   return (
     <PageForm
-      themeDriver={driver === 'html-pack' ? 'html-pack' : 'builtin'}
+      unsupportedBlocks={unsupportedBlocks}
       mode="edit"
       contentId={record.content.id}
       adminPath={ADMIN_PATH}
