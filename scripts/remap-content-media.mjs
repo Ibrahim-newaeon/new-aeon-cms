@@ -15,11 +15,22 @@
 // "al-ai" changes nothing about their addresses. That is the mistake this
 // script exists to repair.
 //
-// Getting the media list, logged into the admin in a browser:
+// Getting the media list, from a tab already logged into the admin. Open the
+// DevTools console ON AN ADMIN PAGE and run:
 //
-//   open https://<your-domain>/api/media   and save the JSON
+//   copy(JSON.stringify((await (await fetch('/api/media')).json()), null, 2))
 //
-// The session cookie rides along, which is simpler than reproducing it in curl.
+// then paste into media.json. The session cookie rides along, which is simpler
+// than reproducing it in curl.
+//
+// NOT by typing /api/media into the address bar. lib/auth/api-guard.ts refuses
+// a request whose Origin does not match Host, and falls back to requiring
+// `Sec-Fetch-Site: same-origin` when there is no Origin at all — which a typed
+// URL is not (browsers send `none`). That returns 403 "Cross-site request
+// blocked", which reads like a login problem and is not one.
+//
+// The route returns the newest 200 assets (app/api/media/route.ts). A library
+// larger than that needs paging before this join is complete.
 //
 // Usage:
 //   node scripts/remap-content-media.mjs --media media.json --dir dist/content

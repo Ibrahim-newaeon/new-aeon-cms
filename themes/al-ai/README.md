@@ -92,6 +92,32 @@ structural markup these sections are built from, and the pages will render as
 loose text. The setting is read at RENDER time, so changing it later fixes
 pages that are already stored — nothing needs re-pasting.
 
+### Pointing the images at the media library first
+
+The fragments leave every image at `/uploads/al-ai/<original name>`, which is a
+placeholder — the media library stores uploads under a generated UUID and a
+year/month prefix. Export the library and rewrite them:
+
+On an admin page, in the DevTools console:
+
+```js
+copy(JSON.stringify(await (await fetch('/api/media')).json(), null, 2))
+```
+
+Paste that into `media.json`, then:
+
+```bash
+node scripts/remap-content-media.mjs --media media.json --dir dist/content --dry-run
+node scripts/remap-content-media.mjs --media media.json --dir dist/content
+```
+
+Do **not** fetch `/api/media` by typing it into the address bar. The API guard
+refuses a request whose `Origin` does not match `Host` and, when there is no
+`Origin`, requires `Sec-Fetch-Site: same-origin` — which a typed URL is not.
+The 403 reads `Cross-site request blocked` and looks like a login failure.
+
+The route returns the newest **200** assets; a larger library needs paging.
+
 ### Publishing them
 
 Two ways in, and they produce the same rows.
