@@ -103,6 +103,7 @@ describe('publish-al-ai-pages arguments', () => {
       status: 'published',
       dryRun: false,
       only: [],
+      split: false,
     });
   });
 

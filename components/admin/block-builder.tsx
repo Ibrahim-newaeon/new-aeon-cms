@@ -1,7 +1,7 @@
 // components/admin/block-builder.tsx
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { Plus, GripVertical, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import {
   DndContext, KeyboardSensor, PointerSensor, closestCenter,
@@ -20,6 +20,7 @@ import {
   type BlockType,
 } from '@/lib/blocks/defaults';
 import type { ContentBlock } from '@/lib/blocks/types';
+import { PACK_SUPPORTED_BLOCKS } from '@/lib/themes/pack-blocks';
 import { useT } from './i18n-provider';
 
 interface BlockBuilderProps {
@@ -36,7 +37,26 @@ interface BlockBuilderProps {
    * names.
    */
   testScope?: string;
+  /**
+   * Storefront driver this content will be rendered by. Only the top-level
+   * builder takes it; nested ones inherit through ThemeDriverContext.
+   */
+  themeDriver?: 'builtin' | 'html-pack';
 }
+
+/**
+ * The storefront driver, read by the picker to warn about block types the
+ * active theme pack will silently drop.
+ *
+ * Context rather than a prop because BlockItem and NestedBlocksEditor sit
+ * between the top-level builder and the picker, and neither has any other
+ * reason to know about themes. Same shape as the admin i18n provider, which
+ * is ambient for the same reason.
+ *
+ * Defaults to 'builtin', which renders every type: a caller that does not know
+ * the driver stays silent rather than warning wrongly.
+ */
+const ThemeDriverContext = createContext<'builtin' | 'html-pack'>('builtin');
 
 let keyCounter = 0;
 const nextKey = () => `blk-${(keyCounter += 1)}`;
@@ -46,8 +66,13 @@ export function BlockBuilder({
   onChange,
   nested = false,
   testScope = 'block',
+  themeDriver,
 }: BlockBuilderProps) {
   const t = useT();
+  // A nested builder renders inside the provider already, so it inherits
+  // rather than resetting to the default when given no prop.
+  const inherited = useContext(ThemeDriverContext);
+  const driver = themeDriver ?? inherited;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -152,7 +177,8 @@ export function BlockBuilder({
   };
 
   return (
-    <div className="space-y-4" data-test-id={`${testScope}-builder`}>
+    <ThemeDriverContext.Provider value={driver}>
+      <div className="space-y-4" data-test-id={`${testScope}-builder`}>
       {blocks.length === 0 && (
         <p className="rounded-lg border border-dashed border-[var(--admin-line)] p-8 text-center text-sm text-[var(--admin-text-muted)]">
           {t('blocks.empty')}
@@ -229,6 +255,16 @@ export function BlockBuilder({
             <div className="p-2 grid grid-cols-2 gap-1">
               {ALL_BLOCK_TYPES.map((type) => {
                 const editable = EDITABLE_BLOCKS.has(type);
+                /*
+                 * Under a theme pack the page is rendered by
+                 * lib/themes/blocks-to-html.ts, which handles 10 of the 33
+                 * types and returns '' for the rest. Adding one of the others
+                 * saves cleanly and the section simply never appears — so say
+                 * so at the moment of choosing, rather than leaving it to be
+                 * discovered on the live site.
+                 */
+                const droppedByPack =
+                  driver === 'html-pack' && !PACK_SUPPORTED_BLOCKS.has(type);
                 return (
                   <button
                     key={type}
@@ -236,13 +272,25 @@ export function BlockBuilder({
                     role="menuitem"
                     onClick={() => addBlock(type)}
                     data-test-id={`${testScope}-add-${type}`}
+                    title={droppedByPack ? t('blocks.notInPackHint') : undefined}
                     className="flex items-center justify-between gap-2 rounded px-3 py-2 text-start text-sm transition-colors hover:bg-white/5"
                   >
-                    <span>{t(BLOCK_LABEL_KEYS[type])}</span>
+                    <span className={droppedByPack ? 'opacity-60' : undefined}>
+                      {t(BLOCK_LABEL_KEYS[type])}
+                    </span>
                     {/* Honest about which pickers lead to a real editor. */}
                     {!editable && (
                       <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-400">
                         {t('blocks.soon')}
+                      </span>
+                    )}
+                    {/* And about which lead to an editor the theme ignores. */}
+                    {editable && droppedByPack && (
+                      <span
+                        className="shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] text-rose-300"
+                        data-test-id={`${testScope}-not-in-pack-${type}`}
+                      >
+                        {t('blocks.notInPack')}
                       </span>
                     )}
                   </button>
@@ -252,7 +300,8 @@ export function BlockBuilder({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </ThemeDriverContext.Provider>
   );
 }
 

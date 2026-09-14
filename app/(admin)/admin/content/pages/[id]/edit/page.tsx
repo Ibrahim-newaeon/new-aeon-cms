@@ -8,11 +8,15 @@ import {
   listTaxonomyOptions, getTypeTaxonomyFlags, getContentTaxonomy,
 } from '@/lib/content/taxonomy';
 import { getAdminLocale } from '@/lib/admin-i18n/server';
+import { getSettings } from '@/lib/db/queries';
 
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin';
 const LOCALES = ['ar', 'en'] as const;
 
 export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
+  // Only the block picker uses this: under a theme pack most block
+  // types render as nothing, and the picker says so.
+  const driver = (await getSettings())?.themeDriver;
   const { id } = await params;
   const record = await getContentById(id);
 
@@ -43,6 +47,7 @@ export default async function EditPage({ params }: { params: Promise<{ id: strin
 
   return (
     <PageForm
+      themeDriver={driver === 'html-pack' ? 'html-pack' : 'builtin'}
       mode="edit"
       contentId={record.content.id}
       adminPath={ADMIN_PATH}

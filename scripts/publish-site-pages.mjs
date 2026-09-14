@@ -29,6 +29,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { splitTopLevel } from './lib/split-sections.mjs';
 
 /** Zod rejects anything else, and a 400 per page is a poor way to find out. */
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -44,6 +45,7 @@ export function parseArgs(argv) {
     status: 'published',
     dryRun: false,
     only: [],
+    split: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--url') out.url = argv[i + 1] ?? null;
@@ -51,6 +53,7 @@ export function parseArgs(argv) {
     if (argv[i] === '--locale') out.locale = argv[i + 1] ?? out.locale;
     if (argv[i] === '--status') out.status = argv[i + 1] ?? out.status;
     if (argv[i] === '--dry-run') out.dryRun = true;
+    if (argv[i] === '--split') out.split = true;
     if (argv[i] === '--only') out.only = (argv[i + 1] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   }
   return out;
@@ -63,7 +66,7 @@ export function parseArgs(argv) {
  * `content` wrong (the html block's field is `content`, not `html`) fails the
  * block registry, and getting the locale wrong writes a page nobody sees.
  */
-export function buildPayload(entry, html, { locale, status }) {
+export function buildPayload(entry, html, { locale, status, split = false }) {
   const meta = (entry.metaDescription ?? '').trim();
   return {
     slug: entry.slug,
@@ -74,11 +77,32 @@ export function buildPayload(entry, html, { locale, status }) {
         title: entry.title,
         // No isolate/fullPage: both only matter when the site shell renders the
         // block, and with the theme pack active the pack's template does.
-        body: [{ type: 'html', content: html }],
+        body: htmlBlocks(html, split),
         ...(meta && meta.length <= META_DESCRIPTION_MAX ? { metaDescription: meta } : {}),
       },
     ],
   };
+}
+
+/**
+ * One `html` block, or one per top-level section.
+ *
+ * A whole page in a single block is editable only by editing raw markup, and
+ * no part of it can be moved or deleted on its own. Splitting at the top level
+ * gives an editor move-up, move-down and delete per band of the page, with the
+ * theme's markup untouched inside each one — which structured blocks could not
+ * do, since a theme pack renders only 10 of the 33 types.
+ *
+ * Falls back to a single block when the fragment will not split cleanly.
+ * splitTopLevel() returns null unless the pieces reassemble into the input
+ * byte for byte, so the choice is between an exact split and no split; it
+ * never publishes markup it has reshaped.
+ */
+export function htmlBlocks(html, split) {
+  if (!split) return [{ type: 'html', content: html }];
+  const parts = splitTopLevel(html);
+  if (!parts || parts.length < 2) return [{ type: 'html', content: html }];
+  return parts.map((content) => ({ type: 'html', content }));
 }
 
 /** Reasons a manifest entry cannot be published, as sentences. */
@@ -154,12 +178,12 @@ function fail(message) {
 }
 
 async function main() {
-  const { url, dir, locale, status, dryRun, only } = parseArgs(process.argv.slice(2));
+  const { url, dir, locale, status, dryRun, only, split } = parseArgs(process.argv.slice(2));
 
   if (!url || !dir) {
     fail(
       'Usage: node scripts/publish-site-pages.mjs --url <site> --dir <content dir>\n' +
-        '       [--locale en] [--status published|draft] [--only slug,slug] [--dry-run]\n' +
+        '       [--locale en] [--status published|draft] [--only slug,slug] [--split] [--dry-run]\n' +
         '       CMS_EMAIL and CMS_PASSWORD must be set in the environment.'
     );
   }
@@ -227,10 +251,17 @@ async function main() {
   }
 
   if (dryRun) {
-    console.log(`Would publish ${wanted.length} page(s) to ${url} as ${status}, locale ${locale}:`);
+    console.log(
+      `Would publish ${wanted.length} page(s) to ${url} as ${status}, locale ${locale}` +
+        `${split ? ', split into sections' : ''}:`
+    );
     for (const entry of wanted) {
       const kb = (bodies.get(entry.slug).length / 1024).toFixed(1);
-      console.log(`  ${entry.type.padEnd(4)}  ${entry.slug.padEnd(38)} ${String(kb).padStart(6)} KB  ${entry.title}`);
+      const blocks = htmlBlocks(bodies.get(entry.slug), split).length;
+      const shape = split ? `${String(blocks).padStart(2)} block(s)` : '';
+      console.log(
+        `  ${entry.type.padEnd(4)}  ${entry.slug.padEnd(38)} ${String(kb).padStart(6)} KB ${shape}  ${entry.title}`
+      );
     }
     console.log('\nNo request was made. Drop --dry-run to publish.');
     return;
@@ -288,7 +319,7 @@ async function main() {
   const failures = [];
 
   for (const entry of wanted) {
-    const payload = buildPayload(entry, bodies.get(entry.slug), { locale, status });
+    const payload = buildPayload(entry, bodies.get(entry.slug), { locale, status, split });
     const id = existing.get(`${entry.type}|${entry.slug}`);
 
     const result = id
