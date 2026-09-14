@@ -145,19 +145,28 @@ function rewrite(body, locale, prefix) {
   );
 
   /*
-   * SVG is deliberately left in place, even though no paste mode allows it.
+   * Drop inline SVG. Settled by reading theme.js, after I argued both sides.
    *
-   * The sanitiser drops the tags and keeps the text inside them, and for this
-   * site that text is load-bearing rather than debris: theme.js finds the words
-   * under .tt-scroll-down and lays them out around a circle itself, the same
-   * way it builds the "Let's connect!" badge. Remove the SVG and the ring is
-   * still drawn — empty.
+   * No paste mode allows SVG — an SVG is a document that can carry <script>,
+   * the same reason image/svg+xml is refused by the media library. The
+   * sanitiser discards the tags and KEEPS the text inside them, so
+   * "Scroll to Explore", curved around a circle by <textpath> on the original
+   * site, arrives as two bare sentences wrapped down the right-hand margin.
    *
-   * An earlier pass stripped these after seeing "Scroll to Explore" wrapped
-   * down the margin as prose. That was real, but the cause was paste mode
-   * sitting at 'safe', which also strips every class — so theme.js had nothing
-   * to recognise. On 'trusted' the same markup renders as designed.
+   * I removed these, then restored them on the theory that theme.js laid the
+   * words out itself and needed them. It does not: theme-before-minify.js
+   * touches .tt-scroll-down in three places and every one is a fade or a
+   * translate (lines 138, 600, 2255). Nothing there builds circular text.
+   *
+   * What misled me is that the "Let's connect!" badge DOES curve in the CMS —
+   * but that one is per-letter <span>s carrying inline transforms, and trusted
+   * mode allows `style`. Two different mechanisms, only one of which survives.
+   *
+   * Every SVG here is decoration: twelve scroll rings and four arrows, no
+   * content. Removing them loses nothing a reader wants, and leaves the
+   * orphaned sentences out of the page.
    */
+  out = out.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '');
 
   // Runs last: it matches on the rewritten /uploads/ paths.
   out = applyMediaReplacements(out, prefix);
