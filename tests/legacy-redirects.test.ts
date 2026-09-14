@@ -1,12 +1,20 @@
 // tests/legacy-redirects.test.ts
 //
-// LEGACY_REDIRECTS is read at build time and baked into the build, so a bad
-// value is not something an operator finds out about from a running site —
+// LEGACY_REDIRECTS rescues the URLs a previous site was indexed under, so a
+// bad value is not something an operator finds out about from a running site —
 // they find out from 404s in the access log weeks later. These cover the
 // shapes a hand-edited environment variable actually arrives in.
+//
+// The table is applied by middleware.ts at RUNTIME. It began as Next's own
+// build-time `redirects()`, which never fired once: next.config.ts is
+// evaluated by `next build`, inside a Docker builder stage that cannot see a
+// variable set on the running container. legacyRedirects() is still exported
+// for a build that IS given the value, and both paths share one parser, so
+// these cases hold for either.
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { legacyRedirects } from '../next.config';
+import { legacyRedirectLookup } from '@/lib/seo/legacy-redirects';
 
 const prev = process.env.LEGACY_REDIRECTS;
 
@@ -103,5 +111,72 @@ describe('legacyRedirects', () => {
     const out = withValue(raw);
     expect(out).toHaveLength(2);
     expect(out.every((r) => r.destination === '/en/automated-decision-making-and-bpa')).toBe(true);
+  });
+});
+
+describe('the runtime lookup middleware uses', () => {
+  const table = JSON.stringify([
+    { from: '/about.html', to: '/en/about' },
+    { from: '/automated-decision-making-and-BPA.html', to: '/en/automated-decision-making-and-bpa' },
+  ]);
+
+  it('finds a path by its exact spelling', () => {
+    expect(legacyRedirectLookup(table).find('/about.html')).toBe('/en/about');
+  });
+
+  /**
+   * The previous server was IIS, which matches paths case-insensitively, so
+   * both spellings of a file are in the wild and both are indexed. A
+   * case-sensitive table would rescue one and 404 the other.
+   */
+  it('matches case-insensitively, as the old server did', () => {
+    const map = legacyRedirectLookup(table);
+    expect(map.find('/automated-decision-making-and-bpa.html')).toBe(
+      '/en/automated-decision-making-and-bpa'
+    );
+    expect(map.find('/About.html')).toBe('/en/about');
+  });
+
+  it('leaves a path it does not know alone', () => {
+    expect(legacyRedirectLookup(table).find('/en/about')).toBeUndefined();
+  });
+
+  /** A table listing both spellings must behave the way its author meant. */
+  it('lets the first of two spellings win', () => {
+    const map = legacyRedirectLookup(
+      JSON.stringify([
+        { from: '/A.html', to: '/en/first' },
+        { from: '/a.html', to: '/en/second' },
+      ])
+    );
+    expect(map.find('/a.html')).toBe('/en/first');
+  });
+
+  it('is empty when the variable is unset, so the check short-circuits', () => {
+    expect(legacyRedirectLookup(undefined).size).toBe(0);
+    expect(legacyRedirectLookup('').size).toBe(0);
+  });
+
+  /** A redirect to itself is a loop the browser reports as one. */
+  it('drops an entry pointing at itself', () => {
+    const problems: string[] = [];
+    const map = legacyRedirectLookup(
+      JSON.stringify([{ from: '/x.html', to: '/x.html' }]),
+      (m) => problems.push(m)
+    );
+    expect(map.size).toBe(0);
+    expect(problems[0]).toContain('points at itself');
+  });
+
+  /** Silence is what made the original failure invisible for weeks. */
+  it('reports what it dropped rather than swallowing it', () => {
+    const problems: string[] = [];
+    legacyRedirectLookup('not json', (m) => problems.push(m));
+    expect(problems[0]).toContain('not valid JSON');
+  });
+
+  it('still refuses a protocol-relative destination', () => {
+    const map = legacyRedirectLookup(JSON.stringify([{ from: '/a.html', to: '//evil.example' }]));
+    expect(map.size).toBe(0);
   });
 });

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyAccessToken } from '@/lib/auth/session';
 import { jwtVerify } from 'jose';
+import { legacyRedirectLookup } from '@/lib/seo/legacy-redirects';
 
 // Read directly from process.env, not lib/env — middleware runs on the Edge
 // runtime and must stay free of Node-only imports.
@@ -13,6 +14,25 @@ const LOCALES = (process.env.AVAILABLE_LOCALES || 'ar,en').split(',').map((l) =>
 const PUBLIC_FILE = /\.[^/]+$/;
 
 const REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET);
+
+/**
+ * Old URLs from the site this install replaced, read at RUNTIME.
+ *
+ * next.config.ts could express these as Next's own `redirects()`, and that is
+ * where they started — but that file is evaluated by `next build`, inside the
+ * Dockerfile's builder stage, which cannot see a variable set on the running
+ * container. The table was empty in every image ever built, every old URL
+ * 404'd, and nothing said so: an empty redirect table is indistinguishable
+ * from one nobody configured. Declaring ARG LEGACY_REDIRECTS was necessary and
+ * still not sufficient, because the platform must also pass it to the build.
+ *
+ * Here it behaves like every other setting. Parsed once at module scope, the
+ * same as ADMIN_PATH above; problems are logged rather than swallowed, because
+ * silence is what made the original failure so hard to see.
+ */
+const LEGACY_REDIRECTS = legacyRedirectLookup(process.env.LEGACY_REDIRECTS, (message) =>
+  console.warn(`[middleware] ${message}`)
+);
 
 /**
  * Signature-and-expiry check only. Whether the token has been revoked or reused
@@ -87,6 +107,23 @@ export async function middleware(request: NextRequest) {
   };
 
   const next = () => withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
+
+  /*
+   * Before the PUBLIC_FILE check, which returns early for any path with an
+   * extension — and every URL this table exists to rescue ends in `.html`.
+   *
+   * The lookup matches case-insensitively, because the server being replaced
+   * was IIS and both spellings of a file are indexed. The query string rides
+   * along, so a campaign link keeps its utm parameters through the redirect.
+   */
+  if (LEGACY_REDIRECTS.size > 0) {
+    const target = LEGACY_REDIRECTS.find(pathname);
+    if (target) {
+      const url = new URL(target, request.url);
+      url.search = request.nextUrl.search;
+      return withCsp(NextResponse.redirect(url, 301));
+    }
+  }
 
   if (PUBLIC_FILE.test(pathname)) return next();
 
