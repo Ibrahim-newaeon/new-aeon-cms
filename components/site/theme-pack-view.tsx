@@ -36,7 +36,23 @@ export async function ThemePackView({
       {cssHrefs.map((href) => (
         <link key={href} rel="stylesheet" href={href} />
       ))}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      {/*
+        suppressHydrationWarning is load-bearing, not noise suppression.
+
+        This subtree is a theme pack's markup: server-rendered for SEO, then
+        handed to the browser as a string. React cannot reconcile it, and on any
+        mismatch it discards the server DOM and re-renders the whole subtree —
+        which is fatal here for a reason that is not obvious. The pack's bundle
+        is a `defer` script, so it runs BEFORE hydration and initialises against
+        the server DOM: it lays "Scroll to Explore" around a circle, builds the
+        badges, wires the sliders. React then replaces every one of those nodes
+        with fresh ones and all of that work is thrown away, leaving raw text
+        where a laid-out widget was a moment earlier.
+
+        Telling React the content is generated outside its control is what this
+        flag is for, and it stops the subtree being regenerated.
+      */}
+      <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: html }} />
       {jsHrefs.map((href) => (
         <script key={href} src={href} defer nonce={nonce} />
       ))}
