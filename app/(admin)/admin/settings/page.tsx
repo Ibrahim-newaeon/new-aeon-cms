@@ -47,6 +47,21 @@ export default async function SettingsPage() {
     contactEmail: s?.contactEmail ?? '',
     contactPhone: s?.contactPhone ?? '',
     socialLinks: (s?.socialLinks as Partial<Record<SocialPlatform, string>>) ?? {},
+    /*
+     * Omitted here, these four are worse than merely blank. The form holds one
+     * `value` object seeded from `initial` and submits the whole thing, so a
+     * field missing from `initial` is submitted as undefined — and the route
+     * writes undefined as null. Loading this page and saving ANY unrelated
+     * setting would therefore erase a WhatsApp number that had been stored
+     * correctly.
+     *
+     * allowAiCrawlers reads `!== false` in the form, so `?? true` keeps an
+     * unset column meaning "allowed" instead of flipping it on first save.
+     */
+    brandAnswer: s?.brandAnswer ?? '',
+    allowAiCrawlers: s?.allowAiCrawlers ?? true,
+    whatsappNumber: s?.whatsappNumber ?? '',
+    whatsappGreeting: s?.whatsappGreeting ?? '',
     analyticsId: s?.analyticsId ?? '',
     gtmId: s?.gtmId ?? '',
     ga4Id: s?.ga4Id ?? '',

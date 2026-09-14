@@ -1,0 +1,16 @@
+{
+  "name": "al-ai.ai",
+  "version": "1.0.0",
+  "description": "Marketing theme pack for al-ai.ai — home, pages, blog and posts.",
+  "templates": {
+    "layout": "templates/layout.html",
+    "home": "templates/home.html",
+    "page": "templates/page.html",
+    "post": "templates/post.html",
+    "blog": "templates/blog.html"
+  },
+  "partials": {
+    "header": "partials/header.html",
+    "footer": "partials/footer.html"
+  }
+}

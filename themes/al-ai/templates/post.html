@@ -1,0 +1,27 @@
+{% comment %}
+  A single blog post. Derived from the unlinked blog-post-sidebar.html that
+  shipped in the source drop but was never reachable from the live site.
+{% endcomment %}
+<div id="page-header" class="ph-full ph-center ph-cap-xxxlg">
+  <div class="ph-caption">
+    <div class="ph-caption-title-wrap">
+      <h1 class="ph-caption-title">{{ page.title }}</h1>
+    </div>
+    {% if page.excerpt %}
+    <div class="ph-caption-description">{{ page.excerpt }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="tt-page-content">
+  <div class="tt-section tt-offset-top-xxlg">
+    <div class="tt-section-inner tt-wrap max-width-1000">
+      <div class="tt-blog-post-content">
+        {{ page.content }}
+      </div>
+      <div class="tt-offset-top-lg">
+        <a href="/{{ locale }}/blog" class="tt-link">&larr; All posts</a>
+      </div>
+    </div>
+  </div>
+</div>

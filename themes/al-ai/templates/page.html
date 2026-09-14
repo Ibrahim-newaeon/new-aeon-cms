@@ -1,0 +1,17 @@
+{% comment %}
+  Every non-home marketing page: about, services, contact, and the six service
+  pages. Same arrangement as home — the hero and sections are page content.
+
+  A page saved with no content still gets a heading, so a newly created page
+  is never a blank screen.
+{% endcomment %}
+{% if page.content and page.content != '' %}
+  {{ page.content }}
+{% else %}
+  <div id="page-header" class="ph-full ph-center ph-cap-xxxxlg">
+    <div class="ph-caption">
+      <h1 class="ph-caption-title">{{ page.title }}</h1>
+      {% if page.excerpt %}<div class="ph-caption-description">{{ page.excerpt }}</div>{% endif %}
+    </div>
+  </div>
+{% endif %}

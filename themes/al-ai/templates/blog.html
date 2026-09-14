@@ -1,0 +1,47 @@
+{% comment %}
+  Blog index. `posts` is supplied by renderThemePage(); an empty list is a
+  normal state for a blog nobody has published to yet, so it gets a message
+  rather than an empty grid.
+{% endcomment %}
+<div id="page-header" class="ph-full ph-center ph-cap-xxxlg">
+  <div class="ph-caption">
+    <div class="ph-caption-title-wrap">
+      <h1 class="ph-caption-title">{{ page.title }}</h1>
+    </div>
+    {% if page.excerpt %}
+    <div class="ph-caption-description">{{ page.excerpt }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="tt-page-content">
+  <div class="tt-section tt-offset-top-xxlg">
+    <div class="tt-section-inner tt-wrap max-width-1200">
+
+      {% if page.content and page.content != '' %}
+      <div class="tt-blog-intro tt-offset-bottom-lg">{{ page.content }}</div>
+      {% endif %}
+
+      {% if posts.size > 0 %}
+      <div class="tt-row">
+        {% for post in posts %}
+        <div class="tt-col-xl-4 tt-col-md-6">
+          <article class="tt-blog-item tt-offset-bottom-lg">
+            <h2 class="tt-blog-item-title">
+              <a href="{{ post.url }}" class="tt-link">{{ post.title }}</a>
+            </h2>
+            {% if post.excerpt %}
+            <p class="tt-blog-item-excerpt">{{ post.excerpt }}</p>
+            {% endif %}
+            <a href="{{ post.url }}" class="tt-link">Read more</a>
+          </article>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="tt-blog-empty">No posts published yet.</p>
+      {% endif %}
+
+    </div>
+  </div>
+</div>

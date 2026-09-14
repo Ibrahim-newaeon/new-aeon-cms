@@ -30,6 +30,75 @@ function mediaRemotePattern(): { protocol: 'http' | 'https'; hostname: string }[
   }
 }
 
+/**
+ * Permanent redirects from a site's previous URLs, read from LEGACY_REDIRECTS.
+ *
+ * A site rebuilt onto this CMS arrives with inbound links and accumulated
+ * ranking pointing at addresses it no longer serves — `/about.html` where the
+ * CMS answers `/en/about`. Without a redirect those become 404s and the
+ * ranking goes with them.
+ *
+ * The map lives in an environment variable rather than in this file because
+ * one repository serves several sites: hard-coding one client's old paths here
+ * would make every other client carry them. Each deployment declares its own.
+ *
+ * Format — a JSON array, paths only:
+ *
+ *   LEGACY_REDIRECTS='[{"from":"/about.html","to":"/en/about"}]'
+ *
+ * 301 rather than `permanent: true`, which emits 308. Both are permanent and
+ * both pass ranking, but 301 is what the tooling and the people reading the
+ * access log expect from a content move.
+ *
+ * Like the rest of this file it is read at BUILD time, so the variable has to
+ * be present when `next build` runs, not only in the running container.
+ */
+export function legacyRedirects(): { source: string; destination: string; statusCode: 301 }[] {
+  const raw = process.env.LEGACY_REDIRECTS;
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // A typo here must not take the build down: the site is still correct
+    // without its redirects, and a failed deploy helps nobody.
+    console.warn('[next.config] LEGACY_REDIRECTS is not valid JSON — ignoring it.');
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    console.warn('[next.config] LEGACY_REDIRECTS must be a JSON array — ignoring it.');
+    return [];
+  }
+
+  const out: { source: string; destination: string; statusCode: 301 }[] = [];
+
+  for (const entry of parsed) {
+    const from = (entry as { from?: unknown })?.from;
+    const to = (entry as { to?: unknown })?.to;
+    if (typeof from !== 'string' || typeof to !== 'string') continue;
+
+    /*
+     * Both sides must be same-origin paths.
+     *
+     * `//evil.example` is a protocol-relative URL, not a path — a browser
+     * follows it off-site. Accepting one here would turn a redirect table into
+     * an open redirect, which is worth guarding even though only an operator
+     * can set this variable.
+     */
+    const isPath = (s: string) => s.startsWith('/') && !s.startsWith('//');
+    if (!isPath(from) || !isPath(to)) {
+      console.warn(`[next.config] LEGACY_REDIRECTS entry skipped, not a local path: ${from} -> ${to}`);
+      continue;
+    }
+
+    out.push({ source: from, destination: to, statusCode: 301 });
+  }
+
+  return out;
+}
+
 const nextConfig: NextConfig = {
   /**
    * Required by docker/Dockerfile, which copies .next/standalone — so it stays
@@ -58,6 +127,10 @@ const nextConfig: NextConfig = {
       ...mediaRemotePattern(),
     ],
     formats: ['image/webp', 'image/avif'],
+  },
+
+  async redirects() {
+    return legacyRedirects();
   },
 
   async headers() {

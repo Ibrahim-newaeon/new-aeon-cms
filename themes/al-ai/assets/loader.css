@@ -1,0 +1,73 @@
+/* Extracted verbatim from the inline <style> block in index.html.
+   It lived inline because the original site had one page template; here it
+   is bundled so every page gets it, and so sanitizeScopedCss() never sees it. */
+			.tt-btn2 {
+				position: relative;
+				display: inline-flex;
+				align-items: center;		
+				background-color: #fff;
+				padding: 3px 15px;
+				text-transform: uppercase;
+				text-align: center;
+				font-size: 15px;
+				font-weight: 500;
+				overflow: hidden;
+				cursor: pointer;
+				letter-spacing: 0.5px;
+				border: none;
+				border-radius: 50px;
+				z-index: 9;
+			}
+			iframe {
+			-webkit-overflow-scrolling: touch !important;
+			overflow: auto !important;
+			touch-action: pan-y !important;
+			}
+
+			@media (max-width: 768px) {
+				.peach-container, canvas, .peach-scene { 
+					pointer-events: none !important; 
+				}
+				.tt-btn2 img{
+    				width: 80px !important;
+				}
+			}
+			@media (max-width: 1400px) {
+				.tt-scroll-down {
+					right: 5px;
+					bottom: 80px;
+				}
+			}
+
+			/* Page loader */
+			#al-loader{
+				position:fixed; inset:0; z-index:999999;
+				background:#000;
+				display:flex; align-items:center; justify-content:center; flex-direction:column;
+				visibility:visible !important; opacity:1;
+				transition:opacity .6s ease, visibility .6s ease;
+			}
+			#al-loader.al-hide{ opacity:0; visibility:hidden !important; pointer-events:none; }
+			/*
+			 * The same dismissal, keyed off <html> instead of the loader itself.
+			 *
+			 * React re-renders the pack's markup on a hydration mismatch, which
+			 * replaces #al-loader with a fresh node — and the reference the
+			 * dismissal script captured at startup then points at a detached
+			 * element. The class went on a node nobody could see, and a brand new
+			 * loader sat over the page forever. Keying the rule to an ancestor
+			 * that React never touches survives any number of re-mounts.
+			 */
+			html.al-loaded #al-loader{ opacity:0; visibility:hidden !important; pointer-events:none; }
+			.al-stage{ position:relative; width:180px; height:180px; display:flex; align-items:center; justify-content:center; }
+			.al-ring{ position:absolute; border-radius:50%; border:1px solid transparent; }
+			.al-ring-1{ width:180px; height:180px; border-top-color:rgba(255,255,255,.65); border-right-color:rgba(255,255,255,.15); animation:alSpin 2.4s linear infinite; }
+			.al-ring-2{ width:138px; height:138px; border-bottom-color:rgba(255,255,255,.4); border-left-color:rgba(255,255,255,.1); animation:alSpin 1.8s linear infinite reverse; }
+			@keyframes alSpin{ to{ transform:rotate(360deg); } }
+			.al-logo{ width:64px; height:auto; position:relative; z-index:2; animation:alPulse 1.8s ease-in-out infinite; filter:drop-shadow(0 0 14px rgba(255,255,255,.35)); }
+			@keyframes alPulse{ 0%,100%{ transform:scale(1); opacity:.9; } 50%{ transform:scale(1.08); opacity:1; } }
+			.al-label{ margin-top:28px; color:rgba(255,255,255,.7); font-family:'Poppins',sans-serif; font-size:12px; letter-spacing:.25em; text-transform:uppercase; }
+			@media (prefers-reduced-motion: reduce){
+				.al-ring, .al-logo{ animation:none !important; }
+			}
+			

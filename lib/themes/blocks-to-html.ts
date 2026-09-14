@@ -9,6 +9,10 @@ import type { ContentBlock } from '@/lib/blocks/types';
 import { processHtmlPaste } from '@/lib/blocks/html-paste';
 import { sanitizeRichHtml, type HtmlPasteMode } from '@/lib/blocks/sanitize';
 
+// Re-exported so the list stays reachable from beside the switch it describes,
+// while the definition lives in a module a Client Component can import.
+export { PACK_SUPPORTED_BLOCKS } from './pack-blocks';
+
 const tiptapExtensions = [StarterKit, TiptapImage, TiptapLink];
 
 function escapeText(s: string): string {

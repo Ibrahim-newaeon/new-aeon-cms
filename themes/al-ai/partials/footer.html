@@ -1,0 +1,97 @@
+{% comment %}
+  Site footer. Addresses, phone numbers and the service list are content, not
+  chrome, but the original site hard-codes them here and the pack format has
+  no per-site data slot for them — so they stay here and are edited here.
+{% endcomment %}
+<footer id="tt-footer" class="border-top" style="padding-bottom: 0px !important;">
+  <div class="tt-footer-inner tt-wrap max-width-1500">
+
+    <div class="tt-row">
+
+      <div class="tt-col-xl-3 tt-col-sm-6">
+        <div class="tt-footer-widget">
+          <ul class="tt-footer-widget-list">
+            <li>
+              <div class="tt-footer-logo">
+                <a href="/{{ locale }}" class="tt-magnetic-item">
+                  <img src="{{ 'assets/img/al-ai.png' | asset }}" class="tt-logo-light" loading="lazy" alt="{{ site.name }}">
+                  <img src="{{ 'assets/img/al-ai.png' | asset }}" class="tt-logo-dark" loading="lazy" alt="{{ site.name }}">
+                </a>
+              </div>
+            </li>
+            <li>
+              <p>A forward-thinking company that leverages artificial intelligence to automate tasks, improve operational efficiency, and drive smarter business decisions.</p>
+            </li>
+            <li>
+              <div class="tt-social-buttons">
+                <ul>
+                  <li><a href="https://www.facebook.com/newaeongroup/" class="tt-magnetic-item" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f"></i></a></li>
+                  <li><a href="https://www.instagram.com/newaeongroup/" class="tt-magnetic-item" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i></a></li>
+                  <li><a href="https://www.linkedin.com/company/new-aeon-digital" class="tt-magnetic-item" target="_blank" rel="noopener"><i class="fa-brands fa-linkedin"></i></a></li>
+                  <li><a href="https://www.youtube.com/@newaeongroup8328" class="tt-magnetic-item" target="_blank" rel="noopener"><i class="fa-brands fa-youtube"></i></a></li>
+                  <li><a href="https://x.com/newaeongroup" class="tt-magnetic-item" target="_blank" rel="noopener"><i class="fa-brands fa-x-twitter"></i></a></li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tt-col-xl-3 tt-col-sm-6">
+        <div class="tt-footer-widget">
+          <h5 class="tt-footer-widget-heading">Partners</h5>
+          <ul class="tt-footer-widget-list">
+            <li>Kingdom of Saudi Arabia - Riyadh - King Fahd Road, Al Olaya District</li>
+            <li><a href="tel:+966568872222" class="tt-link"> +(966) 56 887 2222</a></li>
+            <li>UAE - Office 01, Al Dana Bay, Sharm, Fujairah</li>
+            <li><a href="tel:+971566016681" class="tt-link"> +(971) 56 601 6681</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tt-col-xl-3 tt-col-sm-6">
+        <div class="tt-footer-widget">
+          <h5 class="tt-footer-widget-heading">Services</h5>
+          <ul class="tt-footer-widget-list">
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/data-driven">Data-Driven &amp; Solutions</a></li>
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/agentic-ai-and-multi-agent-systems">Agentic AI &amp; Multi-Agent Systems</a></li>
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/conversational-and-edge-analytics">Conversational &amp; Edge Analytics</a></li>
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/automated-decision-making-and-bpa">Automated Decision-Making &amp; BPA</a></li>
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/polarization-and-pre-indoctrination">Polarization &amp; Indoctrination</a></li>
+            <li><a class="tt-link" style="text-transform: capitalize;" href="/{{ locale }}/behavioral-intelligence">Behavioral Intelligence</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tt-col-xl-3 tt-col-sm-6">
+        <div class="tt-footer-widget">
+          <h5 class="tt-footer-widget-heading">Contact</h5>
+          <ul class="tt-footer-widget-list">
+            <li>Jordan - Dabooq</li>
+            <li><a href="tel:+96265931029" class="tt-link"> +(962) 659 310 29</a></li>
+            <li>Arizona - Phoenix</li>
+            <li><a href="tel:+14807440848" class="tt-link"> +1(480) 744 0848</a></li>
+            <li><a href="mailto:info@al-ai.ai" class="tt-link" style="text-transform: capitalize;">info@al-ai.ai</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="tt-footer-inner tt-wrap max-width-1500 border-top" style="margin-top: 50px;">
+    <div class="tt-row copyRights">
+      <div class="tt-col-xl-6 tt-col-sm-12">
+        <div class="tt-footer-widget">
+          &copy; 2026 {{ site.name }} All Rights Reserved
+        </div>
+      </div>
+      <div class="tt-col-xl-6 tt-col-sm-12">
+        <div class="tt-footer-widget text-right">
+          <a href="/{{ locale }}/privacy-policy" class="tt-link">Privacy Policy</a> |
+          <a href="/{{ locale }}/terms-and-conditions" class="tt-link">Terms &amp; Conditions</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

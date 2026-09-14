@@ -11,6 +11,7 @@ import {
 import type { ContentBlock } from '@/lib/blocks/types';
 import { setContentTaxonomy } from '@/lib/content/taxonomy';
 import { CONTENT_TYPE_SLUGS } from '@/lib/content/content-types';
+import { listContentByType } from '@/lib/content/list';
 
 const createContentSchema = z.object({
   // Derived from CONTENT_TYPE_SLUGS: this was the fourth hand-written copy of
@@ -41,6 +42,36 @@ const createContentSchema = z.object({
   categoryIds: z.array(z.string().uuid()).max(20).optional(),
   tagIds: z.array(z.string().uuid()).max(50).optional(),
 });
+
+/**
+ * Lists one content type, so a caller can tell an update from a create.
+ *
+ * `content.slug` carries an index, not a unique constraint, so POSTing a slug
+ * that already exists does not fail — it silently produces a SECOND page at
+ * the same address, and which one the site serves is then down to row order.
+ * Anything publishing more than one page at a time has to look first, and
+ * until now there was no way to: the admin screens read the database directly
+ * through listContentByType() and no route exposed it.
+ *
+ * Same visibility as those screens, deliberately: an author sees the list and
+ * is still refused the edit by canEdit() in PUT. Narrowing it here would mean
+ * two different answers to "what exists" depending on the door used.
+ */
+export async function GET(request: Request) {
+  const auth = await requireApiAuth(request, ['admin', 'editor', 'author']);
+  if (!auth.ok) return auth.response;
+
+  const type = new URL(request.url).searchParams.get('type') ?? 'page';
+  const parsed = z.enum(CONTENT_TYPE_SLUGS).safeParse(type);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, error: { message: `Unknown content type "${type}"` } },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json({ success: true, data: await listContentByType(parsed.data) });
+}
 
 export async function POST(request: Request) {
   const auth = await requireApiAuth(request, ['admin', 'editor', 'author']);

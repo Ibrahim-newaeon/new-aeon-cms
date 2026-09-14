@@ -1,0 +1,102 @@
+{% comment %}
+  Site header.
+
+  The Services dropdown is written out here rather than driven from the CMS
+  navigation table: renderThemePage() passes `navigation` as a flat
+  {label, url} list (lib/themes/render.ts), which cannot express a submenu.
+  Editing the service list therefore means editing this partial.
+
+  Top-level items that DO come from the CMS are appended after the fixed ones,
+  so an editor can add a link in Admin → Navigation without touching a file.
+{% endcomment %}
+<header id="tt-header" class="tt-header-alter tt-header-filled">
+  <div class="tt-header-inner tt-noise">
+
+    <div class="tt-header-col tt-header-col-left">
+      <div class="tt-logo">
+        <a href="/{{ locale }}" class="tt-magnetic-item">
+          <img src="{{ 'assets/img/al-ai.png' | asset }}" class="tt-logo-light" alt="{{ site.name }}">
+          <img src="{{ 'assets/img/al-ai.png' | asset }}" class="tt-logo-dark" alt="{{ site.name }}">
+        </a>
+      </div>
+    </div>
+
+    <div class="tt-header-col tt-header-col-center">
+      <nav class="tt-main-menu tt-m-menu-center">
+        <div class="tt-main-menu-holder">
+          <div class="tt-main-menu-inner">
+            <div class="tt-main-menu-content">
+              <ul class="tt-main-menu-list">
+
+                {% comment %}
+                  'home', not blank. The front page renders at /<locale> with no
+                  slug in the URL, but the CMS stores it under the slug 'home'
+                  and renderThemePage() passes that through — so a blank test
+                  matched nothing and Home was never marked active.
+                {% endcomment %}
+                <li{% if page.slug == 'home' or page.slug == blank %} class="active"{% endif %}>
+                  <a href="/{{ locale }}">Home</a>
+                </li>
+
+                <li{% if page.slug == 'about' %} class="active"{% endif %}>
+                  <a href="/{{ locale }}/about">About</a>
+                </li>
+
+                <li class="tt-submenu-wrap tt-submenu-master">
+                  <div class="tt-submenu-trigger">
+                    <a href="/{{ locale }}/services">Services</a>
+                  </div>
+                  <div class="tt-submenu">
+                    <ul class="tt-submenu-list">
+                      <li><a href="/{{ locale }}/data-driven">Data Driven</a></li>
+                      <li><a href="/{{ locale }}/agentic-ai-and-multi-agent-systems">Agentic AI &amp; Multi-Agent Systems</a></li>
+                      <li><a href="/{{ locale }}/conversational-and-edge-analytics">Conversational &amp; Edge Analytics</a></li>
+                      <li><a href="/{{ locale }}/automated-decision-making-and-bpa">Automated Decision-Making &amp; BPA</a></li>
+                      <li><a href="/{{ locale }}/polarization-and-pre-indoctrination">Polarization &amp; Indoctrination</a></li>
+                      <li><a href="/{{ locale }}/behavioral-intelligence">Behavioral Intelligence</a></li>
+                    </ul>
+                  </div>
+                </li>
+
+                <li{% if page.slug == 'blog' %} class="active"{% endif %}>
+                  <a href="/{{ locale }}/blog">Blog</a>
+                </li>
+
+                <li{% if page.slug == 'contact' %} class="active"{% endif %}>
+                  <a href="/{{ locale }}/contact">Contact</a>
+                </li>
+
+                {% for item in navigation %}
+                <li><a href="{{ item.url }}">{{ item.label }}</a></li>
+                {% endfor %}
+
+              </ul>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="tt-header-col tt-header-col-right">
+      <div id="tt-m-menu-toggle-btn-wrap">
+        <div class="tt-m-menu-toggle-btn-text">
+          <span class="tt-m-menu-text-menu">Menu</span>
+          <span class="tt-m-menu-text-close">Close</span>
+        </div>
+        <div class="tt-m-menu-toggle-btn-holder">
+          <a href="#" class="tt-m-menu-toggle-btn"><span></span></a>
+        </div>
+      </div>
+
+      {% comment %}
+        Kept as-is from the live site. The target is a temporary hosting
+        domain (*.dtempurl.com), not a permanent address — replace the href
+        once Revacity has its own domain.
+      {% endcomment %}
+      <a href="https://newaeonjo-001-site3.dtempurl.com/" class="tt-btn2 tt-btn-secondary tt-magnetic-item" target="_blank" rel="noopener">
+        <img src="{{ 'assets/img/Revacity.png' | asset }}" alt="Revacity" style="width: 100px;max-width: fit-content !important;">
+      </a>
+    </div>
+
+  </div>
+</header>

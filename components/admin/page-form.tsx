@@ -38,6 +38,12 @@ interface PageFormProps {
     hasCategories: boolean;
     hasTags: boolean;
   };
+  /**
+   * The site's storefront driver, read from settings by the page that renders
+   * this form. Only the block picker uses it, to warn that a theme pack will
+   * not render most block types.
+   */
+  themeDriver?: 'builtin' | 'html-pack';
 }
 
 const TYPE_LABEL: Record<
@@ -56,6 +62,7 @@ export function PageForm({
   adminPath,
   contentType = 'page',
   taxonomy,
+  themeDriver,
 }: PageFormProps) {
   const t = useT();
   const labels = TYPE_LABEL[contentType];
@@ -350,6 +357,7 @@ export function PageForm({
         <BlockBuilder
           key={`${activeLocale}:${structureEpoch}`}
           blocks={active.body}
+          themeDriver={themeDriver}
           onChange={(body) => patchTranslation({ body })}
         />
 
