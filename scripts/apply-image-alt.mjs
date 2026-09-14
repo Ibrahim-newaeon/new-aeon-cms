@@ -17,21 +17,37 @@
 // The split exists because nobody can write good alt text without seeing the
 // image. The report says what needs describing; a human writes the words.
 //
+// ── Running this AFTER the media remap ──────────────────────────────────────
+//
+// Both modes key on the image's file name, which scripts/remap-content-media
+// rewrites: `/uploads/al-ai/hero.png` becomes `/uploads/2026/09/<uuid>.png`.
+// Run this afterwards without help and every key is a uuid — a map written
+// against the original names matches nothing, and a fresh report is 21 uuids
+// that no human can describe without opening each one.
+//
+// `--media <file>` fixes that. It is the same `/api/media` export the remap
+// consumes, and it lets this script translate between the two names in both
+// directions: the report keys by ORIGINAL name whatever the markup says, and
+// apply resolves an original-named map onto uuid `src` attributes. With it,
+// the order of the two scripts stops mattering.
+//
 // Usage:
 //   node scripts/apply-image-alt.mjs --dir dist/content --report alt.json
 //   node scripts/apply-image-alt.mjs --dir dist/content --map alt.json --dry-run
 //   node scripts/apply-image-alt.mjs --dir dist/content --map alt.json
+//   node scripts/apply-image-alt.mjs --dir dist/content --media media.json --map alt.json
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 function parseArgs(argv) {
-  const out = { dir: null, report: null, map: null, dryRun: false, overwrite: false };
+  const out = { dir: null, report: null, map: null, media: null, dryRun: false, overwrite: false };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--dir') out.dir = argv[i + 1] ?? null;
     if (argv[i] === '--report') out.report = argv[i + 1] ?? null;
     if (argv[i] === '--map') out.map = argv[i + 1] ?? null;
+    if (argv[i] === '--media') out.media = argv[i + 1] ?? null;
     if (argv[i] === '--dry-run') out.dryRun = true;
     // Off by default: an alt attribute already present was written by somebody,
     // and replacing it wholesale is how a considered description gets lost.
@@ -90,11 +106,65 @@ export function withAlt(tag, alt) {
   return tag.replace(/\s*\/?>$/, (end) => ` alt="${value}"${end.trimStart() === '/>' ? ' />' : '>'}`);
 }
 
+/**
+ * Two lookups built from an /api/media export: original name → stored name,
+ * and back again.
+ *
+ * Later rows win, walking in reverse for the same reason remap-content-media
+ * does: re-uploading a file leaves both rows in place and the newer one is
+ * what an editor just put there.
+ */
+export function nameMaps(parsed) {
+  const assets = Array.isArray(parsed) ? parsed : (parsed?.data ?? []);
+  const toStored = new Map();
+  const toOriginal = new Map();
+  for (const a of [...assets].reverse()) {
+    const original = a?.originalName ?? a?.original_name;
+    const url = a?.url;
+    if (typeof original !== 'string' || typeof url !== 'string') continue;
+    const stored = url.split('?')[0].split('#')[0].split('/').pop();
+    if (!stored) continue;
+    toStored.set(original, stored);
+    toOriginal.set(stored, original);
+  }
+  return { toStored, toOriginal };
+}
+
+/**
+ * The name this image should be keyed by: its original name when the media
+ * list knows one, otherwise whatever is in the markup.
+ *
+ * Keying reports by the original name is what makes them legible — a list of
+ * uuids tells whoever writes the alt text nothing, and they cannot open the
+ * file to look without resolving it first.
+ */
+export function keyFor(name, maps) {
+  return maps?.toOriginal.get(name) ?? name;
+}
+
+/** Map lookup that accepts either name for the same image. */
+export function lookup(map, name, maps) {
+  return (
+    map[name] ??
+    (maps ? map[maps.toOriginal.get(name) ?? ''] : undefined) ??
+    (maps ? map[maps.toStored.get(name) ?? ''] : undefined)
+  );
+}
+
+async function loadMedia(file) {
+  if (!file) return null;
+  try {
+    return nameMaps(JSON.parse(await fs.readFile(file, 'utf8')));
+  } catch (err) {
+    throw new Error(`Could not read the media list at ${file}: ${err.message}`);
+  }
+}
+
 async function htmlFiles(dir) {
   return (await fs.readdir(dir)).filter((f) => f.endsWith('.html')).sort();
 }
 
-async function report(dir, out) {
+async function report(dir, out, maps) {
   const skeleton = {};
   let total = 0;
   let described = 0;
@@ -106,7 +176,7 @@ async function report(dir, out) {
       const alt = altOf(m[0]);
       if (alt !== null && alt.trim() !== '') { described += 1; continue; }
 
-      const name = basename(srcOf(m[0]));
+      const name = keyFor(basename(srcOf(m[0])), maps);
       if (!name) continue;
       // Keyed by file name: the same image often appears on several pages and
       // wants the same description on each.
@@ -122,7 +192,7 @@ async function report(dir, out) {
   console.log('Fill in each "alt", then re-run with --map.');
 }
 
-async function apply(dir, mapFile, { dryRun, overwrite }) {
+async function apply(dir, mapFile, { dryRun, overwrite, maps }) {
   const map = JSON.parse(await fs.readFile(mapFile, 'utf8'));
 
   const blank = Object.entries(map).filter(([, v]) => !(v?.alt ?? '').trim());
@@ -144,10 +214,11 @@ async function apply(dir, mapFile, { dryRun, overwrite }) {
       const existing = altOf(tag);
       if (existing !== null && existing.trim() !== '' && !overwrite) { kept += 1; return tag; }
 
-      const entry = map[basename(srcOf(tag))];
+      const name = basename(srcOf(tag));
+      const entry = lookup(map, name, maps);
       const alt = (entry?.alt ?? '').trim();
       if (!alt) {
-        if (existing === null) unmatched.add(basename(srcOf(tag)));
+        if (existing === null) unmatched.add(keyFor(name, maps));
         return tag;
       }
       applied += 1;
@@ -167,20 +238,29 @@ async function apply(dir, mapFile, { dryRun, overwrite }) {
   if (unmatched.size) {
     console.log(`\nStill without alt, and not in the map (${unmatched.size}):`);
     for (const name of [...unmatched].sort()) console.log(`  ${name}`);
+    if (!maps) {
+      // The failure this hint exists for: a map written against the original
+      // names, applied after the remap has replaced them with uuids.
+      console.log(
+        '\nIf these are uuids, the media remap has already run. Pass --media <api-media.json>\n' +
+          'so the original names in the map can be resolved onto them.'
+      );
+    }
   }
 }
 
 async function main() {
-  const { dir, report: reportFile, map, dryRun, overwrite } = parseArgs(process.argv.slice(2));
+  const { dir, report: reportFile, map, media, dryRun, overwrite } = parseArgs(process.argv.slice(2));
   if (!dir || (!reportFile && !map)) {
     console.error(
-      'Usage: node scripts/apply-image-alt.mjs --dir <content dir> --report <file>\n' +
-        '       node scripts/apply-image-alt.mjs --dir <content dir> --map <file> [--dry-run] [--overwrite]'
+      'Usage: node scripts/apply-image-alt.mjs --dir <content dir> --report <file> [--media <file>]\n' +
+        '       node scripts/apply-image-alt.mjs --dir <content dir> --map <file> [--media <file>] [--dry-run] [--overwrite]'
     );
     process.exit(1);
   }
-  if (reportFile) await report(dir, reportFile);
-  else await apply(dir, map, { dryRun, overwrite });
+  const maps = await loadMedia(media);
+  if (reportFile) await report(dir, reportFile, maps);
+  else await apply(dir, map, { dryRun, overwrite, maps });
 }
 
 if (process.argv[1] && process.argv[1].endsWith('apply-image-alt.mjs')) {
