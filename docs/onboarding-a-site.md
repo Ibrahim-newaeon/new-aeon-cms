@@ -265,8 +265,23 @@ which one the site serves.
 ## Step 7 — Redirect the old URLs
 
 The old site served `.html` paths and search engines still hold them. Set
-`LEGACY_REDIRECTS` on the instance to a JSON map of old path → new path;
-`next.config.ts` turns it into 301s.
+`LEGACY_REDIRECTS` to a JSON array of `{from, to}` local paths;
+`next.config.ts` turns each into a 301.
+
+**It is read at BUILD time, and a Docker build does not see a service's runtime
+variables.** The Dockerfile declares `ARG LEGACY_REDIRECTS`, so the platform
+must pass it to the build — on Railway that means the service variable, with a
+rebuild afterwards. Setting it without rebuilding changes nothing, and nothing
+reports that: an empty redirect table looks exactly like one nobody wanted.
+
+**Verify before the DNS cutover, never after:**
+
+```bash
+curl -sI https://<the deployment>/about.html | grep -iE '^HTTP|^location'
+```
+
+`301` and a `location` of the new path. A `404` here means every indexed URL
+dies the moment DNS switches — cheap to fix now, expensive to fix later.
 
 ---
 
@@ -350,6 +365,7 @@ re-uploaded, so a content image pointed at it would break on the next upload.
 | Images 404 | Remap not run, or its dry run had unmatched entries |
 | Alt text sets 0 images, every name a uuid | The remap ran first — pass `--media` so the original names resolve |
 | Theme pack gone after a deploy | No volume, or `THEMES_DIR` is not on it |
+| Old `.html` URLs 404 though `LEGACY_REDIRECTS` is set | Read at build time; the variable must reach the BUILD, then rebuild |
 | `Upload failed` on the pack | Volume is root-owned; the container runs as uid 1001 |
 | Loose sentences down the right margin | Inline SVG kept; set `content.stripSvg` |
 | A setting saves, then reloads blank | The field is missing from one of the two field-by-field lists — see below |
