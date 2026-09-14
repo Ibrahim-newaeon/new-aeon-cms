@@ -80,13 +80,71 @@ makes `stats` work for that pack, and `PACK_SUPPORTED_BLOCKS` has to become
 The picker warning added in `components/admin/block-builder.tsx` must follow the
 same rule, or it will lie in the other direction.
 
-**Then the migration mapping.** Extend `site.config.json` with a per-site map
-from a CSS selector to a block type, so the extractor can turn a recognised
-band into a structured block and leave anything unrecognised as an `html` block.
-Unrecognised must stay `html` — a migration that silently drops a section it did
-not understand is worse than one that leaves it as markup.
+**Typed section blocks, not rich text alone.** This is the part that is easy to
+get wrong, so it is spelled out.
 
-**Do not** convert a section to `rich-text` unless the words survive the trip.
+A section converted to a bare `rich-text` block loses every class, and the
+classes are not decoration:
+
+| Class on the al-ai section | What it does |
+|---|---|
+| `.tt-section` | `padding: 80px 0`, responsive to 40px |
+| `.tt-heading-title` | uppercase, alternate font, `clamp(32px, 3vw, 42px)` |
+| `.tt-heading-subtitle` | uppercase, `letter-spacing: 1px`, 30px bottom margin |
+| `.tt-row` / `.tt-col-xl-9` | the grid that puts the badge beside the heading |
+| `.tt-text-reveal` | **theme.js hook** — scroll reveal |
+| `.tt-magnetic-item` | **theme.js hook** — magnetic cursor |
+| `.tt-anim-fadeinup` | **theme.js hook** — fade in |
+
+Three of those are behaviour. `theme.js` queries the class name; no class, no
+animation.
+
+The classes cannot be preserved, for two independent reasons, either one
+sufficient:
+
+1. TipTap's document model has nowhere to put them — a heading node carries
+   `{ level }` and no class attribute.
+2. `sanitizeRichHtml` always calls `safeOptions()` (`lib/blocks/sanitize.ts`),
+   and the `safe` tier strips `class`, `id` and `style` **regardless of the
+   site's `htmlPasteMode`**. Trusted mode does not reach rich text.
+
+Nor is the result merely unstyled: `@tailwindcss/typography` is loaded
+(`tailwind.config.ts`), so `.prose` is defined and the section acquires generic
+article typography inside a bespoke dark theme. That reads as a mistake rather
+than an omission.
+
+So **a section's structure is fields, and only its body copy is prose**. Define
+one block type per recurring section shape, with a typed field per slot, and let
+the pack's partial place each field inside the theme's own markup. For the
+al-ai heading band that is roughly:
+
+```
+section-heading:
+  subtitle   text        -> <h3 class="tt-heading-subtitle tt-text-reveal">
+  title      text        -> <h2 class="tt-heading-title tt-text-reveal">
+  body       rich-text   -> prose, inside .tt-heading
+  ctaText    text        -> the .tt-big-round-ptn badge
+  ctaUrl     url         -> its href
+  image      media       -> via MediaField, into the theme's figure markup
+```
+
+The editor fills in fields and writes body copy; the pack supplies every class
+and every JS hook. A rich-text field is right **inside** a section, never as the
+section.
+
+Derive the block types from the site being migrated — do not reuse al-ai's.
+Read the pages first, find the four or five section shapes that actually
+repeat, and define those. A block type per one-off section is worse than
+leaving that section as `html`.
+
+**Then the migration mapping.** Extend `site.config.json` with a per-site map
+from a CSS selector to a block type and a per-field selector, so the extractor
+can turn a recognised band into a structured block and leave anything
+unrecognised as an `html` block. Unrecognised must stay `html` — a migration
+that silently drops a section it did not understand is worse than one that
+leaves it as markup.
+
+**Do not** convert a section to any block unless the words survive the trip.
 Round-trip every conversion and diff the rendered output against the original
 fragment. A conversion that loses a link, a line break or an image is a failed
 conversion, not an acceptable one.

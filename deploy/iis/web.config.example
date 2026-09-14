@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IIS / httpPlatformHandler configuration for running this CMS on a Windows
+  host such as SmarterASP.NET.
+
+  UNTESTED. Written from the host's own documentation, not from a deployment
+  that has run. Treat every value as a starting point to verify, especially
+  processPath and the Node version behind it.
+
+  Copy to the site root as `web.config`, beside the standalone server.js.
+
+  SECRETS: the values below are placeholders. If the host offers environment
+  variables in its control panel, set them there and DELETE the matching
+  environmentVariable lines from this file — web.config sits in the web root as
+  plain text, is included in every backup, and is readable by anyone with file
+  access to the account. Never commit a filled-in copy to git.
+-->
+<configuration>
+  <system.webServer>
+
+    <handlers>
+      <!-- httpPlatformHandler, not iisnode: the host runs Node as a long-lived
+           process behind IIS and proxies to it, which is what Next's server
+           needs. iisnode's per-request model would not suit it. -->
+      <add name="httpPlatformHandler"
+           path="*"
+           verb="*"
+           modules="httpPlatformHandler"
+           resourceType="Unspecified" />
+    </handlers>
+
+    <httpPlatform processPath="node"
+                  arguments=".\server.js"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile=".\logs\node"
+                  startupTimeLimit="120"
+                  startupRetryCount="3"
+                  requestTimeout="00:04:00">
+      <environmentVariables>
+
+        <!-- REQUIRED. IIS picks a free port per process and passes it here;
+             the standalone server reads process.env.PORT. Hardcoding a number
+             makes IIS proxy to a port nothing is listening on. -->
+        <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+        <environmentVariable name="HOSTNAME" value="127.0.0.1" />
+        <environmentVariable name="NODE_ENV" value="production" />
+
+        <!-- Validated at boot by lib/env.ts. A missing or malformed value here
+             does not degrade: the process exits and IIS reports 502. Check
+             .\logs\node for the validation error, which names the field. -->
+        <environmentVariable name="DATABASE_URL" value="REPLACE_ME" />
+        <environmentVariable name="JWT_ACCESS_SECRET" value="REPLACE_ME_MIN_32_CHARS" />
+        <environmentVariable name="JWT_REFRESH_SECRET" value="REPLACE_ME_MIN_32_CHARS" />
+        <environmentVariable name="NEXT_PUBLIC_APP_URL" value="https://example.com" />
+
+        <!-- Writable paths for uploads and extracted theme packs. Shared
+             hosting has a real filesystem, so these persist across deploys —
+             unlike a container with no volume. Both must exist and be
+             writable by the application pool identity before first boot. -->
+        <environmentVariable name="UPLOAD_DIR" value="D:\home\site\wwwroot\data\uploads" />
+        <environmentVariable name="THEMES_DIR" value="D:\home\site\wwwroot\data\themes" />
+
+        <!-- No Redis on this kind of host, so rate limiting is in-process.
+             Correct ONLY while a single instance serves the site: two
+             processes would each keep their own counters and the effective
+             limit would double. Revisit before scaling out. -->
+        <environmentVariable name="ALLOW_IN_MEMORY_RATE_LIMIT" value="true" />
+
+      </environmentVariables>
+    </httpPlatform>
+
+    <!-- Next serves its own static assets through server.js, so IIS must not
+         try to answer /_next/* from disk first. -->
+    <staticContent>
+      <remove fileExtension=".json" />
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <remove fileExtension=".webmanifest" />
+      <mimeMap fileExtension=".webmanifest" mimeType="application/manifest+json" />
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+    </staticContent>
+
+    <security>
+      <requestFiltering>
+        <!-- Media uploads. lib/media/limits.ts caps video above the image
+             limit, so IIS must not reject a request the app would accept.
+             52428800 bytes = 50 MB; raise only alongside that file. -->
+        <requestLimits maxAllowedContentLength="52428800" />
+        <hiddenSegments>
+          <!-- Never serve these, whatever else is configured. -->
+          <add segment="node_modules" />
+          <add segment=".next" />
+          <add segment="logs" />
+          <add segment="data" />
+        </hiddenSegments>
+      </requestFiltering>
+    </security>
+
+    <httpProtocol>
+      <customHeaders>
+        <!-- middleware.ts sets the full policy including the CSP nonce. These
+             are the few that must hold even for responses IIS serves itself. -->
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <remove name="X-Powered-By" />
+      </customHeaders>
+    </httpProtocol>
+
+  </system.webServer>
+</configuration>
