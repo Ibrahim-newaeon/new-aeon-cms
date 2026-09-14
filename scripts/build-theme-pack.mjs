@@ -124,21 +124,37 @@ const POSTLUDE = `/* --- al-ai pack postlude: contact form is display-only --- *
  * index.html. Nothing else removes #al-loader, which covers the viewport at
  * z-index 999999 — so if this is dropped, every page renders as a black screen.
  *
- * The #mainBanner iframe it waits on exists only on the home page; the
- * whenIframeLoaded() promise resolves immediately when it is absent.
+ * Two departures from the original, both because this now runs inside React.
+ *
+ * The class goes on <html>, not on the loader element. React re-renders the
+ * pack's markup on a hydration mismatch, replacing #al-loader with a fresh
+ * node — and a reference captured at startup then points at a detached
+ * element. The original put the class on that reference, so the page kept a
+ * brand new loader over it forever. An ancestor React never touches survives
+ * any number of re-mounts, and loader.css carries the matching rule.
+ *
+ * The element is also looked up at reveal time rather than at startup, for the
+ * same reason: whatever is in the document then is what needs removing.
+ *
+ * The #mainBanner iframe it waits on is stripped by the sanitiser — iframe is
+ * in no paste mode's tag list — so whenIframeLoaded() resolves immediately.
+ * Left in place because the page it was written for may regain one.
  */
 const LOADER = `/* --- al-ai pack: loader dismissal (was inline in index.html) --- */
 (function () {
   var iframe = document.getElementById('mainBanner');
-  var loaderEl = document.getElementById('al-loader');
   var MIN_MS = 900, MAX_MS = 20000, start = Date.now(), done = false;
 
   function reveal() {
     if (done) return; done = true;
     document.body.style.visibility = 'visible';
-    if (loaderEl) {
-      loaderEl.classList.add('al-hide');
-      setTimeout(function () { if (loaderEl.parentNode) loaderEl.parentNode.removeChild(loaderEl); }, 700);
+    document.documentElement.classList.add('al-loaded');
+
+    // Looked up now, not at startup: a re-render may have replaced it.
+    var el = document.getElementById('al-loader');
+    if (el) {
+      el.classList.add('al-hide');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
     }
   }
 

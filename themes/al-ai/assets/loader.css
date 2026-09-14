@@ -48,6 +48,17 @@
 				transition:opacity .6s ease, visibility .6s ease;
 			}
 			#al-loader.al-hide{ opacity:0; visibility:hidden !important; pointer-events:none; }
+			/*
+			 * The same dismissal, keyed off <html> instead of the loader itself.
+			 *
+			 * React re-renders the pack's markup on a hydration mismatch, which
+			 * replaces #al-loader with a fresh node — and the reference the
+			 * dismissal script captured at startup then points at a detached
+			 * element. The class went on a node nobody could see, and a brand new
+			 * loader sat over the page forever. Keying the rule to an ancestor
+			 * that React never touches survives any number of re-mounts.
+			 */
+			html.al-loaded #al-loader{ opacity:0; visibility:hidden !important; pointer-events:none; }
 			.al-stage{ position:relative; width:180px; height:180px; display:flex; align-items:center; justify-content:center; }
 			.al-ring{ position:absolute; border-radius:50%; border:1px solid transparent; }
 			.al-ring-1{ width:180px; height:180px; border-top-color:rgba(255,255,255,.65); border-right-color:rgba(255,255,255,.15); animation:alSpin 2.4s linear infinite; }
