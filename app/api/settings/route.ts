@@ -27,6 +27,23 @@ export async function PUT(request: Request) {
       contactEmail: empty(data.contactEmail),
       contactPhone: empty(data.contactPhone),
       socialLinks: data.socialLinks ?? {},
+      /*
+       * These four were accepted by settingsSchema, rendered as inputs in
+       * settings-form.tsx, and then dropped: `values` is written out field by
+       * field, and they were never added to it. An admin could type a WhatsApp
+       * number, save, see no error, and reload to find the field empty — while
+       * the product page went on reading settings.whatsappNumber and showing
+       * no button. Silent, and indistinguishable from the feature not existing.
+       *
+       * allowAiCrawlers is boolean and defaults to ALLOWED when unset, so
+       * `?? true` keeps that meaning rather than turning an absent value into
+       * a block. The other three are text and use the same empty() treatment
+       * as every neighbouring string.
+       */
+      brandAnswer: empty(data.brandAnswer),
+      allowAiCrawlers: data.allowAiCrawlers ?? true,
+      whatsappNumber: empty(data.whatsappNumber),
+      whatsappGreeting: empty(data.whatsappGreeting),
       analyticsId: empty(data.analyticsId),
       gtmId: empty(data.gtmId),
       ga4Id: empty(data.ga4Id),
