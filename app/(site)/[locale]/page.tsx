@@ -8,6 +8,20 @@ import { asContentBlocks } from '@/lib/blocks/content-schema';
 import { blocksRequestBlankChrome } from '@/lib/blocks/html-paste';
 import { tryRenderThemePack } from '@/lib/themes/present';
 import { ThemePackView } from '@/components/site/theme-pack-view';
+import type { Metadata } from 'next';
+import { homeMetadata } from '@/lib/seo/home-metadata';
+import { JsonLd } from '@/components/site/json-ld';
+import { contentPageJsonLd, faqJsonLd } from '@/lib/seo/json-ld';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!locales.includes(locale as Locale)) return {};
+  return homeMetadata(locale as Locale);
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -34,6 +48,43 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const settings = await getSettings();
   const fallbackTitle = settings?.siteName?.trim() || 'New Aeon';
 
+  /*
+   * Structured data, the same way the [segment] route does it.
+   *
+   * The front page published only the Organization and WebSite nodes the
+   * layout emits — nothing saying what THIS page is. `WebPage` carries the
+   * stable @id an answer engine deduplicates on, so without it the most linked
+   * page on the site was the one it could say least about.
+   *
+   * No BreadcrumbList: a trail whose only step is the page you are on tells a
+   * reader and a crawler nothing.
+   */
+  const pageSchema = contentPageJsonLd({
+    kind: 'page',
+    path: `/${typedLocale}`,
+    title: homeContent?.i18n?.metaTitle || homeContent?.i18n?.title || fallbackTitle,
+    description:
+      homeContent?.i18n?.metaDescription ||
+      homeContent?.i18n?.excerpt ||
+      settings?.siteDescription,
+    image: homeContent?.i18n?.ogImage ?? homeContent?.content?.featuredImage ?? settings?.logo,
+    locale: typedLocale,
+    publishedAt: homeContent?.content?.publishedAt,
+    updatedAt: homeContent?.content?.updatedAt,
+    publisher: settings?.siteName ? { name: settings.siteName, logo: settings.logo } : null,
+  });
+
+  // A home page may carry FAQs too, and the schema is worth as much there.
+  const faqItems = blocks.flatMap((b) => (b.type === 'faq' ? b.items : []));
+  const faq = faqItems.length > 0 ? faqJsonLd(faqItems) : null;
+
+  const schema = (
+    <>
+      <JsonLd data={pageSchema} />
+      {faq && <JsonLd data={faq} />}
+    </>
+  );
+
   const themed = await tryRenderThemePack({
     kind: 'home',
     locale: typedLocale,
@@ -43,7 +94,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     body: homeContent?.i18n?.body,
   });
   if (themed) {
-    return <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />;
+    return (
+      <>
+        {schema}
+        <ThemePackView html={themed.html} cssHrefs={themed.cssHrefs} jsHrefs={themed.jsHrefs} />
+      </>
+    );
   }
 
   /**
@@ -60,6 +116,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   if (blankChrome) {
     return (
       <div data-test-id="full-page-html">
+        {schema}
         <ContentRenderer blocks={blocks} locale={typedLocale} />
       </div>
     );
@@ -67,6 +124,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <div>
+      {schema}
       {!leadsWithSlider && (
         <HeroSection
           title={homeContent?.i18n?.title || fallbackTitle}
