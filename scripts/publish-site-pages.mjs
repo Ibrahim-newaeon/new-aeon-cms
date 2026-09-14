@@ -14,6 +14,15 @@
 // HTML fragments plus the pages.json manifest that names each one's slug,
 // title and content type.
 //
+// A manifest entry may instead carry `blocks`, a literal block array used as
+// the page body in place of any file. That is how a page gets STRUCTURED
+// content — a faq block with question and answer fields, which a theme pack
+// can render itself and which the route turns into FAQPage schema — without
+// anyone retyping it into the admin:
+//
+//   { "slug": "faq", "type": "page", "title": "FAQ",
+//     "blocks": [{ "type": "faq", "items": [{ "question": "...", "answer": "..." }] }] }
+//
 // Idempotent by slug. A slug that already exists is UPDATED, not duplicated —
 // `content.slug` has an index but no unique constraint, so a blind create
 // would leave two pages fighting over one address.
@@ -67,6 +76,19 @@ export function parseArgs(argv) {
  * `content` wrong (the html block's field is `content`, not `html`) fails the
  * block registry, and getting the locale wrong writes a page nobody sees.
  */
+/**
+ * The request body for one page.
+ *
+ * `entry.blocks`, when the manifest supplies it, is used verbatim in place of
+ * the html file. That is how a page gets STRUCTURED content — a faq block with
+ * its question and answer fields, rather than markup — without an editor
+ * retyping it into the admin, and it is the only way such a page can be built
+ * reproducibly for the next site.
+ *
+ * Exported and pure so the shape can be tested without a server: getting
+ * `content` wrong (the html block's field is `content`, not `html`) fails the
+ * block registry, and getting the locale wrong writes a page nobody sees.
+ */
 export function buildPayload(entry, html, { locale, status, split = false }) {
   const meta = (entry.metaDescription ?? '').trim();
   const metaTitle = (entry.metaTitle ?? '').trim();
@@ -81,7 +103,7 @@ export function buildPayload(entry, html, { locale, status, split = false }) {
         title: entry.title,
         // No isolate/fullPage: both only matter when the site shell renders the
         // block, and with the theme pack active the pack's template does.
-        body: htmlBlocks(html, split),
+        body: entry.blocks ?? htmlBlocks(html, split),
         /*
          * The SEO/AEO fields. generateMetadata() prefers metaTitle over title
          * and metaDescription over excerpt, so a page with these set controls
@@ -149,8 +171,13 @@ export function validateEntry(entry) {
   if (typeof entry.title !== 'string' || entry.title.trim() === '') {
     problems.push('title is empty');
   }
-  if (typeof entry.file !== 'string' || !entry.file.endsWith('.html')) {
-    problems.push('file is not an .html name');
+  if (Array.isArray(entry.blocks)) {
+    if (entry.blocks.length === 0) problems.push('blocks is an empty array');
+    else if (entry.blocks.some((b) => typeof b?.type !== 'string')) {
+      problems.push('every entry in blocks needs a string `type`');
+    }
+  } else if (typeof entry.file !== 'string' || !entry.file.endsWith('.html')) {
+    problems.push('file is not an .html name, and no blocks were given instead');
   }
   if ((entry.metaDescription ?? '').length > META_DESCRIPTION_MAX) {
     problems.push(`metaDescription is ${entry.metaDescription.length} chars, over the ${META_DESCRIPTION_MAX} limit — it will be left unset`);
@@ -277,9 +304,11 @@ async function main() {
   }
   if (blocking.length) fail(`Manifest problems:\n  ${blocking.join('\n  ')}`);
 
-  // Read every fragment up front, for the same reason.
+  // Read every fragment up front, for the same reason. An entry carrying its
+  // own `blocks` needs no file, so it is not looked for.
   const bodies = new Map();
   for (const entry of wanted) {
+    if (entry.blocks) { bodies.set(entry.slug, ''); continue; }
     try {
       bodies.set(entry.slug, await fs.readFile(path.join(dir, entry.file), 'utf8'));
     } catch {
@@ -293,9 +322,13 @@ async function main() {
         `${split ? ', split into sections' : ''}:`
     );
     for (const entry of wanted) {
+      const body = entry.blocks ?? htmlBlocks(bodies.get(entry.slug), split);
       const kb = (bodies.get(entry.slug).length / 1024).toFixed(1);
-      const blocks = htmlBlocks(bodies.get(entry.slug), split).length;
-      const shape = split ? `${String(blocks).padStart(2)} block(s)` : '';
+      const shape = entry.blocks
+        ? `${String(body.length).padStart(2)} ${body.map((b) => b.type).join('+')}`
+        : split
+          ? `${String(body.length).padStart(2)} block(s)`
+          : '';
       console.log(
         `  ${entry.type.padEnd(4)}  ${entry.slug.padEnd(38)} ${String(kb).padStart(6)} KB ${shape}  ${entry.title}`
       );
