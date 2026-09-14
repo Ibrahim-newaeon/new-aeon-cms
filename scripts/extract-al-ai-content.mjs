@@ -145,19 +145,19 @@ function rewrite(body, locale, prefix) {
   );
 
   /*
-   * Drop inline SVG.
+   * SVG is deliberately left in place, even though no paste mode allows it.
    *
-   * The sanitiser allows no SVG in any paste mode — not even trusted — because
-   * an SVG is a document that can carry <script>, the same reason
-   * image/svg+xml is refused by the media library. It strips the tags and keeps
-   * the text inside them, which is worse than dropping both: al-ai.ai curves
-   * "Scroll to Explore" around a circle with <textpath>, and what reached the
-   * page was that sentence wrapped down the right-hand margin as prose.
+   * The sanitiser drops the tags and keeps the text inside them, and for this
+   * site that text is load-bearing rather than debris: theme.js finds the words
+   * under .tt-scroll-down and lays them out around a circle itself, the same
+   * way it builds the "Let's connect!" badge. Remove the SVG and the ring is
+   * still drawn — empty.
    *
-   * Every SVG in this site is decoration — a scroll indicator and an arrow —
-   * so removing them loses nothing a reader wants.
+   * An earlier pass stripped these after seeing "Scroll to Explore" wrapped
+   * down the margin as prose. That was real, but the cause was paste mode
+   * sitting at 'safe', which also strips every class — so theme.js had nothing
+   * to recognise. On 'trusted' the same markup renders as designed.
    */
-  out = out.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '');
 
   // Runs last: it matches on the rewritten /uploads/ paths.
   out = applyMediaReplacements(out, prefix);
