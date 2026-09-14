@@ -1,6 +1,7 @@
 // next.config.ts
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { parseLegacyRedirects } from './lib/seo/legacy-redirects';
 
 // Without this plugin next-intl cannot locate i18n/request.ts.
 const withNextIntl = createNextIntlPlugin();
@@ -54,49 +55,23 @@ function mediaRemotePattern(): { protocol: 'http' | 'https'; hostname: string }[
  * be present when `next build` runs, not only in the running container.
  */
 export function legacyRedirects(): { source: string; destination: string; statusCode: 301 }[] {
-  const raw = process.env.LEGACY_REDIRECTS;
-  if (!raw) return [];
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // A typo here must not take the build down: the site is still correct
-    // without its redirects, and a failed deploy helps nobody.
-    console.warn('[next.config] LEGACY_REDIRECTS is not valid JSON — ignoring it.');
-    return [];
-  }
-
-  if (!Array.isArray(parsed)) {
-    console.warn('[next.config] LEGACY_REDIRECTS must be a JSON array — ignoring it.');
-    return [];
-  }
-
-  const out: { source: string; destination: string; statusCode: 301 }[] = [];
-
-  for (const entry of parsed) {
-    const from = (entry as { from?: unknown })?.from;
-    const to = (entry as { to?: unknown })?.to;
-    if (typeof from !== 'string' || typeof to !== 'string') continue;
-
-    /*
-     * Both sides must be same-origin paths.
-     *
-     * `//evil.example` is a protocol-relative URL, not a path — a browser
-     * follows it off-site. Accepting one here would turn a redirect table into
-     * an open redirect, which is worth guarding even though only an operator
-     * can set this variable.
-     */
-    const isPath = (s: string) => s.startsWith('/') && !s.startsWith('//');
-    if (!isPath(from) || !isPath(to)) {
-      console.warn(`[next.config] LEGACY_REDIRECTS entry skipped, not a local path: ${from} -> ${to}`);
-      continue;
-    }
-
-    out.push({ source: from, destination: to, statusCode: 301 });
-  }
-
-  return out;
+  /*
+   * Kept, but no longer the mechanism anyone should rely on.
+   *
+   * This file is evaluated by `next build`, so it only sees LEGACY_REDIRECTS
+   * when the build itself is given it — inside docker/Dockerfile that needs
+   * both the ARG declaration and a platform that passes the build argument.
+   * Railway does not, which is why the table was empty in every image and
+   * every old URL 404'd.
+   *
+   * middleware.ts now does this at runtime from the same parser, which works
+   * wherever the variable is merely set on the service. This remains for a
+   * build that DOES supply it — the two agree, so a path matched here simply
+   * never reaches the middleware.
+   */
+  return parseLegacyRedirects(process.env.LEGACY_REDIRECTS, (message) =>
+    console.warn(`[next.config] ${message}`)
+  ).map(({ from, to }) => ({ source: from, destination: to, statusCode: 301 as const }));
 }
 
 const nextConfig: NextConfig = {
