@@ -121,3 +121,52 @@ describe('publish-al-ai-pages arguments', () => {
     expect(Object.keys(parseArgs(['--url', 'https://x.test']))).not.toContain('password');
   });
 });
+
+describe('a manifest entry carrying its own blocks', () => {
+  const faqEntry = {
+    slug: 'faq',
+    type: 'page',
+    title: 'FAQ',
+    blocks: [{ type: 'faq', items: [{ question: 'Q?', answer: 'A.' }] }],
+  };
+
+  /**
+   * The reason this exists: a `faq` block is what produces FAQPage schema and
+   * what a pack renders through its own partial. Without this the only way to
+   * create one is to retype every question into the admin, which is not a
+   * thing anyone does twice.
+   */
+  it('uses the blocks verbatim instead of the html file', () => {
+    const payload = buildPayload(faqEntry, '<p>ignored</p>', opts);
+    expect(payload.translations[0]?.body).toEqual(faqEntry.blocks);
+  });
+
+  it('still produces a body the content API accepts', () => {
+    expect(() => contentPayloadSchema.parse(buildPayload(faqEntry, '', opts))).not.toThrow();
+  });
+
+  it('needs no file on such an entry', () => {
+    expect(validateEntry({ ...faqEntry })).toEqual([]);
+  });
+
+  /** An empty array would publish a page with no content at all. */
+  it('refuses an empty blocks array', () => {
+    expect(validateEntry({ ...faqEntry, blocks: [] })).toHaveLength(1);
+  });
+
+  /** The renderer switches on `type`; an entry without one renders as nothing. */
+  it('refuses a block with no type', () => {
+    expect(validateEntry({ ...faqEntry, blocks: [{ items: [] }] })).toHaveLength(1);
+  });
+
+  it('still requires a file when no blocks are given', () => {
+    expect(validateEntry({ slug: 'x', type: 'page', title: 'X' })).toHaveLength(1);
+  });
+
+  it('leaves the html path alone', () => {
+    const payload = buildPayload(entry, '<section>Hi</section>', opts);
+    expect(payload.translations[0]?.body).toEqual([
+      { type: 'html', content: '<section>Hi</section>', isolate: false },
+    ]);
+  });
+});
