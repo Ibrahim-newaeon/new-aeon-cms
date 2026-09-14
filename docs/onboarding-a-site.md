@@ -211,6 +211,31 @@ publishing** — an unmatched path is left as-is and 404s on the live page.
 
 ---
 
+## Step 5b — Describe the images
+
+A hand-built site usually has none: 28 of al-ai.ai's 60 images had no `alt`
+attribute at all. That is an accessibility failure, lost image-search signal,
+and — for answer and generative engines — a missing piece of the only prose on
+the page that says what a picture shows.
+
+```bash
+node scripts/apply-image-alt.mjs --dir dist/content --media media.json --report alt.json
+# write the text into each "alt" in alt.json
+node scripts/apply-image-alt.mjs --dir dist/content --media media.json --map alt.json --dry-run
+node scripts/apply-image-alt.mjs --dir dist/content --media media.json --map alt.json
+```
+
+Report and apply are separate because nobody can write alt text without seeing
+the image. The report names each one with the page and nearest heading; a human
+writes the words. Existing descriptions are left alone unless `--overwrite`.
+
+> **Pass `--media` whenever the remap has already run.** Both scripts key on the
+> image's file name and the remap rewrites it: `/uploads/al-ai/hero.png` becomes
+> `/uploads/2026/09/<uuid>.png`. Without `--media` the report is a list of uuids
+> nobody can describe, and a map written against the original names matches
+> nothing — silently, reporting 0 images set. With it, the order of the two
+> scripts stops mattering.
+
 ## Step 6 — Publish every page in one command
 
 ```bash
@@ -304,6 +329,7 @@ re-uploaded, so a content image pointed at it would break on the next upload.
 - [ ] Theme pack built, uploaded, activated, driver = `html-pack`
 - [ ] Content extracted; nothing skipped
 - [ ] Media uploaded; remap dry run matches **everything**
+- [ ] Every image has alt text (`--report` comes back with 0 entries)
 - [ ] Pages published; `--dry-run` clean first
 - [ ] Theme colours set in the admin
 - [ ] Footer contact details agreed — they need a redeploy to change
@@ -322,6 +348,7 @@ re-uploaded, so a content image pointed at it would break on the next upload.
 | A loading overlay never clears | The dismissal shim is missing, or keys off an element React replaced |
 | Every icon is a blank box | `build.webfonts` is not set |
 | Images 404 | Remap not run, or its dry run had unmatched entries |
+| Alt text sets 0 images, every name a uuid | The remap ran first — pass `--media` so the original names resolve |
 | Theme pack gone after a deploy | No volume, or `THEMES_DIR` is not on it |
 | `Upload failed` on the pack | Volume is root-owned; the container runs as uid 1001 |
 | Loose sentences down the right margin | Inline SVG kept; set `content.stripSvg` |
