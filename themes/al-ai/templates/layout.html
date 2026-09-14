@@ -1,4 +1,4 @@
-{#
+{% comment %}
   Outer chrome for every themed page.
 
   Next owns <html>/<body>, so this is a fragment. The original site relied on
@@ -6,7 +6,7 @@
   tt-smooth-scroll) — theme.js reads them with hasClass(). The CMS renders its
   own <body>, so the bundle re-applies them at runtime; see the prelude in
   scripts/build-theme-pack.mjs.
-#}
+{% endcomment %}
 <div id="body-inner">
 
   <div id="al-loader" role="status" aria-live="polite" aria-label="Loading {{ site.name }}">

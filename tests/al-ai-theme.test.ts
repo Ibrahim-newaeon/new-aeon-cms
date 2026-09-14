@@ -177,6 +177,26 @@ describe('al-ai theme pack', () => {
   });
 
   /**
+   * Liquid has no {# #} comment form — that is Jinja, and liquidjs prints it
+   * verbatim. The first build shipped eight such blocks and every one of them
+   * appeared on the live page as a paragraph of implementation notes above the
+   * header. Nothing failed; it simply rendered.
+   */
+  it('leaks no comment markers of any dialect into the page', async () => {
+    for (const kind of ['home', 'page', 'post', 'blog'] as const) {
+      const { html } = await renderThemePage(id, manifest, kind, {
+        ...baseCtx,
+        page: { title: 'T', content: '<p>c</p>', slug: 's' },
+        posts: [{ title: 'P', excerpt: 'e', url: '/en/blog/p' }],
+      });
+      expect(html).not.toContain('{#');
+      expect(html).not.toContain('#}');
+      expect(html).not.toContain('{%');
+      expect(html).not.toContain('comment %}');
+    }
+  });
+
+  /**
    * ThemePackView injects the rendered HTML with dangerouslySetInnerHTML, and
    * innerHTML never executes <script>. A script tag in a template is therefore
    * dead code that looks alive — the bundle is the only path that runs.

@@ -1,10 +1,10 @@
-{#
+{% comment %}
   Every non-home marketing page: about, services, contact, and the six service
   pages. Same arrangement as home — the hero and sections are page content.
 
   A page saved with no content still gets a heading, so a newly created page
   is never a blank screen.
-#}
+{% endcomment %}
 {% if page.content and page.content != '' %}
   {{ page.content }}
 {% else %}
