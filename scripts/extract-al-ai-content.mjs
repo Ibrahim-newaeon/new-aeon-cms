@@ -58,6 +58,12 @@ const SLUGS = {
  * the path. `muted` is required or the browser refuses to autoplay, and
  * object-fit keeps the video filling the box the image used to fill.
  */
+/** Pages the pack writes itself, copied through verbatim. See themes/al-ai/content/. */
+const PACK_PAGES = {
+  'privacy-policy.html': 'Privacy Policy',
+  'terms-and-conditions.html': 'Terms & Conditions',
+};
+
 const MEDIA_REPLACEMENTS = [
   { missing: 'ai-driven.png', replacement: 'bg-brain2.mp4', as: 'video', label: 'AI-driven systems' },
 ];
@@ -115,6 +121,54 @@ function extractBody(html) {
   const footer = html.indexOf('<footer id="tt-footer"', start);
   if (footer === -1) return null;
   return html.slice(start, footer).trim();
+}
+
+/**
+ * The page <title>, minus the site prefix the originals repeat on every page.
+ *
+ * Every original title reads "al-ai.ai | Something". Storing that whole string
+ * as the CMS title would render "al-ai.ai | About Us" inside the page heading
+ * AND again in the browser tab beside the site name — so the prefix is dropped
+ * here and the site name is left to the layout, which is where it belongs.
+ */
+export function extractTitle(html, fallback) {
+  const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (!match) return fallback;
+  const text = decodeEntities(match[1].replace(/\s+/g, ' ').trim());
+  const bar = text.lastIndexOf('|');
+  const tail = bar === -1 ? text : text.slice(bar + 1).trim();
+  return tail || fallback;
+}
+
+/** <meta name="description">, empty on most of these pages. */
+export function extractDescription(html) {
+  const tag = /<meta\b[^>]*\bname=["']description["'][^>]*>/i.exec(html);
+  if (!tag) return '';
+  const content = /\bcontent=["']([\s\S]*?)["']/i.exec(tag[0]);
+  return content ? decodeEntities(content[1].replace(/\s+/g, ' ').trim()) : '';
+}
+
+/** Only the five named entities a title or description realistically carries. */
+function decodeEntities(text) {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'");
+}
+
+/**
+ * Title from the filename, for a page whose <title> is missing or is nothing
+ * but the site prefix. "agentic-AI-and-multi-agent-systems" is not a heading,
+ * but a blank one is worse.
+ */
+export function titleFromSlug(slug) {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 function rewrite(body, locale, prefix) {
@@ -184,6 +238,7 @@ async function main() {
   await fs.mkdir(out, { recursive: true });
   const written = [];
   const skipped = [];
+  const manifest = [];
 
   for (const [name, slug] of Object.entries(SLUGS)) {
     let html;
@@ -203,9 +258,52 @@ async function main() {
     const file = `${slug || 'home'}.html`;
     await fs.writeFile(path.join(out, file), `${rewrite(body, locale, prefix)}\n`, 'utf8');
     written.push(`${file}  (${(body.length / 1024).toFixed(1)} KB)`);
+
+    // The CMS slug, which is NOT the URL slug for the front page: the home
+    // page is stored under 'home' (app/(site)/[locale]/page.tsx looks it up by
+    // that name) and serves at /<locale>, with no slug in the path.
+    const cmsSlug = slug || 'home';
+    manifest.push({
+      file,
+      slug: cmsSlug,
+      type: name === 'blog-post-sidebar.html' ? 'post' : 'page',
+      title: extractTitle(html, titleFromSlug(cmsSlug)),
+      metaDescription: extractDescription(html),
+    });
   }
 
-  console.log(`Wrote ${written.length} page bodies to ${out}`);
+  /*
+   * The two policy pages have no original to lift from — they 404 on the live
+   * site — so the pack ships written templates instead. Copied in here so one
+   * command produces every page the site needs, and so they appear in the
+   * manifest the publisher reads.
+   */
+  for (const [file, title] of Object.entries(PACK_PAGES)) {
+    const from = path.join(process.cwd(), 'themes', 'al-ai', 'content', file);
+    try {
+      await fs.writeFile(path.join(out, file), await fs.readFile(from, 'utf8'), 'utf8');
+    } catch {
+      skipped.push(`${file} (not in themes/al-ai/content)`);
+      continue;
+    }
+    written.push(file);
+    manifest.push({ file, slug: file.replace(/\.html$/, ''), type: 'page', title, metaDescription: '' });
+  }
+
+  /*
+   * The manifest is what makes bulk publishing possible.
+   *
+   * scripts/publish-al-ai-pages.mjs reads it to decide each page's slug, title
+   * and content type without a human retyping them into a form thirteen times.
+   * Written even when a file is skipped, so the two stay in step.
+   */
+  await fs.writeFile(
+    path.join(out, 'pages.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8'
+  );
+
+  console.log(`Wrote ${written.length} page bodies and pages.json to ${out}`);
   for (const w of written) console.log(`  ${w}`);
   if (skipped.length) {
     console.log(`Skipped ${skipped.length}:`);
@@ -213,7 +311,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  process.exit(1);
-});
+// Importable for tests; only the CLI path runs main().
+if (process.argv[1] && process.argv[1].endsWith('extract-al-ai-content.mjs')) {
+  main().catch((err) => {
+    console.error(err.message);
+    process.exit(1);
+  });
+}

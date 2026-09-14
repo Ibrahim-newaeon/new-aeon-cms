@@ -28,7 +28,13 @@
             <div class="tt-main-menu-content">
               <ul class="tt-main-menu-list">
 
-                <li{% if page.slug == blank %} class="active"{% endif %}>
+                {% comment %}
+                  'home', not blank. The front page renders at /<locale> with no
+                  slug in the URL, but the CMS stores it under the slug 'home'
+                  and renderThemePage() passes that through — so a blank test
+                  matched nothing and Home was never marked active.
+                {% endcomment %}
+                <li{% if page.slug == 'home' or page.slug == blank %} class="active"{% endif %}>
                   <a href="/{{ locale }}">Home</a>
                 </li>
 

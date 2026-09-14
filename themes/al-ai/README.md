@@ -23,6 +23,10 @@ assembled from ~2 MB of third-party libraries that do not belong in git.
 | `assets/loader.css` | The loader styles that were inline in `index.html`. |
 | `content/*.html` | Starter copy for Privacy Policy and Terms. |
 
+Two scripts outside this directory belong to the same job:
+`scripts/extract-al-ai-content.mjs` turns the original pages into content
+fragments, and `scripts/publish-al-ai-pages.mjs` puts them into a running CMS.
+
 ## Building the pack
 
 ```bash
@@ -78,13 +82,42 @@ node scripts/extract-al-ai-content.mjs \
   --src <dir-of-original-html> --out dist/content --locale en --prefix al-ai
 ```
 
-That writes 13 fragments — 12 marketing pages plus the demo blog post — with
-inter-page links rewritten to `/en/<slug>` and media pointed at
-`/uploads/al-ai/<file>`. Paste each into its page as an `html` block.
+That writes 15 fragments — 12 marketing pages, the demo blog post, and the two
+policy templates copied from `content/` — with inter-page links rewritten to
+`/en/<slug>` and media pointed at `/uploads/al-ai/<file>`. It also writes
+`pages.json`, a manifest naming each fragment's slug, title and content type.
 
 **Set `htmlPasteMode` to `trusted` first.** On `safe` the sanitiser strips the
 structural markup these sections are built from, and the pages will render as
-loose text.
+loose text. The setting is read at RENDER time, so changing it later fixes
+pages that are already stored — nothing needs re-pasting.
+
+### Publishing them
+
+Two ways in, and they produce the same rows.
+
+**In bulk**, which is the reason `pages.json` exists:
+
+```bash
+export CMS_EMAIL='you@example.com'
+export CMS_PASSWORD='…'          # never on the command line: argv is public
+node scripts/publish-al-ai-pages.mjs --url https://<site> --dir dist/content --dry-run
+node scripts/publish-al-ai-pages.mjs --url https://<site> --dir dist/content
+```
+
+It logs in and drives the same HTTP API the admin screens drive, so the origin
+check, the session, the role check and the block validation all still apply —
+it can publish nothing a logged-in editor could not. `--dry-run` reads and
+validates everything and sends no request. `--only home,about` limits it,
+`--status draft` holds them back, and `--locale ar` writes the other language.
+
+It is idempotent **by slug**: a page that already exists is updated in place.
+That matters more than it sounds — `content.slug` carries an index but no
+unique constraint, so creating blindly would leave two pages at one address.
+
+**By hand**, one page at a time: Admin → Pages → New, paste the fragment as an
+`html` block, and take the slug and title from `pages.json`. The front page is
+stored under the slug `home` and serves at `/<locale>`.
 
 ## Content images live in the media library, not here
 

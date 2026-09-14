@@ -117,6 +117,20 @@ describe('al-ai theme pack', () => {
     expect(html).toMatch(/<li class="active">\s*<a href="\/en\/contact">Contact<\/a>/);
   });
 
+  /**
+   * The front page has no slug in its URL but IS stored under one: the route
+   * looks up 'home' and passes that to the renderer. A blank test therefore
+   * matched nothing and Home was the one item that never lit up.
+   */
+  it('marks Home active on the front page, which is stored under slug home', async () => {
+    const { html } = await renderThemePage(id, manifest, 'home', {
+      ...baseCtx,
+      page: { title: 'Home', content: '<p>x</p>', slug: 'home' },
+    });
+
+    expect(html).toMatch(/<li class="active">\s*<a href="\/en">Home<\/a>/);
+  });
+
   it('appends CMS navigation items after the fixed ones', async () => {
     const { html } = await renderThemePage(id, manifest, 'page', {
       ...baseCtx,
