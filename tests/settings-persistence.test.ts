@@ -6,8 +6,15 @@
 // been in that state — brandAnswer, allowAiCrawlers, whatsappNumber and
 // whatsappGreeting — and nothing failed, because nothing was checking.
 //
-// Reading the route's source is blunt, but the alternative is a database.
-// The guard assertions below fail loudly if the shape it parses ever changes.
+// The round trip has TWO field-by-field lists, and the first fix only covered
+// one of them. The settings page builds `initial` the same way, and the form
+// holds a single `value` object seeded from it and submits the whole thing —
+// so a field missing from `initial` is submitted as undefined and written as
+// null. A value saved correctly would be erased by the next unrelated save.
+// Both lists are checked here.
+//
+// Reading source is blunt, but the alternative is a database. The guard
+// assertions below fail loudly if either shape it parses ever changes.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -32,6 +39,24 @@ const written = new Set(
   [...valuesBlock.matchAll(/^\s{6}([a-zA-Z][A-Za-z0-9]*):/gm)].flatMap((m) => (m[1] ? [m[1]] : []))
 );
 
+const pageSource = readFileSync(
+  path.resolve(import.meta.dirname, '..', 'app/(admin)/admin/settings/page.tsx'),
+  'utf8'
+);
+
+/** The `initial` object the settings page hands to the form. */
+const initialBlock = (() => {
+  const at = pageSource.indexOf('const initial: SettingsInput = {');
+  const end = pageSource.indexOf('\n  };', at);
+  expect(at, 'settings page no longer builds `const initial`').toBeGreaterThan(-1);
+  expect(end, 'could not find the end of the initial literal').toBeGreaterThan(at);
+  return pageSource.slice(at, end);
+})();
+
+const seeded = new Set(
+  [...initialBlock.matchAll(/^\s{4}([a-zA-Z][A-Za-z0-9]*):/gm)].flatMap((m) => (m[1] ? [m[1]] : []))
+);
+
 const accepted = Object.keys(settingsSchema.shape);
 
 describe('settings route persistence', () => {
@@ -54,6 +79,30 @@ describe('settings route persistence', () => {
       expect(written.has(field)).toBe(true);
     }
   );
+
+  it('parses an initial literal at all', () => {
+    expect(seeded.size).toBeGreaterThan(20);
+  });
+
+  /**
+   * The other half of the round trip, and the one the first fix missed.
+   */
+  it('seeds the form with every field settingsSchema accepts', () => {
+    const missing = accepted.filter((key) => !seeded.has(key));
+    expect(missing, `written to the database but never read back: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it.each(['brandAnswer', 'allowAiCrawlers', 'whatsappNumber', 'whatsappGreeting'])(
+    'reads %s back into the form',
+    (field) => {
+      expect(seeded.has(field)).toBe(true);
+    }
+  );
+
+  /** Same default on both sides, or one save flips it. */
+  it('seeds allowAiCrawlers as allowed', () => {
+    expect(initialBlock).toMatch(/allowAiCrawlers:\s*s\?\.allowAiCrawlers\s*\?\?\s*true/);
+  });
 
   /**
    * Absent means "crawlers allowed", matching the form's `!== false` default.
