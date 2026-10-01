@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "motion-designer": {
+      "source": "kaventro/motion-designer",
+      "sourceType": "github",
+      "skillPath": "skills/motion-designer/SKILL.md",
+      "computedHash": "560fdbd97017f9e2d5d5ffc2b65c6b67be2c452eb01db450f509745a744ce6ce"
+    }
+  }
+}

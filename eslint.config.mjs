@@ -29,6 +29,8 @@ const config = [
       'playwright-report/**',
       'test-results/**',
       'next-env.d.ts',
+      // Vendored agent skill (npx skills add kaventro/motion-designer), not app code.
+      '.claude/skills/motion-designer/**',
     ],
   },
 
