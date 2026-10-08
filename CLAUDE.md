@@ -6,6 +6,10 @@ New Aeon CMS is a Next.js/TypeScript content and commerce platform with Drizzle/
 
 Prefer registered code and tests, then **package.json**, Drizzle schema/migrations, CI, environment examples, and focused documents under **docs/**. Setup, migration, licensing, storage, themes, commerce, and localization behavior all have tests; do not infer status from filenames alone.
 
+## Change records
+
+A change with a product decision behind it starts as a file in **intent/**, which links to its design in **docs/superpowers/specs/** and its plan in **docs/superpowers/plans/**. Read that chain before implementing, and when the implementation departs from the plan, update the plan in the same commit. These files record what was asked and decided, not current behavior. **intent/README.md** has the format.
+
 ## Repository map
 
 - **app/** — route groups for setup, authentication, administration, site, and APIs
